@@ -5,7 +5,8 @@ This repository contains code and data (or links to data) that will enable recre
 
 Organization:
 
-* Scripts
-* Input
-* Figures
-* Tables
+* scripts
+* input
+* output: intermediate files that are not tables or figures but may be used in additional analyses
+* figures
+* tables
