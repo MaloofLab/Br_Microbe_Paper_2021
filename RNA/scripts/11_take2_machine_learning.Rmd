@@ -1,0 +1,281 @@
+---
+title: "11_machine_learning_take2"
+author: "Julin Maloof"
+date: "01/21/2021"
+output: html_notebook
+---
+
+The goal of this file is to find which WGCNA modules are best able to predict leaf length.
+
+Here I modify the original script to use a multi-CV approach that I developed from the metabolites.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(glmnet)
+library(relaimpo)
+library(tidyverse)
+```
+
+## get data
+
+leafdata
+```{r}
+leaf <- read_csv("../../../tools/leaf_data/leaf_lengths_combined.csv") %>%
+  mutate(sampleID=str_remove(sampleID, "_(leaf|root)"),
+         sampleID=str_remove(sampleID, "^[a-h][1-8]_")) %>%
+  filter(!duplicated(sampleID))
+
+leaf %>% arrange(sampleID)
+```
+
+load root modules
+```{r}
+root.voom5 <- readr::read_tsv(file.path("..","output","voom_expression.e1and3.resid.exp_gt.root.plusR500.txt.gz"))
+load(file.path("..","output","voom_expression.e1and3.resid.exp_gt.root.plusR500.txt.gz.WGCNA.softthresh10.RData"))
+
+rootMEs <- MEs %>% as_tibble() %>%
+  rename_all(str_c, "_root") %>%
+  mutate(sampleID=colnames(root.voom5)[-1],
+         sampleID=str_remove(sampleID, "_root"),
+         sampleID=str_remove(sampleID, "_S[0-9]{1,3}$"),
+         sampleID=str_remove(sampleID, "^[a-h][1-8]_")) %>%
+  select(sampleID, everything())
+rootMEs
+rm(MEs)
+```
+
+load leaf modules
+```{r}
+leaf.voom5 <- readr::read_tsv(file.path("..","output","voom_expression.e1and3.resid.exp_gt.leaf.plusR500.txt.gz"))
+load(file.path("..","output","voom_expression.e1and3.resid.exp_gt.leaf.plusR500.txt.gz.WGCNA.softthresh10.RData"))
+
+leafMEs <- MEs %>% as_tibble() %>%
+  rename_all(str_c, "_leaf") %>%
+  mutate(sampleID=colnames(leaf.voom5)[-1],
+         sampleID=str_remove(sampleID, "_leaf"),
+         sampleID=str_remove(sampleID, "_S[0-9]{1,3}$"),
+         sampleID=str_remove(sampleID, "^[a-h][1-8]_")) %>%
+  select(sampleID, everything())
+leafMEs
+rm(MEs)
+```
+
+bring it all together
+```{r}
+d <- leaf %>% select(sampleID, leaf_avg_std) %>%
+  inner_join(leafMEs, by="sampleID") %>% 
+  inner_join(rootMEs, by="sampleID") %>% 
+  select(-sampleID) %>%
+  as_data_frame()
+d
+```
+
+```{r}
+apply(d, 2, mean)
+apply(d, 2, sd)
+```
+
+
+## elastic net regression
+
+### Use a multi-cross validation to compare different alphas
+
+With a small number of samples, there is a lot of run-to-run variation in cross validation attempts.  I will do many and average over them to choose an appropriate alpha and lambda.
+
+## multi CV
+
+set up the data
+```{r}
+x <- d %>% select(starts_with("ME")) %>% as.matrix()
+y <- d %>% pull(leaf_avg_std)
+```
+
+
+Fit 101 4 fold CVs for each of 11 alphas
+```{r}
+set.seed(1245)
+
+folds <- tibble(run=1:101) %>% 
+  mutate(folds=map(run, ~ sample(rep(1:5,8))))
+
+system.time (multiCV <- expand_grid(run=1:100, alpha=seq(0,1,.1)) %>%
+               left_join(folds, by="run") %>%
+               mutate(fit=map2(folds, alpha, ~ cv.glmnet(x=x, y=y, foldid = .x, alpha=.y
+                                                         )))
+             #, lambda=exp(seq(-5,0,length.out = 50)) )))
+) #100 seconds
+
+head(multiCV)
+```
+
+for each fit, pull out the mean cv error, lambda, min lambda, and 1se lambda 
+```{r}
+multiCV <- multiCV %>%
+  mutate(cvm=map(fit, magrittr::extract("cvm")),
+         lambda=map(fit, magrittr::extract("lambda")),
+         lambda.min=map_dbl(fit, magrittr::extract("lambda.min" )),
+         lambda.1se=map_dbl(fit, magrittr::extract("lambda.1se")),
+         nzero=map(fit, magrittr::extract("nzero"))
+  )
+
+head(multiCV)
+```
+
+
+now calculate the mean and sem of cvm and min,1se labmdas.  These need to be done separately because of the way the grouping works
+```{r}
+summary_cvm <- multiCV %>% dplyr::select(-fit, -folds) %>% 
+  unnest(c(cvm, lambda)) %>%
+  group_by(alpha, lambda) %>%
+  summarize(meancvm=mean(cvm), sem=sd(cvm)/sqrt(n()), high=meancvm+sem, low=meancvm-sem)
+
+summary_cvm
+```
+
+```{r}
+summary_lambda <- multiCV %>% dplyr::select(-fit, -folds, -cvm) %>% 
+  group_by(alpha) %>%
+  summarize(
+    lambda.min.sd=sd(lambda.min), 
+    lambda.min.mean=mean(lambda.min),
+    #lambda.min.med=median(lambda.min), 
+    lambda.min.high=lambda.min.mean+lambda.min.sd,
+    #lambda.min.low=lambda.min.mean-lambda.min.sem,
+    #lambda.1se.sem=sd(lambda.1se)/sqrt(n()), 
+    lambda.1se.mean=mean(lambda.1se),
+    #lambda.1se.med=median(lambda.1se), 
+    #lambda.1se.high=lambda.1se+lambda.1se.sem,
+    #lambda.1se.low=lambda.1se-lambda.1se.sem,
+    nzero=nzero[1],
+    lambda=lambda[1]
+  )
+
+summary_lambda
+```
+
+
+plot it
+```{r}
+summary_cvm %>%
+  #filter(alpha!=0) %>% # worse than everything else and throwing the plots off
+  ggplot(aes(x=log(lambda), y= meancvm,  ymin=low, ymax=high)) +
+  geom_ribbon(alpha=.25) +
+  geom_line(aes(color=as.character(alpha))) +
+  facet_wrap(~ as.character(alpha)) +
+   coord_cartesian(xlim=(c(-5,0))) +
+  geom_vline(aes(xintercept=log(lambda.min.mean)), alpha=.5, data=summary_lambda) +
+  geom_vline(aes(xintercept=log(lambda.min.high)), alpha=.5, data=summary_lambda, color="blue") 
+
+```
+
+Min MSE per alpha:
+
+```{r}
+summary_cvm %>% 
+  group_by(as.factor(alpha)) %>%
+  filter(rank(meancvm, ties.method="first")==1) %>%
+  ggplot(aes(x=alpha,y=meancvm,ymin=low,ymax=high)) +
+  geom_ribbon(color=NA, fill="gray80") +
+  geom_line() +
+  geom_point()
+```
+
+Not a huge amount of difference there.  Obviously alpha=0 is "best" but I want to do variable selection so will choose something higher.
+
+Make a plot of number of nzero coefficients
+
+```{r}
+summary_lambda %>%
+  unnest(c(lambda, nzero)) %>%
+  group_by(alpha) %>%
+  filter(abs(lambda.min.mean-lambda)==min(abs(lambda.min.mean-lambda))  ) %>%
+  ungroup() %>%
+
+ggplot(aes(x=as.character(alpha), y=nzero)) +
+  geom_point() +
+  ggtitle("Number of non-zero coefficents at minimum lambda") +
+  ylim(0,24)
+```
+
+Let-s compromise and choose alpha = .5
+
+Look at the actual fit
+
+```{r}
+bestlam_multiCV <- summary_lambda %>% filter(round(alpha,1)==.5) %>% pull(lambda.min.mean)
+fit <- multiCV %>% filter(round(alpha,1)==.5, run==1) %>% pull(fit) %>% magrittr::extract2(1)
+```
+
+
+```{r}
+multiCV_coef.tb <- coef(fit, s=bestlam_multiCV) %>% 
+  as.matrix() %>% as.data.frame() %>% 
+  rownames_to_column(var="ME") %>%
+  dplyr::rename(beta_multiCV=`1`)
+  
+multiCV_coef.tb %>% filter(beta_multiCV!=0) %>% arrange(beta_multiCV)
+
+```
+
+pred and obs
+```{r}
+pred <- predict(fit, s=bestlam_multiCV, newx=x)
+plot(y,pred)
+cor.test(y, pred) #.73
+mean((y-pred)^2) #0.64
+```
+
+check some train/test
+
+```{r}
+testtrain_multiCV <- tibble(run=1:10000) %>%
+  mutate(train=map(run, ~ sample(1:40,8))) %>%
+  mutate(fit=map(train, ~ glmnet(x=x[.,], y=y[.], lambda = bestlam_multiCV, 
+                                 alpha = .5 ) )) %>%
+  mutate(pred=map2(fit, train, ~ predict(.x, newx = x[-.y,]))) %>%
+  mutate(cor=map2_dbl(pred, train, ~ cor(.x, y[-.y])  )) %>%
+  mutate(MSE=map2_dbl(pred, train, ~ mean((y[-.y] - .x)^2)))
+
+sum(testtrain_multiCV$cor<=0, na.rm = TRUE) + sum(is.na(testtrain_multiCV$cor))
+mean(testtrain_multiCV$cor, na.rm=TRUE)
+mean(testtrain_multiCV$cor^2, na.rm=TRUE)
+mean(testtrain_multiCV$MSE)
+hist(testtrain_multiCV$cor)
+hist(testtrain_multiCV$cor^2)
+t.test(testtrain_multiCV$cor)
+```
+
+
+```{r}
+vars <- multiCV_coef.tb %>% 
+  filter(beta_multiCV !=0, ME!="(Intercept)") %>%
+  pull(ME) %>% c("leaf_avg_std", .)
+
+relimpmultiCV <- d %>% dplyr::select(all_of(vars)) %>%
+  calc.relimp() 
+
+coef.tb <- relimpmultiCV@lmg %>% as.matrix() %>% as.data.frame() %>%
+  rownames_to_column("ME") %>%
+  rename(Prop_Var_Explained=V1) %>%
+  full_join(multiCV_coef.tb) %>%
+  arrange(desc(Prop_Var_Explained))
+
+coef.tb <- coef.tb %>% arrange(desc(Prop_Var_Explained)) %>% 
+  filter(!is.na(Prop_Var_Explained)) %>%
+  mutate(Pct_Var_Explained=round(100*Prop_Var_Explained,1),
+         Effect=ifelse(beta_multiCV>0, "Increase", "Decrease"),
+         Module_Organ=str_extract(ME,"root|leaf"),
+         Module_Name=str_replace(ME,"^ME(.*)_(leaf|root)$", "\\1")) %>%
+  
+  select(Module_Name, Module_Organ, Pct_Var_Explained, Effect) 
+
+coef.tb %>% write_csv("../output/ElasticNet0.5_multiCV_Pct_var.csv")
+
+relimpmultiCV
+
+coef.tb
+```

@@ -1,0 +1,220 @@
+---
+title: "Wrangle Leaf Data"
+author: "Julin Maloof"
+date: "7/25/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+We have leaf growth data for Mark.  I want to bring this in and get it associated with the appropriate RNAseq data.
+
+```{r}
+library(tidyverse)
+library(readxl)
+library(GGally)
+```
+
+## experiment 1
+
+get leaf data
+```{r}
+leafexp1 <- read_excel("exp1_leaf_ln_data.xlsx", sheet = 2) %>%
+  filter(data_type=="RNAseq",
+         time_point=="wk2")
+leafexp1
+```
+
+just keep the data we need
+```{r}
+leafexp1 <- leafexp1 %>% select(pot, leaf_avg=avg_lf_03.24_no_germ)
+```
+
+
+get RNAseq info
+```{r}
+rnaexp1 <- read_excel("../../v3.0annotation/20170617-samples/input/wy001_RNAseq.xlsx") %>%
+  filter(time_point=="wk2")
+rnaexp1
+```
+
+we have tissues from both root and shoot, so this needs to be doubled
+```{r}
+rnaexp1 <- bind_rows({rnaexp1 %>% mutate(tissue="leaf")},
+                     {rnaexp1 %>% mutate(tissue="root")})
+```
+
+
+merge them
+```{r}
+leafrnaexp1 <- rnaexp1 %>%
+  left_join(leafexp1, by="pot") %>%
+  mutate(exp="exp1")
+leafrnaexp1
+```
+plot it
+```{r}
+leafrnaexp1 %>%
+  mutate(group=str_c(soil, str_replace_na(autoclave))) %>%
+  ggplot(aes(x=group, y=leaf_avg, color=genotype)) +
+  geom_boxplot()
+```
+
+looks good!
+
+## exp density
+
+
+get leaf data
+```{r}
+leafexp_density <- read_excel("density_exp_leaf_ln.xlsx", sheet = 2) %>%
+  filter(density=="CR")
+leafexp_density
+```
+
+just keep the data we need
+```{r}
+leafexp_density <- leafexp_density %>% select(pot=pot...2, leaf_avg=raw_avg_lf_11.07.17, genotype)
+```
+
+get RNAseq info
+```{r}
+rnaexp_density <- read_csv("../../v3.0annotation/20180202-samples/input/20180202-data/wy003-metadata.csv") %>%
+  filter(CROWDING=="CR") %>%
+  rename_all(tolower)
+rnaexp_density
+```
+
+merge leaf and RNA info
+```{r}
+leafrnaexp_density <- rnaexp_density %>%
+  left_join(leafexp_density, by="pot") %>%
+  mutate(exp="exp_density",
+         soil=str_c(soil, "E"))
+leafrnaexp_density
+```
+plot it
+```{r}
+leafrnaexp_density %>%
+  mutate(group=str_c(soil, treatment)) %>%
+  ggplot(aes(x=group, y=leaf_avg)) +
+  geom_boxplot()
+```
+
+looks good!
+
+## combine the experiments
+
+wyo_root_FPsc_02_052
+
+```{r}
+leafrnaexp1 <- leafrnaexp1 %>% 
+  mutate(sampleID=str_c("wyo", tissue, genotype, str_pad(block, 2, pad = "0"), str_pad(pot, 3, pad = "0"), sep = "_" ),
+         pot=as.character(pot)) %>%
+  select(sampleID, exp, pot, soil, tissue, genotype, autoclave, leaf_avg)
+head(leafrnaexp1)
+```
+
+
+```{r}
+leafrnaexp_density <- leafrnaexp_density %>% select(sampleID=`sample id`, exp, pot, soil, tissue, genotype, autoclave=treatment, leaf_avg)
+head(leafrnaexp_density)
+```
+
+```{r}
+leafrna <- bind_rows(leafrnaexp1, leafrnaexp_density)
+leafrna
+```
+plot it
+
+```{r}
+leafrna %>%
+  mutate(group=str_c(soil, autoclave)) %>%
+  ggplot(aes(x=group,y=leaf_avg, color=genotype)) +
+  geom_boxplot() +
+  facet_wrap(~exp)
+```
+
+standardize for each group
+```{r}
+leafrna <- leafrna %>%
+  mutate(group=str_c(exp, genotype, sep="_")) %>%
+  group_by(group) %>%
+  mutate(leaf_avg_std = scale(leaf_avg))
+```
+
+plot standardized
+```{r}
+leafrna %>%
+  mutate(group=str_c(soil, autoclave)) %>%
+  ggplot(aes(x=group,y=leaf_avg_std, color=genotype)) +
+  geom_boxplot() +
+  facet_wrap(~exp)
+```
+
+Do I get a similar result if I use residuals to remove gt and exp?
+
+```{r}
+lm1 <- lm(leaf_avg ~ genotype + exp, data = leafrna)
+leafrna$leaf_avg_resid <- residuals(lm1)
+```
+
+```{r}
+leafrna %>% ungroup() %>% select(starts_with("leaf")) %>% cor()
+```
+
+## now check that sample names match voom names
+
+### rootnames
+```{r}
+rootnames <- readLines("../../v3.0annotation/20180202-samples/output/voom_expression.e1and3.resid.root.txt.gz", n=1) %>%
+  str_split("\t") %>%
+  unlist() %>% magrittr::extract(-1)
+rootnames
+```
+
+
+```{r}
+leafnames <- readLines("../../v3.0annotation/20180202-samples/output/voom_expression.e1and3.resid.leaf.txt.gz", n=1) %>%
+  str_split("\t") %>%
+  unlist() %>% magrittr::extract(-1)
+leafnames
+```
+
+```{r}
+voomnames <- c(rootnames, leafnames)
+```
+
+```{r}
+voomnames %in% leafrna$sampleID
+```
+
+uggh, need to add the "S" number to density experiment
+
+```{r}
+voomnames <- tibble(fullname=voomnames) %>%
+  mutate(basename=str_remove(fullname, "_S[0-9]*$"))
+voomnames
+```
+
+```{r}
+voomnames$basename %in% leafrna$sampleID
+```
+
+
+```{r}
+leafrna <- leafrna %>% left_join(voomnames, by=c("sampleID" = "basename")) %>%
+  select(sampleID, fullname, everything()) %>%
+  mutate(fullname=ifelse(is.na(fullname), sampleID, fullname))
+sum(leafrna$fullname %in% voomnames$fullname)
+leafrna
+```
+
+```{r}
+leafrna %>% select(fullname, exp, soil, tissue, genotype, autoclave, leaf_avg, leaf_avg_std)
+write_csv(leafrna, "leaf_lengths_combined.csv")
+```
+
+

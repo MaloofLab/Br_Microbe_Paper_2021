@@ -1,0 +1,48 @@
+---
+title: "Wrangle Leaf Data"
+author: "Julin Maloof"
+date: "7/25/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+We have leaf growth data for Mark.  I want to bring this in and get it associated with the appropriate metabolite data.
+
+```{r}
+library(tidyverse)
+library(readxl)
+```
+
+## experiment 1
+
+get leaf data
+```{r}
+leafexp1 <- read_excel("exp1_leaf_ln_data.xlsx", sheet = 2) %>%
+  mutate(data_type = str_replace(data_type,"Phys", "phys")) %>%
+  filter(data_type=="phys",
+         time_point=="wk2")
+leafexp1
+```
+
+just keep the data we need
+```{r}
+leafexp1 <- leafexp1 %>% select(pot, soil, genotype, trt=`5E_soil_trts`, leaf_avg=avg_lf_03.24_no_germ)
+```
+
+
+standardize for each gt
+```{r}
+leafexp1 <- leafexp1 %>%
+  group_by(genotype) %>%
+  mutate(leaf_avg_std = scale(leaf_avg))
+```
+
+```{r}
+leafexp1 %>% 
+write_csv("leaf_lengths_metabolite.csv")
+```
+
+
