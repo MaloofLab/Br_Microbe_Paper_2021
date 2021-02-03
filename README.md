@@ -5,8 +5,8 @@ This repository contains code and data (or links to data) that will enable recre
 
 __Organization:__
 
-* Paper_Tables: raw tables (csv, etc) and final formatted tables.
-* Paper_Figures: figures and retouched (Illustrator) figures
+* _Paper_Tables: raw tables (csv, etc) and final formatted tables.
+* _Paper_Figures: figures and retouched (Illustrator) figures
 * annotation: Files related to gene annotation
 * metabolites: Files related to metabolite data and analysis
 * microbes: Files related to microbe data and analysis
