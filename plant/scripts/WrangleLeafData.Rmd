@@ -2,7 +2,7 @@
 title: "Wrangle Leaf Data"
 author: "Julin Maloof"
 date: "7/25/2020"
-output: html_document
+output: html_notebook
 ---
 
 ```{r setup, include=FALSE}
@@ -21,7 +21,7 @@ library(GGally)
 
 get leaf data
 ```{r}
-leafexp1 <- read_excel("exp1_leaf_ln_data.xlsx", sheet = 2) %>%
+leafexp1 <- read_excel("../input/exp1_leaf_ln_data.xlsx", sheet = 2) %>%
   filter(data_type=="RNAseq",
          time_point=="wk2")
 leafexp1
@@ -35,7 +35,7 @@ leafexp1 <- leafexp1 %>% select(pot, leaf_avg=avg_lf_03.24_no_germ)
 
 get RNAseq info
 ```{r}
-rnaexp1 <- read_excel("../../v3.0annotation/20170617-samples/input/wy001_RNAseq.xlsx") %>%
+rnaexp1 <- read_excel("../../RNA/input/wy001_RNAseq.xlsx") %>%
   filter(time_point=="wk2")
 rnaexp1
 ```
@@ -69,7 +69,7 @@ looks good!
 
 get leaf data
 ```{r}
-leafexp_density <- read_excel("density_exp_leaf_ln.xlsx", sheet = 2) %>%
+leafexp_density <- read_excel("../input/density_exp_leaf_ln.xlsx", sheet = 2) %>%
   filter(density=="CR")
 leafexp_density
 ```
@@ -81,7 +81,7 @@ leafexp_density <- leafexp_density %>% select(pot=pot...2, leaf_avg=raw_avg_lf_1
 
 get RNAseq info
 ```{r}
-rnaexp_density <- read_csv("../../v3.0annotation/20180202-samples/input/20180202-data/wy003-metadata.csv") %>%
+rnaexp_density <- read_csv("../../RNA/input/wy003-metadata.csv") %>%
   filter(CROWDING=="CR") %>%
   rename_all(tolower)
 rnaexp_density
@@ -169,7 +169,7 @@ leafrna %>% ungroup() %>% select(starts_with("leaf")) %>% cor()
 
 ### rootnames
 ```{r}
-rootnames <- readLines("../../v3.0annotation/20180202-samples/output/voom_expression.e1and3.resid.root.txt.gz", n=1) %>%
+rootnames <- readLines("../../RNA/output/voom_expression.e1and3.resid.root.txt.gz", n=1) %>%
   str_split("\t") %>%
   unlist() %>% magrittr::extract(-1)
 rootnames
@@ -177,7 +177,7 @@ rootnames
 
 
 ```{r}
-leafnames <- readLines("../../v3.0annotation/20180202-samples/output/voom_expression.e1and3.resid.leaf.txt.gz", n=1) %>%
+leafnames <- readLines("../../RNA/output/voom_expression.e1and3.resid.leaf.txt.gz", n=1) %>%
   str_split("\t") %>%
   unlist() %>% magrittr::extract(-1)
 leafnames
@@ -214,7 +214,7 @@ leafrna
 
 ```{r}
 leafrna %>% select(fullname, exp, soil, tissue, genotype, autoclave, leaf_avg, leaf_avg_std)
-write_csv(leafrna, "leaf_lengths_combined.csv")
+write_csv(leafrna, "../output/leaf_lengths_combined.csv")
 ```
 
 

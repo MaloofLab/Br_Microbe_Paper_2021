@@ -20,7 +20,7 @@ library(readxl)
 
 get leaf data
 ```{r}
-leafexp1 <- read_excel("exp1_leaf_ln_data.xlsx", sheet = 2) %>%
+leafexp1 <- read_excel("../input/exp1_leaf_ln_data.xlsx", sheet = 2) %>%
   mutate(data_type = str_replace(data_type,"Phys", "phys")) %>%
   filter(data_type=="phys",
          time_point=="wk2")
@@ -42,7 +42,7 @@ leafexp1 <- leafexp1 %>%
 
 ```{r}
 leafexp1 %>% 
-write_csv("leaf_lengths_metabolite.csv")
+write_csv("../output/leaf_lengths_metabolite.csv")
 ```
 
 
