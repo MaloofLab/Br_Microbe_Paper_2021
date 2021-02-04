@@ -23,7 +23,7 @@ library(tidyverse)
 
 get leaflength data
 ```{r}
-leaflength <- read_csv("../../../tools/leaf_data/leaf_lengths_metabolite.csv") %>%
+leaflength <- read_csv("../../plant/output/leaf_lengths_metabolite.csv") %>%
   mutate(pot=str_pad(pot, width=3, pad="0"),
          sampleID=str_c("wyo", genotype, pot, sep="_")) %>%
   select(sampleID, leaf_avg_std) 
@@ -32,9 +32,7 @@ leaflength %>% arrange(sampleID)
 
 get and wrangle metabolite data
 ```{r}
-metpath <- "~/Box/BrapaMicrobes/Bra_microbiome_manuscript/raw_data/"
-file <- dir(metpath, pattern = "metabolites" )
-met_raw <-read_csv(file.path(metpath, file))
+met_raw <-read_csv("../input/metabolites_set1.csv")
 met <- met_raw %>% 
   mutate(pot=str_pad(pot, width = 3, pad = "0")) %>%
   mutate(sampleID=str_c("wyo", genotype, pot, sep="_")) %>%
@@ -78,7 +76,7 @@ leaflength
 
 #### leaf
 
-```{r, fig.asp=1}
+```{r}
 met_per_mg.leaf_PCA <- met_per_mg %>% 
   select(matches("_leaf_")) %>%
   prcomp(center = FALSE, scale. = FALSE) #already centered and scaled
@@ -96,7 +94,7 @@ tibble(variance=met_per_mg.leaf_PCA$sdev^2, PC=str_c("PC",
 
 #### root
 
-```{r, fig.asp=1}
+```{r}
 met_per_mg.root_PCA <- met_per_mg %>% 
   select(matches("_root_")) %>%
   prcomp(center = FALSE, scale. = FALSE) #already centered and scaled
@@ -115,7 +113,7 @@ tibble(variance=met_per_mg.root_PCA$sdev^2, PC=str_c("PC",
 ### raw
 
 #### leaf
-```{r, fig.asp=1}
+```{r}
 met_amt.leaf_PCA <- met_amt %>%
   select(matches("_leaf_")) %>%
   prcomp(center = FALSE, scale. = FALSE) #already centered and scaled
@@ -132,7 +130,7 @@ tibble(variance=met_amt.leaf_PCA$sdev^2, PC=str_c("PC",
 ```
 
 #### root
-```{r, fig.asp=1}
+```{r}
 met_amt.root_PCA <- met_amt %>%
   select(matches("_root_")) %>%
   prcomp(center = FALSE, scale. = FALSE) #already centered and scaled
@@ -410,7 +408,7 @@ best_per_mg$full_MSE
 
 ## Percent variance explained
 
-```{r, eval=FALSE}
+```{r}
 per_mg_vars <- per_mg_coef.tb %>% 
   filter(beta !=0, PC!="(Intercept)") %>%
   pull(PC) %>% c("leaf_avg_std", .)
@@ -430,15 +428,21 @@ per_mg_coef.tb
 
 Checkout the rotations.  
 
+
 ```{r}
-met_per_mg.PC_rotation %>% 
+met_per_mg_rotation_out <- met_per_mg.PC_rotation %>% 
   pivot_longer(-metabolite, names_to="PC", values_to="loading") %>%
   filter(PC %in% filter(per_mg_coef.tb, beta!=0)$PC ) %>%
   group_by(PC) %>%
     filter(!str_detect(metabolite,".*(leaf|root)_[0-9]*$")) %>%
-  filter(row_number(desc(abs(loading))) <= 20) %>%
+  filter(abs(loading) >= 0.05) %>%
   left_join(per_mg_coef.tb, by="PC") %>%
-  arrange(desc(abs(beta)), desc(abs(loading)))
+  arrange(desc(abs(beta)), desc(abs(loading))) %>%
+  mutate(organ=ifelse(str_detect(metabolite, "_leaf_"), "leaf", "root"),
+         transformation="normalized",
+         metabolite=str_remove(metabolite, "met_per_mg_(root|leaf)_"),
+         metabolite_effect_on_leaf=ifelse(beta*loading>0, "increase", "decrease"))
+met_per_mg_rotation_out %>%  write_csv("../output/Leaf_associated_metaboiltes_normalized.csv")
 ```
 
 # non-normazlized
@@ -629,7 +633,7 @@ best_amt$full_MSE
 
 ## Percent variance explained
 
-```{r, eval=FALSE}
+```{r}
 amt_vars <- amt_coef.tb %>% 
   filter(beta !=0, PC!="(Intercept)") %>%
   pull(PC) %>% c("leaf_avg_std", .)
@@ -650,12 +654,18 @@ amt_coef.tb
 Checkout the rotations.  
 
 ```{r}
-met_amt.PC_rotation %>% 
+met_amt_rotation_out <- met_amt.PC_rotation %>% 
   pivot_longer(-metabolite, names_to="PC", values_to="loading") %>%
   filter(PC %in% filter(amt_coef.tb, beta!=0)$PC ) %>%
   group_by(PC) %>%
     filter(!str_detect(metabolite,".*(leaf|root)_[0-9]*$")) %>%
-  filter(row_number(desc(abs(loading))) <= 20) %>%
+  filter(abs(loading) >= 0.05) %>%
   left_join(amt_coef.tb, by="PC") %>%
-  arrange(desc(abs(beta)), desc(abs(loading)))
+  arrange(desc(abs(beta)), desc(abs(loading))) %>%
+  mutate(organ=ifelse(str_detect(metabolite, "_leaf_"), "leaf", "root"),
+         transformation="normalized",
+         metabolite=str_remove(metabolite, "met_amt_(root|leaf)_"),
+         metabolite_effect_on_leaf=ifelse(beta*loading>0, "increase", "decrease"))
+met_amt_rotation_out %>%  write_csv("../output/Leaf_associated_metaboiltes_raw.csv")
 ```
+
