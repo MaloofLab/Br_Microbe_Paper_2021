@@ -21,7 +21,7 @@ library(tidyverse)
 
 get leaflength data
 ```{r}
-leaflength <- read_csv("../../../tools/leaf_data/leaf_lengths_metabolite.csv") %>%
+leaflength <- read_csv("../../plant/output/leaf_lengths_metabolite.csv") %>%
   mutate(pot=str_pad(pot, width=3, pad="0"),
          sampleID=str_c("wyo", genotype, pot, sep="_"), 
          group=str_c(soil,genotype,trt,sep="_")) %>%
@@ -33,9 +33,7 @@ leaflength %>% arrange(sampleID)
 
 get and wrangle metabolite data
 ```{r}
-metpath <- "~/Box/BrapaMicrobes/Bra_microbiome_manuscript/raw_data/"
-file <- dir(metpath, pattern = "metabolites" )
-met_raw <-read_csv(file.path(metpath, file))
+met_raw <-read_csv("../input/metabolites_set1.csv")
 met <- met_raw %>% 
   mutate(pot=str_pad(pot, width = 3, pad = "0")) %>%
   mutate(sampleID=str_c("wyo", genotype, pot, sep="_")) %>%
@@ -413,7 +411,7 @@ best_per_mg$full_MSE
 
 ## Percent variance explained
 
-```{r, eval=FALSE}
+```{r}
 per_mg_vars <- per_mg_coef.tb %>% 
   filter(beta !=0, PC!="(Intercept)") %>%
   pull(PC) %>% c("leaf_avg_std", .)
@@ -434,14 +432,19 @@ per_mg_coef.tb
 Checkout the rotations.  
 
 ```{r}
-met_per_mg.PC_rotation %>% 
+met_per_mg_rotation_out <- met_per_mg.PC_rotation %>% 
   pivot_longer(-metabolite, names_to="PC", values_to="loading") %>%
   filter(PC %in% filter(per_mg_coef.tb, beta!=0)$PC ) %>%
   group_by(PC) %>%
     filter(!str_detect(metabolite,".*(leaf|root)_[0-9]*$")) %>%
-  filter(row_number(desc(abs(loading))) <= 20) %>%
+  filter(abs(loading) >= 0.05) %>%
   left_join(per_mg_coef.tb, by="PC") %>%
-  arrange(desc(abs(beta)), desc(abs(loading)))
+  arrange(desc(abs(beta)), desc(abs(loading))) %>%
+  mutate(organ=ifelse(str_detect(metabolite, "_leaf_"), "leaf", "root"),
+         transformation="normalized",
+         metabolite=str_remove(metabolite, "met_per_mg_(root|leaf)_"),
+         metabolite_effect_on_leaf=ifelse(beta*loading>0, "increase", "decrease"))
+met_per_mg_rotation_out %>%  write_csv("../output/Leaf_associated_metabolites_normalized_NOBLANK.csv")
 ```
 
 # non-normazlized
@@ -626,23 +629,24 @@ amt_coef.tb %>% filter(beta!=0) %>% arrange(beta)
 pred and obs
 ```{r}
 plot(leaflength$leaf_avg_std, best_amt$pred_full[[1]])
-cor.test(leaflength$leaf_avg_std, best_amt$pred_full[[1]]) #.736
+cor.test(leaflength$leaf_avg_std, best_amt$pred_full[[1]]) #.64
 best_amt$full_MSE
 ```
 
 ## Percent variance explained
 
-```{r, eval=FALSE}
+```{r}
 amt_vars <- amt_coef.tb %>% 
   filter(beta !=0, PC!="(Intercept)") %>%
   pull(PC) %>% c("leaf_avg_std", .)
 
-amt_relimp <- leaflength %>% select(leaf_avg_std) %>% cbind(met_amt.PCs) %>% as.data.frame() %>% dplyr::select(all_of(amt_vars)) %>%
-  calc.relimp() 
+# because there is only one explanatory variable, we don't need to (and can't) use relimp
+amt_relimp <- leaflength %>% select(leaf_avg_std) %>% cbind(met_amt.PCs) %>% as.data.frame() %>% dplyr::select(all_of(amt_vars)) %>% cor() %>% magrittr::extract(1,2) %>% magrittr::multiply_by(.,.)
+amt_relimp <- tibble(PC=str_subset(amt_vars, "PC"),
+                     PropVar_met_amt=amt_relimp)
 
-amt_coef.tb <- amt_relimp@lmg %>% as.matrix() %>% as.data.frame() %>%
-  rownames_to_column("PC") %>%
-  rename(PropVar_met_amt=V1) %>%
+
+amt_coef.tb <- amt_relimp %>% 
   full_join(amt_coef.tb) %>%
   arrange(desc(PropVar_met_amt))
 
@@ -653,12 +657,19 @@ amt_coef.tb
 Checkout the rotations.  
 
 ```{r}
-met_amt.PC_rotation %>% 
+met_amt_rotation_out <- met_amt.PC_rotation %>% 
   pivot_longer(-metabolite, names_to="PC", values_to="loading") %>%
   filter(PC %in% filter(amt_coef.tb, beta!=0)$PC ) %>%
   group_by(PC) %>%
     filter(!str_detect(metabolite,".*(leaf|root)_[0-9]*$")) %>%
-  filter(row_number(desc(abs(loading))) <= 20) %>%
+  filter(abs(loading) >= 0.05) %>%
   left_join(amt_coef.tb, by="PC") %>%
-  arrange(desc(abs(beta)), desc(abs(loading)))
+  arrange(desc(abs(beta)), desc(abs(loading))) %>%
+  mutate(organ=ifelse(str_detect(metabolite, "_leaf_"), "leaf", "root"),
+         transformation="raw",
+         metabolite=str_remove(metabolite, "met_amt_(root|leaf)_"),
+         metabolite_effect_on_leaf=ifelse(beta*loading>0, "increase", "decrease"))
+met_amt_rotation_out %>%  write_csv("../output/Leaf_associated_metabolites_raw_NOBLANK.csv")
+
+met_amt_rotation_out
 ```

@@ -442,7 +442,9 @@ met_per_mg_rotation_out <- met_per_mg.PC_rotation %>%
          transformation="normalized",
          metabolite=str_remove(metabolite, "met_per_mg_(root|leaf)_"),
          metabolite_effect_on_leaf=ifelse(beta*loading>0, "increase", "decrease"))
-met_per_mg_rotation_out %>%  write_csv("../output/Leaf_associated_metaboiltes_normalized.csv")
+met_per_mg_rotation_out %>%  write_csv("../output/Leaf_associated_metabolites_normalized.csv")
+
+met_per_mg_rotation_out
 ```
 
 # non-normazlized
@@ -663,9 +665,11 @@ met_amt_rotation_out <- met_amt.PC_rotation %>%
   left_join(amt_coef.tb, by="PC") %>%
   arrange(desc(abs(beta)), desc(abs(loading))) %>%
   mutate(organ=ifelse(str_detect(metabolite, "_leaf_"), "leaf", "root"),
-         transformation="normalized",
+         transformation="raw",
          metabolite=str_remove(metabolite, "met_amt_(root|leaf)_"),
          metabolite_effect_on_leaf=ifelse(beta*loading>0, "increase", "decrease"))
-met_amt_rotation_out %>%  write_csv("../output/Leaf_associated_metaboiltes_raw.csv")
+met_amt_rotation_out %>%  write_csv("../output/Leaf_associated_metabolites_raw.csv")
+
+met_amt_rotation_out
 ```
 
