@@ -2,9 +2,7 @@
 title: "Machine learning for metabolites, no blank, all metabolites"
 author: "Julin Maloof"
 date: "1/28/2021"
-output:
-  html_document:
-    df_print: paged
+output: html_notebook
 ---
 
 ```{r setup, include=FALSE}
@@ -384,12 +382,12 @@ per_mg_fit_test_train %>%
   geom_line(aes(y=avg_MSE), color="blue") +
   geom_point(aes(y=avg_MSE), color="blue")
 ```
-alpha of 0.8 to 1.0 are very similar and are the best here.
+all are similar from 0.2 onwards
 
 ## look at fit:
 
 ```{r}
-alpha_per_mg <- .8
+alpha_per_mg <- .2
 
 best_per_mg <- per_mg_fit_test_train %>% filter(alpha == alpha_per_mg) 
 best_per_mg_fit <- best_per_mg$fit[[1]]
@@ -407,7 +405,7 @@ per_mg_coef.tb %>% filter(beta!=0) %>% arrange(beta)
 pred and obs
 ```{r}
 plot(leaflength$leaf_avg_std, best_per_mg$pred_full[[1]])
-cor.test(leaflength$leaf_avg_std, best_per_mg$pred_full[[1]]) #.57
+cor.test(leaflength$leaf_avg_std, best_per_mg$pred_full[[1]]) #.65
 best_per_mg$full_MSE
 ```
 
@@ -447,6 +445,7 @@ met_per_mg_rotation_out <- met_per_mg.PC_rotation %>%
          metabolite=str_remove(metabolite, "met_per_mg_(root|leaf)_"),
          metabolite_effect_on_leaf=ifelse(beta*loading>0, "increase", "decrease"))
 met_per_mg_rotation_out %>%  write_csv("../output/Leaf_associated_metabolites_normalized_NOBLANK.csv")
+met_per_mg_rotation_out
 ```
 
 # non-normazlized
@@ -542,7 +541,7 @@ met_amt_summary_cvm %>%
   geom_line() +
   geom_point()
 ```
-not a particular large difference here after 0.2
+decreasing throughout, although differences are pretty small
 
 Plot the number of nzero coefficients
 
@@ -608,12 +607,12 @@ amt_fit_test_train %>%
   geom_line(aes(y=avg_MSE), color="blue") +
   geom_point(aes(y=avg_MSE), color="blue")
 ```
-alpha of 0.8 to 1.0 are very similar and are the best here.
+not a big difference after 0.2
 
 ## look at fit:
 
 ```{r}
-alpha_amt <- .8
+alpha_amt <- .7
 
 best_amt <- amt_fit_test_train %>% filter(alpha == alpha_amt) 
 best_amt_fit <- best_amt$fit[[1]]
