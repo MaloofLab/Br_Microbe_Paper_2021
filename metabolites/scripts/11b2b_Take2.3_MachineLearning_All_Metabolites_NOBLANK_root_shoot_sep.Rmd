@@ -2,7 +2,9 @@
 title: "Machine learning for metabolites, no blank, all metabolites"
 author: "Julin Maloof"
 date: "1/28/2021"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
 ```{r setup, include=FALSE}

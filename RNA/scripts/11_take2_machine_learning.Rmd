@@ -24,7 +24,7 @@ library(tidyverse)
 
 leafdata
 ```{r}
-leaf <- read_csv("../../../tools/leaf_data/leaf_lengths_combined.csv") %>%
+leaf <- read_csv("../../plant/output/leaf_lengths_combined.csv") %>%
   mutate(sampleID=str_remove(sampleID, "_(leaf|root)"),
          sampleID=str_remove(sampleID, "^[a-h][1-8]_")) %>%
   filter(!duplicated(sampleID))
@@ -274,6 +274,8 @@ coef.tb <- coef.tb %>% arrange(desc(Prop_Var_Explained)) %>%
   select(Module_Name, Module_Organ, Pct_Var_Explained, Effect) 
 
 coef.tb %>% write_csv("../output/ElasticNet0.5_multiCV_Pct_var.csv")
+
+coef.tb %>% write_csv("../../_Paper_Tables/ElasticNetWGCNA_Modules.csv")
 
 relimpmultiCV
 

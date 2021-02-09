@@ -1,0 +1,240 @@
+---
+title: "07_GSEA_expression_data"
+author: "Julin"
+date: "5/7/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: inline
+---
+
+Write tables of voom stabilized expression data, corrected (or not) for experiment and block effects
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,error=TRUE)
+library(edgeR)
+library(tidyverse)
+library(readr)
+library(readxl)
+library(scales) # for muted function
+```
+
+
+helper function to get residuals
+```{r}
+getResid <- function(gene_expression, block1, block2=NA, block3=NA, verbose = FALSE) { #
+  if(is.na(block2[1])) lm1 <- lm(gene_expression ~ block1)
+  else if(is.na(block3[1])) lm1 <- lm(gene_expression ~ block1 + block2)
+  else lm1 <- lm(gene_expression ~ block1 + block2 + block3)
+  if (verbose) print(summary(lm1))
+residuals(lm1)
+}
+```
+
+# read dge objects 
+```{r}
+# exp1 
+# load exp1 v3.0 annotation dge files and sample info
+load(file.path("..","..","20170617-samples","output","edgeR_dge_objects.e1.v3.0anno.RData"))
+e1.dge.leaf <- dge.leaf
+e1.dge.root <- dge.root
+rm(dge.leaf, dge.root,sample.description.leaf,sample.description.root)
+# exp3 (20180202-samples)
+load(file.path("..","output","edgeR_dge_objects.e3.v3.0anno.RData"))
+e3.dge.leaf <- dge.leaf
+e3.dge.root <- dge.root
+rm(dge.leaf, dge.root,sample.description2.leaf,sample.description2.root)
+```
+
+# combine and reformat (root and leaf):  only crowd in exp3
+```{r}
+# exp1 sample
+e1.samples <- e1.dge.root$samples %>% filter(!trt=="BLANK_NA") %>% mutate(trt=str_remove(trt,"5E_")) %>% mutate(exp="exp1") %>% unite(group.e1and3,genotype,trt,tissue,remove=FALSE) %>% dplyr::select(sample,group.e1and3,genotype,trt,block,exp)
+# exp3 sample
+e3.samples <- e3.dge.root$samples %>% filter(density=="cr") %>% mutate(exp="exp3", genotype="FPsc") %>% unite(group.e1and3, genotype,trt,tissue,remove=FALSE) %>% dplyr::select(sample,group.e1and3,genotype,trt,block,exp)
+# combine exp1 and exp3 sample
+e1and3.samples.root <- e1.samples %>% bind_rows(e3.samples) %>% mutate(block=str_c(block,exp)) #ensure unique block names
+dim(e1.dge.root$counts) #[1] 27887    36
+dim(e3.dge.root$counts) #[1] 26338    32 
+# combine counts
+e1ande3.counts <- e1.dge.root$genes %>% bind_cols(as_tibble(e1.dge.root$counts)) %>% inner_join(e3.dge.root$genes %>% bind_cols(as_tibble(e3.dge.root$counts)),by="genes")
+dim(e1ande3.counts) # [1] 25766    69
+# select samples (only exp1 FPsc and live/dead soil, exp3 crowd)
+e1ande3.counts <- e1ande3.counts %>% dplyr::select(genes, e1and3.samples.root$sample)
+dim(e1ande3.counts) #[1] 25766    41
+# construct DGEList
+e1and3.dge.root <- DGEList(e1ande3.counts[,-1],
+               group=e1and3.samples.root$group.e1and3,
+               samples=e1and3.samples.root,
+               genes=e1ande3.counts$genes)
+```
+
+# combine and reformat (shoot): only crowd in exp3
+```{r}
+# exp1 sample
+e1.samples <- e1.dge.leaf$samples %>% 
+  filter(!trt=="BLANK_NA") %>% 
+  mutate(trt=str_remove(trt,"5E_")) %>% 
+  mutate(exp="exp1") %>% 
+  unite(group.e1and3,genotype,trt,tissue,remove=FALSE) %>% 
+  dplyr::select(sample,group.e1and3,genotype,trt,block,exp)
+# exp3 sample
+e3.samples <- e3.dge.leaf$samples %>% 
+  filter(density=="cr") %>% 
+  mutate(exp="exp3", genotype="FPsc") %>% 
+  unite(group.e1and3, genotype, trt,tissue,remove=FALSE) %>%
+  dplyr::select(sample,group.e1and3,genotype,trt,block,exp)
+# combine exp1 and exp3 sample
+e1and3.samples.leaf <- e1.samples %>% 
+  bind_rows(e3.samples) %>% 
+  mutate(block=str_c(block,exp)) #ensure unique block names
+dim(e1.dge.leaf$counts) #[1] 25210    36
+dim(e3.dge.leaf$counts) #[1] 23888    32 
+# combine counts
+e1ande3.counts <- e1.dge.leaf$genes %>% 
+  bind_cols(as_tibble(e1.dge.leaf$counts)) %>%
+  inner_join(e3.dge.leaf$genes %>% bind_cols(as_tibble(e3.dge.leaf$counts)),by="genes")
+dim(e1ande3.counts) # [1] 23002    69
+# select samples (only exp1 FPsc and live/dead soil, exp3 crowd)
+e1ande3.counts <- e1ande3.counts %>% dplyr::select(genes, e1and3.samples.leaf$sample)
+dim(e1ande3.counts) #[1] 23002    41
+# construct DGEList
+e1and3.dge.leaf <- DGEList(e1ande3.counts[,-1],
+               group=e1and3.samples.leaf$group.e1and3,
+               samples=e1and3.samples.leaf,
+               genes=e1ande3.counts$genes)
+```
+
+## voom transformation
+```{r}
+## dge
+root.design.add <- with(e1and3.dge.root$samples, model.matrix(~ genotype + trt  + exp))
+leaf.design.add <- with(e1and3.dge.leaf$samples, model.matrix(~ genotype + trt  + exp))
+## 
+e1and3.dge.root.voom <- e1and3.dge.root[rowSums(cpm(e1and3.dge.root)>1) >= 6,,keep.lib.sizes=FALSE]
+e1and3.dge.root.voom <- calcNormFactors(e1and3.dge.root.voom)
+#
+e1and3.dge.leaf.voom <- e1and3.dge.leaf[rowSums(cpm(e1and3.dge.leaf)>1) >= 6,,keep.lib.sizes=FALSE]
+e1and3.dge.leaf.voom <- calcNormFactors(e1and3.dge.leaf.voom)
+
+#
+e1and3.voom.root <- voom(e1and3.dge.root.voom,design = root.design.add, block = e1and3.dge.root.voom$samples$block)
+e1and3.voom.leaf <- voom(e1and3.dge.leaf.voom,design = leaf.design.add, block = e1and3.dge.leaf.voom$samples$block)
+```
+
+### write the uncorrected voom data out
+```{r}
+e1and3.voom.root$E %>% 
+  as_tibble() %>%
+  bind_cols(e1and3.voom.root$genes, .) %>%
+  write_tsv("../output/voom_expression.e1and3.uncorrected.root.plusR500.txt.gz")
+
+e1and3.voom.leaf$E %>% 
+  as_tibble() %>%
+  bind_cols(e1and3.voom.leaf$genes, .) %>%
+write_tsv("../output/voom_expression.e1and3.uncorrected.leaf.plusR500.txt.gz")
+```
+
+### Use voom removeBatchEffect to remove experiment and block
+```{r}
+# design for gt and trt only
+root.design.trt <- with(e1and3.dge.root$samples, model.matrix(~ genotype + trt))
+leaf.design.trt <- with(e1and3.dge.leaf$samples, model.matrix(~ genotype + trt))
+
+# remove batch effects (exp + block)
+e1and3.voom.root2 <- removeBatchEffect(e1and3.voom.root, e1and3.dge.root$samples$exp, batch2 = e1and3.dge.root$samples$block, design = root.design.trt)
+head(e1and3.voom.root2)
+e1and3.voom.leaf2 <- removeBatchEffect(e1and3.voom.leaf, e1and3.dge.leaf$samples$exp, batch2 = e1and3.dge.leaf$samples$block, design = leaf.design.trt)
+head(e1and3.voom.leaf2)
+
+# add gene name
+e1and3.voom.root3 <- bind_cols(e1and3.voom.root$genes,as_tibble(e1and3.voom.root2))  %>% as_tibble()
+head(e1and3.voom.root3)
+e1and3.voom.leaf3 <- bind_cols(e1and3.voom.leaf$genes,as_tibble(e1and3.voom.leaf2))  %>% as_tibble()
+head(e1and3.voom.leaf3)
+```
+
+
+```{r}
+# write file
+write_tsv(e1and3.voom.root3, "../output/voom_expression.e1and3.remove.block.root.plusR500.txt.gz")
+write_tsv(e1and3.voom.leaf3, "../output/voom_expression.e1and3.remove.block.leaf.plusR500.txt.gz")
+```
+
+## alternative: take residuals.
+```{r}
+
+leaf.resid <- t(apply(e1and3.voom.leaf$E, 1, getResid,  e1and3.dge.leaf$samples$exp, e1and3.dge.leaf$samples$block)) %>%
+  as.data.frame() %>%
+  mutate(genes=e1and3.voom.leaf$genes$genes) %>%
+  select(genes, everything())
+
+root.resid <- t(apply(e1and3.voom.root$E, 1, getResid,  e1and3.dge.root$samples$exp, e1and3.dge.root$samples$block)) %>%
+  as.data.frame() %>%
+  mutate(genes=e1and3.voom.root$genes$genes) %>%
+  select(genes, everything())
+
+write_tsv(root.resid, "../output/voom_expression.e1and3.resid.root.plusR500.txt.gz")
+write_tsv(leaf.resid, "../output/voom_expression.e1and3.resid.leaf.plusR500.txt.gz")
+
+```
+
+
+## residuals experiment only
+leave block and genotype effects in:
+
+```{r}
+
+leaf.resid.noblock <- t(apply(e1and3.voom.leaf$E, 1, getResid,  e1and3.dge.leaf$samples$exp)) %>%
+  as.data.frame() %>%
+  mutate(genes=e1and3.voom.leaf$genes$genes) %>%
+  select(genes, everything())
+
+root.resid.noblock <- t(apply(e1and3.voom.root$E, 1, getResid,  e1and3.dge.root$samples$exp)) %>%
+  as.data.frame() %>%
+  mutate(genes=e1and3.voom.root$genes$genes) %>%
+  select(genes, everything())
+
+write_tsv(root.resid.noblock, "../output/voom_expression.e1and3.resid.exp_only.root.plusR500.txt.gz")
+write_tsv(leaf.resid.noblock, "../output/voom_expression.e1and3.resid.exp_only.leaf.plusR500.txt.gz")
+
+```
+
+
+## residuals remove experiment AND genotupe
+leave block effects in:
+
+```{r}
+
+leaf.resid.gt.exp <- t(apply(e1and3.voom.leaf$E, 1, getResid,  e1and3.dge.leaf$samples$exp, e1and3.dge.leaf$samples$genotype)) %>%
+  as.data.frame() %>%
+  mutate(genes=e1and3.voom.leaf$genes$genes) %>%
+  select(genes, everything())
+
+root.resid.gt.exp <- t(apply(e1and3.voom.root$E, 1, getResid,  e1and3.dge.root$samples$exp, e1and3.dge.root$samples$genotype )) %>%
+  as.data.frame() %>%
+  mutate(genes=e1and3.voom.root$genes$genes) %>%
+  select(genes, everything())
+
+write_tsv(root.resid.gt.exp, "../output/voom_expression.e1and3.resid.exp_gt.root.plusR500.txt.gz")
+write_tsv(leaf.resid.gt.exp, "../output/voom_expression.e1and3.resid.exp_gt.leaf.plusR500.txt.gz")
+
+```
+
+## residuals remove experiment AND genotupe AND block
+
+```{r}
+
+leaf.resid.gt.exp.block <- t(apply(e1and3.voom.leaf$E, 1, getResid,  e1and3.dge.leaf$samples$exp, e1and3.dge.leaf$samples$genotype, e1and3.dge.leaf$samples$block)) %>%
+  as.data.frame() %>%
+  mutate(genes=e1and3.voom.leaf$genes$genes) %>%
+  select(genes, everything())
+
+root.resid.gt.exp.block <- t(apply(e1and3.voom.root$E, 1, getResid,  e1and3.dge.root$samples$exp, e1and3.dge.root$samples$genotype, e1and3.dge.leaf$samples$block )) %>%
+  as.data.frame() %>%
+  mutate(genes=e1and3.voom.root$genes$genes) %>%
+  select(genes, everything())
+
+write_tsv(root.resid.gt.exp.block, "../output/voom_expression.e1and3.resid.exp_gt_block.root.plusR500.txt.gz")
+write_tsv(leaf.resid.gt.exp.block, "../output/voom_expression.e1and3.resid.exp_gt_block.leaf.plusR500.txt.gz")
+
+```
