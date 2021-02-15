@@ -39,6 +39,7 @@ oldmets <- read_csv("../output/all_unique_associated_metabolites.csv")
 
 ```{r}
 newmets <- mets %>% filter(!metabolite %in% oldmets$metabolite)
+newmets
 ```
 
 
