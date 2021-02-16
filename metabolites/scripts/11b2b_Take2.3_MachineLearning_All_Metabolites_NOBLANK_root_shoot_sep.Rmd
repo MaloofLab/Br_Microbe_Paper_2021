@@ -156,7 +156,7 @@ met_per_mg.root_PCA$x %>%
 ### raw
 
 #### leaf
-```{r, fig.asp=1}
+```{r}
 met_amt.leaf_PCA <- met_amt %>%
   select(matches("_leaf_")) %>%
   prcomp(center = FALSE, scale. = FALSE) #already centered and scaled
