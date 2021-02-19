@@ -25,7 +25,7 @@ leaflength <- read_csv("../../plant/output/leaf_lengths_metabolite.csv") %>%
   mutate(pot=str_pad(pot, width=3, pad="0"),
          sampleID=str_c("wyo", genotype, pot, sep="_"), 
          group=str_c(soil,genotype,trt,sep="_")) %>%
-  select(sampleID, group, leaf_avg_std)  %>%
+  select(sampleID, group, genotype, trt, leaf_avg_std)  %>%
   filter(!str_detect(group, "BLANK"))
 length(unique(leaflength$group))
 leaflength %>% arrange(sampleID)
@@ -79,7 +79,7 @@ leaflength
 
 #### leaf
 
-```{r, fig.asp=1}
+```{r}
 met_per_mg.leaf_PCA <- met_per_mg %>% 
   select(matches("_leaf_")) %>%
   prcomp(center = FALSE, scale. = FALSE) #already centered and scaled
@@ -95,9 +95,25 @@ tibble(variance=met_per_mg.leaf_PCA$sdev^2, PC=str_c("PC",
   ggtitle("percent variance explained, named, normalized leaf metabolites")
 ```
 
+
+## some t.tests
+
+```{r}
+met_per_mg.leaf_PCA$x %>%
+  as.data.frame() %>%
+  rownames_to_column("sampleID") %>%
+  left_join(leaflength) %>%
+  select(sampleID, genotype, trt, starts_with("PC")) %>%
+  summarise(across(starts_with("PC"), ~ t.test(.x ~ trt)$p.value)) %>%
+  pivot_longer(starts_with("PC")) %>%
+  arrange(value)
+```
+
+
+
 #### root
 
-```{r, fig.asp=1}
+```{r}
 met_per_mg.root_PCA <- met_per_mg %>% 
   select(matches("_root_")) %>%
   prcomp(center = FALSE, scale. = FALSE) #already centered and scaled
@@ -113,10 +129,34 @@ tibble(variance=met_per_mg.root_PCA$sdev^2, PC=str_c("PC",
   ggtitle("percent variance explained, named, normalized root metabolites")
 ```
 
+```{r}
+met_per_mg.root_PCA$x %>%
+  as.data.frame() %>%
+  rownames_to_column("sampleID") %>%
+  left_join(leaflength) %>%
+  select(sampleID, genotype, trt, starts_with("PC")) %>%
+  summarise(across(starts_with("PC"), ~ t.test(.x ~ trt)$p.value)) %>%
+  pivot_longer(starts_with("PC")) %>%
+  arrange(value)
+```
+
+PC2 and marginally PC5 
+
+```{r}
+met_per_mg.root_PCA$x %>%
+  as.data.frame() %>%
+  rownames_to_column("sampleID") %>%
+  left_join(leaflength) %>%
+  select(sampleID, genotype, trt, starts_with("PC")) %>%
+  summarise(across(starts_with("PC"), ~ t.test(.x ~ genotype)$p.value)) %>%
+  pivot_longer(starts_with("PC")) %>%
+  arrange(value)
+```
+
 ### raw
 
 #### leaf
-```{r, fig.asp=1}
+```{r}
 met_amt.leaf_PCA <- met_amt %>%
   select(matches("_leaf_")) %>%
   prcomp(center = FALSE, scale. = FALSE) #already centered and scaled
@@ -130,6 +170,30 @@ tibble(variance=met_amt.leaf_PCA$sdev^2, PC=str_c("PC",
   geom_col(fill="skyblue") + 
   geom_line(aes(y=cumulative_var), group="") +
   ggtitle("percent variance explained, named, raw leaf metabolites")
+```
+
+t.tests
+
+```{r}
+met_amt.leaf_PCA$x %>%
+  as.data.frame() %>%
+  rownames_to_column("sampleID") %>%
+  left_join(leaflength) %>%
+  select(sampleID, genotype, trt, starts_with("PC")) %>%
+  summarise(across(starts_with("PC"), ~ t.test(.x ~ trt)$p.value)) %>%
+  pivot_longer(starts_with("PC")) %>%
+  arrange(value)
+```
+
+```{r}
+met_amt.leaf_PCA$x %>%
+  as.data.frame() %>%
+  rownames_to_column("sampleID") %>%
+  left_join(leaflength) %>%
+  select(sampleID, genotype, trt, starts_with("PC")) %>%
+  summarise(across(starts_with("PC"), ~ t.test(.x ~ genotype)$p.value)) %>%
+  pivot_longer(starts_with("PC")) %>%
+  arrange(value)
 ```
 
 #### root
@@ -148,6 +212,30 @@ tibble(variance=met_amt.root_PCA$sdev^2, PC=str_c("PC",
   geom_line(aes(y=cumulative_var), group="") +
   ggtitle("percent variance explained, named, raw root metabolites")
 ```
+
+t.test
+```{r}
+met_amt.root_PCA$x %>%
+  as.data.frame() %>%
+  rownames_to_column("sampleID") %>%
+  left_join(leaflength) %>%
+  select(sampleID, genotype, trt, starts_with("PC")) %>%
+  summarise(across(starts_with("PC"), ~ t.test(.x ~ trt)$p.value)) %>%
+  pivot_longer(starts_with("PC")) %>%
+  arrange(value)
+```
+
+```{r}
+met_amt.root_PCA$x %>%
+  as.data.frame() %>%
+  rownames_to_column("sampleID") %>%
+  left_join(leaflength) %>%
+  select(sampleID, genotype, trt, starts_with("PC")) %>%
+  summarise(across(starts_with("PC"), ~ t.test(.x ~ genotype)$p.value)) %>%
+  pivot_longer(starts_with("PC")) %>%
+  arrange(value)
+```
+
 
 ## now try these in a penalized regression
 

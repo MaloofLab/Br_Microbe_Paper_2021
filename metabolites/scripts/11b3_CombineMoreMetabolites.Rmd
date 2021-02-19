@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Quick script to get all unique metabolites.  Here I compare to an exisiting to update
+Quick script to get all unique metabolites.  Here I compare to an existing to update
 
 ```{r}
 library(tidyverse)
@@ -39,10 +39,11 @@ oldmets <- read_csv("../output/all_unique_associated_metabolites.csv")
 
 ```{r}
 newmets <- mets %>% filter(!metabolite %in% oldmets$metabolite)
+newmets
 ```
 
 
 ```{r}
-mets %>% write_csv("../output/new_unique_associated_metabolites_02_09_21.csv")
+newmets %>% write_csv("../output/new_unique_associated_metabolites_02_09_21.csv")
 ```
 
