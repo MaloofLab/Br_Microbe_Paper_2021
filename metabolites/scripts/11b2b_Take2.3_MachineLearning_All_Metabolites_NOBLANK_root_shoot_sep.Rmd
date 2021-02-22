@@ -17,6 +17,7 @@ Previously (script 11b2) I filtered out unnamed metabolites.  Here I keep them a
 library(glmnet)
 library(relaimpo)
 library(tidyverse)
+library(broom)
 ```
 
 get leaflength data
@@ -517,6 +518,79 @@ per_mg_coef.tb
 
 ```
 
+## test PCs for sig assoc with trt
+
+### leaves
+lm with gt and trt
+```{r}
+lmtest <- met_per_mg.leaf_PCA$x %>%
+  as.data.frame() %>%
+  rownames_to_column("sampleID") %>%
+  left_join(leaflength) %>%
+  select(sampleID, genotype, trt, starts_with("PC")) %>%
+  pivot_longer(cols=starts_with("PC"), names_to = "PC") %>%
+  mutate(PC=str_c("leaf_", PC)) %>%
+  group_by(PC) %>%
+  nest() %>%
+  mutate(lm_add=map(data, ~ lm(value ~ genotype + trt, data=.)),
+         lm_int=map(data, ~ lm(value ~ genotype*trt, data=.)))
+
+```
+
+```{r}
+lmtest %>% mutate(broomtidy = map(lm_add, tidy)) %>%
+  unnest(broomtidy) %>%
+  select(PC, term, p.value) %>%
+  filter(! str_detect(term, "Intercept"),
+         p.value < 0.1) %>%
+  arrange(term, p.value)
+```
+
+```{r}
+lmtest %>% mutate(broomtidy = map(lm_int, broom::tidy)) %>%
+  unnest(broomtidy) %>%
+  select(PC, term, p.value) %>%
+  filter(! str_detect(term, "Intercept"),
+         p.value < 0.1) %>%
+  arrange(term, p.value)
+```
+
+### root
+
+```{r}
+lmtest <- met_per_mg.root_PCA$x %>%
+  as.data.frame() %>%
+  rownames_to_column("sampleID") %>%
+  left_join(leaflength) %>%
+  select(sampleID, genotype, trt, starts_with("PC")) %>%
+  pivot_longer(cols=starts_with("PC"), names_to = "PC") %>%
+  mutate(PC=str_c("root_", PC)) %>%
+  group_by(PC) %>%
+  nest() %>%
+  mutate(lm_add=map(data, ~ lm(value ~ genotype + trt, data=.)),
+         lm_int=map(data, ~ lm(value ~ genotype*trt, data=.)))
+
+```
+
+```{r}
+lmtest %>% mutate(broomtidy = map(lm_add, tidy)) %>%
+  unnest(broomtidy) %>%
+  select(PC, term, p.value) %>%
+  filter(! str_detect(term, "Intercept"),
+         p.value < 0.1) %>%
+  arrange(term, p.value)
+```
+
+```{r}
+lmtest %>% mutate(broomtidy = map(lm_int, broom::tidy)) %>%
+  unnest(broomtidy) %>%
+  select(PC, term, p.value) %>%
+  filter(! str_detect(term, "Intercept"),
+         p.value < 0.1) %>%
+  arrange(term, p.value)
+```
+
+
 Checkout the rotations.  
 
 ```{r}
@@ -742,6 +816,79 @@ amt_coef.tb <- amt_relimp %>%
 amt_coef.tb
 
 ```
+
+## test PCs for sig assoc with trt
+
+### leaves
+lm with gt and trt
+```{r}
+lmtest <- met_amt.leaf_PCA$x %>%
+  as.data.frame() %>%
+  rownames_to_column("sampleID") %>%
+  left_join(leaflength) %>%
+  select(sampleID, genotype, trt, starts_with("PC")) %>%
+  pivot_longer(cols=starts_with("PC"), names_to = "PC") %>%
+  mutate(PC=str_c("leaf_", PC)) %>%
+  group_by(PC) %>%
+  nest() %>%
+  mutate(lm_add=map(data, ~ lm(value ~ genotype + trt, data=.)),
+         lm_int=map(data, ~ lm(value ~ genotype*trt, data=.)))
+
+```
+
+```{r}
+lmtest %>% mutate(broomtidy = map(lm_add, tidy)) %>%
+  unnest(broomtidy) %>%
+  select(PC, term, p.value) %>%
+  filter(! str_detect(term, "Intercept"),
+         p.value < 0.1) %>%
+  arrange(term, p.value)
+```
+
+```{r}
+lmtest %>% mutate(broomtidy = map(lm_int, broom::tidy)) %>%
+  unnest(broomtidy) %>%
+  select(PC, term, p.value) %>%
+  filter(! str_detect(term, "Intercept"),
+         p.value < 0.1) %>%
+  arrange(term, p.value)
+```
+
+### root
+
+```{r}
+lmtest <- met_amt.root_PCA$x %>%
+  as.data.frame() %>%
+  rownames_to_column("sampleID") %>%
+  left_join(leaflength) %>%
+  select(sampleID, genotype, trt, starts_with("PC")) %>%
+  pivot_longer(cols=starts_with("PC"), names_to = "PC") %>%
+  mutate(PC=str_c("root_", PC)) %>%
+  group_by(PC) %>%
+  nest() %>%
+  mutate(lm_add=map(data, ~ lm(value ~ genotype + trt, data=.)),
+         lm_int=map(data, ~ lm(value ~ genotype*trt, data=.)))
+
+```
+
+```{r}
+lmtest %>% mutate(broomtidy = map(lm_add, tidy)) %>%
+  unnest(broomtidy) %>%
+  select(PC, term, p.value) %>%
+  filter(! str_detect(term, "Intercept"),
+         p.value < 0.1) %>%
+  arrange(term, p.value)
+```
+
+```{r}
+lmtest %>% mutate(broomtidy = map(lm_int, broom::tidy)) %>%
+  unnest(broomtidy) %>%
+  select(PC, term, p.value) %>%
+  filter(! str_detect(term, "Intercept"),
+         p.value < 0.1) %>%
+  arrange(term, p.value)
+```
+
 
 Checkout the rotations.  
 

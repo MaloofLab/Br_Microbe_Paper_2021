@@ -19,6 +19,7 @@ Also I will PC separately for root and leaf.
 library(glmnet)
 library(relaimpo)
 library(tidyverse)
+library(broom)
 ```
 
 get leaflength data
@@ -90,32 +91,6 @@ tibble(variance=met_per_mg.leaf_PCA$sdev^2, PC=str_c("PC",
   geom_col(fill="skyblue") + 
   geom_line(aes(y=cumulative_var), group="") +
   ggtitle("percent variance explained, named, normalized leaf metabolites")
-```
-
-## test PCs for sig
-
-t-test on (joined) treatment
-```{r}
-met_per_mg.leaf_PCA$x %>%
-  as.data.frame() %>%
-  rownames_to_column("sampleID") %>%
-  left_join(leaflength) %>%
-  mutate(trt=ifelse(str_detect(trt, "dead|BLANK"), "deadBLANK", trt)) %>%
-  select(sampleID, genotype, trt, starts_with("PC")) %>%
-  summarise(across(starts_with("PC"), ~ t.test(.x ~ trt)$p.value)) %>%
-  pivot_longer(starts_with("PC")) %>%
-  arrange(value)
-```
-anova
-```{r}
-met_per_mg.leaf_PCA$x %>%
-  as.data.frame() %>%
-  rownames_to_column("sampleID") %>%
-  left_join(leaflength) %>%
-  select(sampleID, genotype, trt, starts_with("PC")) %>%
-  summarise(across(starts_with("PC"), ~ summary(aov(.x ~ genotype*trt))[[1]][,"Pr(>F)"])) %>%
-  pivot_longer(starts_with("PC")) %>%
-  arrange(value)
 ```
 
 
@@ -453,6 +428,80 @@ per_mg_coef.tb
 
 ```
 
+## test PCs for sig assoc with trt
+
+### leaves
+lm with gt and trt
+```{r}
+lmtest <- met_per_mg.leaf_PCA$x %>%
+  as.data.frame() %>%
+  rownames_to_column("sampleID") %>%
+  left_join(leaflength) %>%
+  select(sampleID, genotype, trt, starts_with("PC")) %>%
+  mutate(trt=ifelse(str_detect(trt, "dead|BLANK"), "deadBLANK", trt)) %>%
+  pivot_longer(cols=starts_with("PC"), names_to = "PC") %>%
+  mutate(PC=str_c("leaf_", PC)) %>%
+  group_by(PC) %>%
+  nest() %>%
+  mutate(lm_add=map(data, ~ lm(value ~ genotype + trt, data=.)),
+         lm_int=map(data, ~ lm(value ~ genotype*trt, data=.)))
+
+```
+
+```{r}
+lmtest %>% mutate(broomtidy = map(lm_add, tidy)) %>%
+  unnest(broomtidy) %>%
+  select(PC, term, p.value) %>%
+  filter(! str_detect(term, "Intercept"),
+         p.value < 0.1) %>%
+  arrange(term, p.value)
+```
+
+```{r}
+lmtest %>% mutate(broomtidy = map(lm_int, broom::tidy)) %>%
+  unnest(broomtidy) %>%
+  select(PC, term, p.value) %>%
+  filter(! str_detect(term, "Intercept"),
+         p.value < 0.1) %>%
+  arrange(term, p.value)
+```
+
+### root
+
+```{r}
+lmtest <- met_per_mg.root_PCA$x %>%
+  as.data.frame() %>%
+  rownames_to_column("sampleID") %>%
+  left_join(leaflength) %>%
+  select(sampleID, genotype, trt, starts_with("PC")) %>%
+  mutate(trt=ifelse(str_detect(trt, "dead|BLANK"), "deadBLANK", trt)) %>%
+  pivot_longer(cols=starts_with("PC"), names_to = "PC") %>%
+  mutate(PC=str_c("root_", PC)) %>%
+  group_by(PC) %>%
+  nest() %>%
+  mutate(lm_add=map(data, ~ lm(value ~ genotype + trt, data=.)),
+         lm_int=map(data, ~ lm(value ~ genotype*trt, data=.)))
+
+```
+
+```{r}
+lmtest %>% mutate(broomtidy = map(lm_add, tidy)) %>%
+  unnest(broomtidy) %>%
+  select(PC, term, p.value) %>%
+  filter(! str_detect(term, "Intercept"),
+         p.value < 0.1) %>%
+  arrange(term, p.value)
+```
+
+```{r}
+lmtest %>% mutate(broomtidy = map(lm_int, broom::tidy)) %>%
+  unnest(broomtidy) %>%
+  select(PC, term, p.value) %>%
+  filter(! str_detect(term, "Intercept"),
+         p.value < 0.1) %>%
+  arrange(term, p.value)
+```
+
 Checkout the rotations.  
 
 
@@ -678,6 +727,81 @@ amt_coef.tb <- amt_relimp@lmg %>% as.matrix() %>% as.data.frame() %>%
 
 amt_coef.tb
 
+```
+
+
+## test PCs for sig assoc with trt
+
+### leaves
+lm with gt and trt
+```{r}
+lmtest <- met_amt.leaf_PCA$x %>%
+  as.data.frame() %>%
+  rownames_to_column("sampleID") %>%
+  left_join(leaflength) %>%
+  select(sampleID, genotype, trt, starts_with("PC")) %>%
+  mutate(trt=ifelse(str_detect(trt, "dead|BLANK"), "deadBLANK", trt)) %>%
+  pivot_longer(cols=starts_with("PC"), names_to = "PC") %>%
+  mutate(PC=str_c("leaf_", PC)) %>%
+  group_by(PC) %>%
+  nest() %>%
+  mutate(lm_add=map(data, ~ lm(value ~ genotype + trt, data=.)),
+         lm_int=map(data, ~ lm(value ~ genotype*trt, data=.)))
+
+```
+
+```{r}
+lmtest %>% mutate(broomtidy = map(lm_add, tidy)) %>%
+  unnest(broomtidy) %>%
+  select(PC, term, p.value) %>%
+  filter(! str_detect(term, "Intercept"),
+         p.value < 0.1) %>%
+  arrange(term, p.value)
+```
+
+```{r}
+lmtest %>% mutate(broomtidy = map(lm_int, broom::tidy)) %>%
+  unnest(broomtidy) %>%
+  select(PC, term, p.value) %>%
+  filter(! str_detect(term, "Intercept"),
+         p.value < 0.1) %>%
+  arrange(term, p.value)
+```
+
+### root
+
+```{r}
+lmtest <- met_amt.root_PCA$x %>%
+  as.data.frame() %>%
+  rownames_to_column("sampleID") %>%
+  left_join(leaflength) %>%
+  select(sampleID, genotype, trt, starts_with("PC")) %>%
+  mutate(trt=ifelse(str_detect(trt, "dead|BLANK"), "deadBLANK", trt)) %>%
+  pivot_longer(cols=starts_with("PC"), names_to = "PC") %>%
+  mutate(PC=str_c("root_", PC)) %>%
+  group_by(PC) %>%
+  nest() %>%
+  mutate(lm_add=map(data, ~ lm(value ~ genotype + trt, data=.)),
+         lm_int=map(data, ~ lm(value ~ genotype*trt, data=.)))
+
+```
+
+```{r}
+lmtest %>% mutate(broomtidy = map(lm_add, tidy)) %>%
+  unnest(broomtidy) %>%
+  select(PC, term, p.value) %>%
+  filter(! str_detect(term, "Intercept"),
+         p.value < 0.1) %>%
+  arrange(term, p.value)
+```
+
+```{r}
+lmtest %>% mutate(broomtidy = map(lm_int, broom::tidy)) %>%
+  unnest(broomtidy) %>%
+  select(PC, term, p.value) %>%
+  filter(! str_detect(term, "Intercept"),
+         p.value < 0.1) %>%
+  arrange(term, p.value)
 ```
 
 Checkout the rotations.  
