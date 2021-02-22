@@ -1,0 +1,41 @@
+---
+title: "PMN_Pathway Collage from an Omics Dataset"
+author: "Kazunari Nozue"
+date: "2/15/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# [Pathway Collage from an Omics Dataset](https://pmn.plantcyc.org/PToolsWebsiteHowto.shtml#celOverview)
+
+```{r}
+library(tidyverse);library(readxl)
+```
+
+# Automated + mannual compound name curration for PMN
+* automated curation by PMN (imported to SmartTable)
+* manual curation (added to the imported SmartTable) by using search engine in PMN and "add" function.
+* summarized in "new_unique_associated_metabolites_02_09_21_PMNcuration.xlsx"
+
+```{r}
+mets.PMN <- read_xlsx("../output/new_unique_associated_metabolites_02_09_21_PMNcuration.xlsx")
+
+```
+
+# read
+```{r}
+met_amt_rotation_out <- read_csv("../output/Leaf_associated_metabolites_raw_NOBLANK.csv")
+
+```
+
+# combine metabolite conversion table
+```{r}
+met_amt_rotation_out %>% inner_join(mets.PMN,by="metabolite") %>% dplyr::select(Compound_id,PC,loading) %>% #group_by(PC) %>% summarize(n())
+  filter(PC=="root_PC3") %>% write_tsv(file.path("..","output","Leaf_associated_metabolites_raw_NOBLANK.PMN.root_PC3.tsv"))
+```
+
+# How to map the metabolite data onto PMN cellular view? (under construction)
+* 
