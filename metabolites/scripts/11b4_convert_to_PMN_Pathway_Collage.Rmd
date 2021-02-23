@@ -22,20 +22,81 @@ library(tidyverse);library(readxl)
 
 ```{r}
 mets.PMN <- read_xlsx("../output/new_unique_associated_metabolites_02_09_21_PMNcuration.xlsx")
+mets.PMN <- mets.PMN %>% filter(!Compound_id=="0")
 
 ```
 
-# read
+# read csv file
 ```{r}
 met_amt_rotation_out <- read_csv("../output/Leaf_associated_metabolites_raw_NOBLANK.csv")
 
 ```
 
-# combine metabolite conversion table
+# combine metabolite conversion table, which is readable by PMN
 ```{r}
 met_amt_rotation_out %>% inner_join(mets.PMN,by="metabolite") %>% dplyr::select(Compound_id,PC,loading) %>% #group_by(PC) %>% summarize(n())
   filter(PC=="root_PC3") %>% write_tsv(file.path("..","output","Leaf_associated_metabolites_raw_NOBLANK.PMN.root_PC3.tsv"))
 ```
 
 # How to map the metabolite data onto PMN cellular view? (under construction)
-* 
+* https://pmn.plantcyc.org/overviewsWeb/celOv.shtml?orgid=BRAPA_FPSC
+* Operations > Overlay Experimental Data (Omics Viewer) > Upload Data from File
+* Choose File, "Leaf_associated_metabolites_raw_NOBLANK.PMN.root_PC3.tsv"
+* Select "Compound names and/or identifiers" under "Items in the first column of the file are:"
+* Input "2" in "Data columns to use"
+* "Relative" in "Select type of value"
+* "0-centered scale" for Data values uses a 
+* "No ratio of data columns"
+* Show data: "As a Pathway Collage"
+
+# Pathways to genes tables
+# from compounds to genes
+```{r}
+#brapa_fpsccyc_fast <- read_csv(file.path("..","..","..","Annotation","input","brapa_fpsccyc.fasta"))
+# compounds
+brapa_fpsccyc_compounds.20180702 <- read_tsv(file.path("..","..","annotation","input","PMN","brapa_fpsccyc_compounds.20180702"))
+write_csv(brapa_fpsccyc_compounds.20180702,file=file.path("..","..","annotation","input","PMN","brapa_fpsccyc_compounds.20180702.csv"))
+brapa_fpsccyc_compounds.20180702
+# pathways
+brapa_fpsccyc_pathways.20180702 <- read_tsv(file.path("..","..","annotation","input","PMN","brapa_fpsccyc_pathways.20180702"))
+brapa_fpsccyc_pathways.20180702
+```
+
+# combine them
+```{r}
+brapa_fpsccyc_compounds.20180702_to_genes <- brapa_fpsccyc_compounds.20180702 %>% inner_join(brapa_fpsccyc_pathways.20180702,by="EC") #%>% #View()
+#write_csv(brapa_fpsccyc_compounds.20180702_to_genes,file=file.path("..","output","brapa_fpsccyc_compounds.20180702_to_genes.csv.gz"))
+# 
+brapa_fpsccyc_compounds.20180702_to_genes %>% group_by(Compound_id) %>% summarize(num=n())
+```
+
+
+# comparison PMN compund names and Julin's ML_leaf_associated_normalized_metabolites 
+```{r}
+met_amt_rotation_out.brapa_fpsccyc_compounds.20180702_to_genes <- met_amt_rotation_out %>% inner_join(mets.PMN,by="metabolite") %>% dplyr::select(Compound_id,PC,loading) %>% mutate(Compound_id=str_to_upper(Compound_id)) %>%  inner_join(brapa_fpsccyc_compounds.20180702_to_genes,by="Compound_id") 
+met_amt_rotation_out.brapa_fpsccyc_compounds.20180702_to_genes %>% View()
+# write csv
+write_csv(met_amt_rotation_out.brapa_fpsccyc_compounds.20180702_to_genes,file.path("..","output","met_amt_rotation_out.brapa_fpsccyc_compounds.20180702_to_genes.csv"))
+# how many metabolites in met_amt_rotation_out.brapa_fpsccyc_compounds.20180702_to_genes?
+# the original metabolite
+met_amt_rotation_out %>% group_by(metabolite) %>% summarise(n=n()) # 77
+# met_amt_rotation_out (corresponding "Compound_id" in PMN)
+met_amt_rotation_out %>% inner_join(mets.PMN,by="metabolite") %>% dplyr::select(Compound_id,PC,loading) %>% group_by(Compound_id) %>% summarise(n=n()) # 61
+# to_genes
+met_amt_rotation_out.brapa_fpsccyc_compounds.20180702_to_genes %>% group_by(Compound_id) %>% summarise(n=n()) # 18 compound_id ... too small. why?
+
+#
+ML_leaf_associated_normalized_metabolites$metabolite %in% unique(brapa_fpsccyc_compounds.20180702_to_genes$Compound_common_name) %>% summary()
+# only 8 TRUE. Needs to do ambiguous (or partial) search on the database? How to?
+```
+
+
+
+
+
+
+
+# How to add omics data to a Pathway Collage
+* File > Add or replace omics data
+* Overlay our RNAse data. Which? (option 1) live/dead relative expression values of soil treatment associated genes ("Yes" in GSEA) among leaf length correlated modules.(option 2)
+
