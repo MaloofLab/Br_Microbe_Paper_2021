@@ -15,8 +15,6 @@ Take a different approach with metabolites:
 2) Ask if those are associated with leaf length
 
 ```{r}
-library(glmnet)
-library(relaimpo)
 library(tidyverse)
 library(broom)
 ```
@@ -107,6 +105,8 @@ met_per_mg_lm_results %>% ungroup() %>%
 
 met_per_mg_lm_results %>% filter(FDR.trt < 0.1 & FDR.leaf < 0.1) %>% 
   select(metabolite, FDR.trt, FDR.leaf)
+
+met_per_mg_lm_results %>% select(-term.trt, - term.leaf) %>% write_csv("../output/met_per_mg_lm_full.csv")
 ```
 
 raw
@@ -137,6 +137,8 @@ met_amt_lm_results %>% ungroup() %>%
   summarize(sig.trt=sum(FDR.trt<0.1), sig.leaf=sum(FDR.leaf<0.1), sig.both=sum(FDR.trt<0.1&FDR.leaf<0.1), count=n())
 
 met_amt_lm_results %>% filter(FDR.trt < 0.1 & FDR.leaf < 0.1) %>% select(metabolite, FDR.trt, FDR.leaf)
+
+met_amt_lm_results %>% select(-term.trt, - term.leaf) %>% write_csv("../output/met_amt_lm_full.csv")
 ```
 
 
@@ -176,6 +178,9 @@ met_per_mg_lm_results_nb %>% ungroup() %>%
   summarize(sig.trt=sum(FDR.trt<0.1), sig.leaf=sum(FDR.leaf<0.1), sig.both=sum(FDR.trt<0.1&FDR.leaf<0.1), count=n())
 
 met_per_mg_lm_results_nb %>% filter(FDR.trt < 0.1 & FDR.leaf < 0.1) %>% select(metabolite, FDR.trt, FDR.leaf)
+
+met_per_mg_lm_results %>% select(-term.trt, - term.leaf) %>% write_csv("../output/met_per_mg_lm_NOBLANK.csv")
+
 ```
 
 raw
@@ -206,4 +211,7 @@ met_amt_lm_results_nb %>% ungroup() %>%
   summarize(sig.trt=sum(FDR.trt<0.1), sig.leaf=sum(FDR.leaf<0.1), sig.both=sum(FDR.trt<0.1&FDR.leaf<0.1), count=n())
 
 met_amt_lm_results_nb %>% filter(FDR.trt < 0.1 & FDR.leaf < 0.1) %>% select(FDR.trt, FDR.leaf)
+
+met_amt_lm_results %>% select(-term.trt, - term.leaf) %>% write_csv("../output/met_amt_lm_NOBLANK.csv")
+
 ```
