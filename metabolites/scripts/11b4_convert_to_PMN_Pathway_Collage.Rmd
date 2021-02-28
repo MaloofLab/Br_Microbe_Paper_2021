@@ -12,7 +12,15 @@ knitr::opts_chunk$set(echo = TRUE)
 # [Pathway Collage from an Omics Dataset](https://pmn.plantcyc.org/PToolsWebsiteHowto.shtml#celOverview)
 
 ```{r}
-library(tidyverse);library(readxl)
+rm(list=ls())
+library(tidyverse);library(readr);library(readxl);library(openxlsx)
+# The following setting is important for WGCNA, do not omit.
+options(stringsAsFactors = FALSE)
+# install.packages(c("dynamicTreeCut", "cluster", "flashClust", "Hmisc", "reshape", "foreach", "doParallel") ) 
+library(WGCNA);library(flashClust) # for WGCNA in Whitney
+#allowWGCNAThreads(nThreads = NULL) # for Whitney
+#enableWGCNAThreads(4) # for Whitney
+
 ```
 
 # Automated + mannual compound name curration for PMN
@@ -99,4 +107,121 @@ ML_leaf_associated_normalized_metabolites$metabolite %in% unique(brapa_fpsccyc_c
 # How to add omics data to a Pathway Collage
 * File > Add or replace omics data
 * Overlay our RNAse data. Which? (option 1) live/dead relative expression values of soil treatment associated genes ("Yes" in GSEA) among leaf length correlated modules.(option 2)
+
+# Julin's Machine Learning selected modules
+```{r}
+# reading Julin's results of penalized regression (see slide)
+ElasticNet0.5_LOO_prop_var <- read_csv(file.path("..","output","ElasticNet0.5_LOO_prop_var.csv"))
+ElasticNet0.5_LOO_prop_var <- ElasticNet0.5_LOO_prop_var %>% mutate(J.module=str_remove(ME,"ME")) %>% separate(J.module,into=c("module","tissue")) %>% mutate(module=str_to_upper(module)) %>% unite(tissue.module,c("tissue","module"),sep=".") 
+```
+
+
+# reading GSEA results (all WGCNA modules)
+# GSEA analysis with WGCNA modules
+## read reports 
+## function for oct30 reports copied from "10_WGCNA_including_R500.Rmd"
+```{r}
+read.gsea_report_files_WGCNA <- function(gsea_report_path,GSEA.FDR.cutoff,tp=c("resid","removeblock"),data="exp_gt_block") {
+# open xsl files and save as csvs
+# gsea_report
+gsea_report_files <- list.files(path=gsea_report_path,full.names=FALSE,include.dirs = FALSE,recursive=TRUE, pattern="(gsea_report_for)([[:print:]]+)(\\.xls)")
+# ifelse(setCutoff=="Total", x <- "Total",if(setCutoff<10) {x <-  str_c("In0",setCutoff)} else {x <- str_c("In",setCutoff)})
+
+# gsea_report_files <- gsea_report_files[str_detect(gsea_report_files,x)]
+# print(str_c(x,"orless"))
+
+gsea_report_files
+# gsea_report (full name)
+gsea_report_files2 <- list.files(path=gsea_report_path,full.names=TRUE,recursive=TRUE, pattern="(gsea_report_for)([[:print:]]+)(\\.xls)")
+#gsea_report_files2 <- gsea_report_files2[str_detect(gsea_report_files2,x)] 
+#gsea_report_files2
+# read xls file (file name is "xls", actually tsv. That is why read_xls did not work)
+GSEA_reports<-lapply(gsea_report_files2, function(x) read_tsv(file=file.path(x)))
+# name
+names(GSEA_reports) <- gsea_report_files
+  gsub(".xls","",gsub("([[:print:]]+)(/)([[:print:]]+)","\\3",gsea_report_files))
+# convert list into one data.frame
+GSEA_reports.DF <- GSEA_reports %>% enframe(name="report") %>% unnest(value)
+#GSEA_reports.DF %>% View()
+# filter only significnt `FDR q-val` (GSEA.FDR.cutoff)
+GSEA_reports.DF <- GSEA_reports.DF %>% filter(`FDR q-val`< GSEA.FDR.cutoff)
+# 
+GSEA_reports.DF <- GSEA_reports.DF %>% separate(report,into=c("report2","report3"),sep="/") %>% mutate(report2=str_replace(report2,"remove.block","removeblock")) %>% separate(report2,into=c("exp","type","type2","tissue","categories"),sep="\\.",fill="left",extra="drop") 
+#
+GSEA_reports.DF <- GSEA_reports.DF %>% filter(type2==data) # works?
+#GSEA_reports.DF$LorD <- gsub("(gsea_report_for_)(0|1)([[:print:]]+)","\\2",GSEA_reports.DF$report3)
+#GSEA_reports.DF <- GSEA_reports.DF %>% mutate(LorD=ifelse(LorD==0,"Live","Dead"))
+GSEA_reports.DF %>% View()
+ifelse(dim(GSEA_reports.DF)[1]==0,print("no significnat categories"),return(GSEA_reports.DF))
+}
+```
+
+
+
+
+
+
+# data: leaf.voom5.module or root,voom5.module (WGCNA modules calculated either from voom_expression.e1and3.resid.exp_gt.root.plusR500 or voom_expression.e1and3.resid.exp_gt.leaf.plusR500). Expression data is "voom_expression.e1and3.resid.exp_gt_block.root.plusR500.txt" or "voom_expression.e1and3.resid.exp_gt_block.leaf.plusR500.txt
+```{r}
+type="resid";cutoff <- 1;
+gsea_report_path=file.path("~","Box","gsea_home","output","oct30")
+GSEA_reports.DF <- read.gsea_report_files_WGCNA(gsea_report_path,GSEA.FDR.cutoff=cutoff) # 
+# select root.voom5 and leaf.voom5 data for categories
+GSEA_reports.DF <- GSEA_reports.DF %>% filter(str_detect(categories,"voom5")) #%>% View()
+
+# rename "NAME" column (for module names)
+GSEA_reports.DF <- GSEA_reports.DF %>% mutate(NAME= str_remove(NAME,"MODULE.")) #%>%
+  #str_replace("ROOT.VOOM5","voom_expression.e1and3.resid.exp_gt.root.plusR500") %>%
+  #str_replace("LEAF.VOOM5","voom_expression.e1and3.resid.exp_gt.leaf.plusR500"))  #%>% View()
+# adding L or D info
+GSEA_reports.DF$LorD <- gsub("(gsea_report_for_)(0|1)([[:print:]]+)","\\2",GSEA_reports.DF$report3)
+GSEA_reports.DF <- GSEA_reports.DF %>% mutate(LorD=ifelse(LorD==0,"Live","Dead"))
+GSEA_reports.DF %>% View()
+```
+
+# selecting GSEA results for Machine Learning selected modules
+```{r}
+GSEA_reports.DF.MLselected <- 
+GSEA_reports.DF %>% mutate(NAME=NAME %>% str_remove_all(".VOOM5") %>% str_replace_all("LEAF.","leaf.") %>% str_replace_all("ROOT.","root.")) %>% 
+inner_join(ElasticNet0.5_LOO_prop_var,by=c("NAME"="tissue.module")) #%>% View()
+```
+
+
+
+
+
+
+
+### copy & paste from "10_GSEA_first_then_leaf_length_cor_with_WGCNA_including_R500.Rmd"
+# using map() or pmap() to add "core" gene list tata to each row of GSEA_reports.DF.all (ended up to use old Loop way...)
+```{r}
+# loop (though this is not smart R way)
+coregenes <-list()
+temp <- modTrait.leaf_avg.RP2.cor.GSEA.summary %>% filter(FDR < 0.3 & `FDR q-val`< 0.3)
+for(i in 1:nrow(temp)) {
+  coregenes[[i]] <- read.coregenes(xls.file.in.GSEA_reports=as_vector(temp[i,"report3"]),
+                                   category.name = as_vector(temp[i,grep("MSigDB",names(temp),value=TRUE)]))
+}
+names(coregenes) <- temp$voom.module
+# select genes with "yes" in enrichment
+coregenes.yes <- list()
+for(i in 1:nrow(temp)) {
+  coregenes.yes[[i]] <- coregenes[[i]] %>% filter(`CORE ENRICHMENT`=="Yes") %>% dplyr::select(PROBE) %>% mutate(presence=as.numeric(1))
+}
+names(coregenes.yes) <- names(coregenes)
+# combine (different length of column)
+temp2 <- Br.v3.0anno.At.BLAST.highscore %>% dplyr::select(name,AGI,At_symbol, At_full_name,At_short_description) %>% left_join(coregenes.yes[[1]], by=c("name"="PROBE"))
+for(i in 2:length(names(coregenes.yes))) {
+  temp2 <- temp2 %>% left_join(coregenes.yes[[i]], by=c("name"="PROBE"))
+}
+temp2 %>% View()
+# rename colnames
+colnames(temp2)[str_detect(colnames(temp2),"presence")] <- names(coregenes.yes)
+coregenes.yes.DF <- temp2
+coregenes.yes.DF %>% View()
+# replcae NA into 0
+coregenes.yes.DF[is.na(coregenes.yes.DF)] <- 0
+```
+
+
 
