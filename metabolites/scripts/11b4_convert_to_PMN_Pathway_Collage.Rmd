@@ -3,6 +3,8 @@ title: "PMN_Pathway Collage from an Omics Dataset"
 author: "Kazunari Nozue"
 date: "2/15/2021"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -89,29 +91,19 @@ write_csv(met_amt_rotation_out.brapa_fpsccyc_compounds.20180702_to_genes,file.pa
 # the original metabolite
 met_amt_rotation_out %>% group_by(metabolite) %>% summarise(n=n()) # 77
 # met_amt_rotation_out (corresponding "Compound_id" in PMN)
-met_amt_rotation_out %>% inner_join(mets.PMN,by="metabolite") %>% dplyr::select(Compound_id,PC,loading) %>% group_by(Compound_id) %>% summarise(n=n()) # 61
-# to_genes
-met_amt_rotation_out.brapa_fpsccyc_compounds.20180702_to_genes %>% group_by(Compound_id) %>% summarise(n=n()) # 18 compound_id ... too small. why?
-
-#
-ML_leaf_associated_normalized_metabolites$metabolite %in% unique(brapa_fpsccyc_compounds.20180702_to_genes$Compound_common_name) %>% summary()
-# only 8 TRUE. Needs to do ambiguous (or partial) search on the database? How to?
+met_amt_rotation_out %>% inner_join(mets.PMN,by="metabolite") %>% dplyr::select(Compound_id,PC,loading) %>% group_by(Compound_id) %>% summarise(n=n()) # 59
+# to_genes (something is wrong)
+met_amt_rotation_out.brapa_fpsccyc_compounds.20180702_to_genes %>% group_by(Compound_id) %>% summarise(n=n()) # 14 compound_id ... too small. why?????
 ```
-
-
-
-
-
-
 
 # How to add omics data to a Pathway Collage
 * File > Add or replace omics data
 * Overlay our RNAse data. Which? (option 1) live/dead relative expression values of soil treatment associated genes ("Yes" in GSEA) among leaf length correlated modules.(option 2)
 
-# Julin's Machine Learning selected modules
+# Julin's Machine Learning selected WGCNA modules
 ```{r}
 # reading Julin's results of penalized regression (see slide)
-ElasticNet0.5_LOO_prop_var <- read_csv(file.path("..","output","ElasticNet0.5_LOO_prop_var.csv"))
+ElasticNet0.5_LOO_prop_var <- read_csv(file.path("..","..","plant","output","ElasticNet0.5_LOO_prop_var.csv")) # fixed
 ElasticNet0.5_LOO_prop_var <- ElasticNet0.5_LOO_prop_var %>% mutate(J.module=str_remove(ME,"ME")) %>% separate(J.module,into=c("module","tissue")) %>% mutate(module=str_to_upper(module)) %>% unite(tissue.module,c("tissue","module"),sep=".") 
 ```
 
@@ -186,7 +178,32 @@ GSEA_reports.DF %>% mutate(NAME=NAME %>% str_remove_all(".VOOM5") %>% str_replac
 inner_join(ElasticNet0.5_LOO_prop_var,by=c("NAME"="tissue.module")) #%>% View()
 ```
 
+# modify this
+```{r}
 
+
+modTrait.leaf_avg.RP2.cor.GSEA.summary %>% View()
+gsea_report_path=file.path("~","Box","gsea_home","output","aug15")
+xls.file <- modTrait.leaf_avg.RP2.cor.GSEA.summary %>% dplyr::select(report3) %>% as_vector()
+
+# function
+read.coregenes <- function(default.path=gsea_report_path,
+                           xls.file.in.GSEA_reports=report3,
+                           category.name = NAME
+)
+  
+{
+  gsea_report_files <- list.files(path=default.path,full.names=FALSE,include.dirs = FALSE,recursive=TRUE, pattern="(gsea_report_for)([[:print:]]+)(\\.xls)")
+  
+  temp.dir <- gsea_report_files[str_detect(gsea_report_files,pattern=xls.file.in.GSEA_reports)] %>% str_split(pattern="/") %>% unlist() %>% .[1]
+  print(str_c("temp.dir is ",temp.dir))
+  # xls.file.name to read core gene list file
+  xls.file.name <- str_c(category.name,".xls") #%>% str_replace("UP","FC_UP") %>% str_replace("DOWN","FC_DOWN")
+  # 
+  core.data <- read_tsv(file.path(default.path,temp.dir,xls.file.name)) %>% mutate(dirname=temp.dir) # actually the xls file is tsv files (found by Julin...) 
+  return(core.data)
+}  
+```
 
 
 
@@ -197,12 +214,13 @@ inner_join(ElasticNet0.5_LOO_prop_var,by=c("NAME"="tissue.module")) #%>% View()
 ```{r}
 # loop (though this is not smart R way)
 coregenes <-list()
-temp <- modTrait.leaf_avg.RP2.cor.GSEA.summary %>% filter(FDR < 0.3 & `FDR q-val`< 0.3)
+temp <- GSEA_reports.DF %>% filter(`FDR q-val`< 0.3)
 for(i in 1:nrow(temp)) {
   coregenes[[i]] <- read.coregenes(xls.file.in.GSEA_reports=as_vector(temp[i,"report3"]),
                                    category.name = as_vector(temp[i,grep("MSigDB",names(temp),value=TRUE)]))
 }
-names(coregenes) <- temp$voom.module
+names(coregenes) <- temp$voom.module # none. needs to fix
+
 # select genes with "yes" in enrichment
 coregenes.yes <- list()
 for(i in 1:nrow(temp)) {
