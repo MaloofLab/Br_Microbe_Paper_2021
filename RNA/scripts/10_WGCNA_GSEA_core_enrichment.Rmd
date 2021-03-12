@@ -208,7 +208,7 @@ bring it all together (copied from 11_machine_learning.Rmd)
 d <- leaf %>% dplyr::select(sampleID, leaf_avg_std) %>%
   inner_join(leafMEs, by="sampleID") %>% 
   inner_join(rootMEs, by="sampleID") %>% 
-  dplyr::select(-sampleID) %>%
+  # dplyr::select(-sampleID) %>% # Kazu need sampleID later
   as_data_frame()
 d
 ```
@@ -219,11 +219,15 @@ d
 # new ver (tissue.module lowercase)
 ElasticNet0.5_multiCV_Pct_var.module <- ElasticNet0.5_multiCV_Pct_var %>% dplyr::select(tissue.module) %>% as_vector()
 # new ver. use anti_join()
-nonElasticNet0.5_multiCV_Pct_var.module <- tibble(all = colnames(d)[-1]) %>% separate(all, c("module","tissue")) %>% mutate(module=str_remove(module,"ME")) %>% unite(tissue.module.all,tissue,module,sep=".") %>% anti_join(ElasticNet0.5_multiCV_Pct_var,by=c("tissue.module.all"="tissue.module")) %>% as_vector()
+nonElasticNet0.5_multiCV_Pct_var.module <- tibble(all = colnames(d)[-1:-2]) %>% separate(all, c("module","tissue")) %>% mutate(module=str_remove(module,"ME")) %>% unite(tissue.module.all,tissue,module,sep=".") %>% anti_join(ElasticNet0.5_multiCV_Pct_var,by=c("tissue.module.all"="tissue.module")) %>% as_vector()
 # 
 mod <- ElasticNet0.5_multiCV_Pct_var.module[3]
 # making expression pattern plot function (compare within/outside module)
-expression.module4 <- function(target.module=mod,dat.voom=root.voom5.mod,tissue_MEs=rootMEs) { 
+#
+d.root <- d %>% dplyr::select(sampleID,leaf_avg_std,ends_with("root"))
+d.leaf <- d %>% dplyr::select(sampleID,leaf_avg_std,ends_with("leaf"))
+# 
+expression.module4 <- function(target.module=mod,dat.voom=root.voom5.mod,tissue_MEs=d.root) { 
   print(str_c("The target.module is ",target.module,"."))
 # add within target.module info
 dat.voom <- dat.voom %>% mutate(TF=ifelse(dat.voom.module==target.module,"within the module","not in the module"),.keep="unused") %>% mutate(TF.module=str_c(target.module,"\n",TF))
@@ -232,11 +236,11 @@ dat.voom %>% group_by(TF) %>% summarize(nTF=n())
 # longer format
 dat.voom.long <- dat.voom %>% pivot_longer(-c(genes,TF,TF.module),names_to="sampleID",values_to="value") %>% mutate(sampleID=str_remove(sampleID,"_root")) %>% mutate(sampleID=str_remove(sampleID,"_leaf"))
 # modify for new ME
-temp.target.module <- tibble(tissue_MEs=colnames(tissue_MEs)[-1]) %>% mutate(tissue_MEs = str_remove(tissue_MEs,"^ME")) %>% separate(tissue_MEs,c("module","tissue")) %>% unite(tissue.module,tissue,module,sep=".") %>% as_vector()
+temp.target.module <- tibble(tissue_MEs=colnames(tissue_MEs)[-2:-1]) %>% mutate(tissue_MEs = str_remove(tissue_MEs,"^ME")) %>% separate(tissue_MEs,c("module","tissue")) %>% unite(tissue.module,tissue,module,sep=".") %>% as_vector()
 # change format of colnames of tissue_MEs
-colnames(tissue_MEs)[-1] <- temp.target.module
-# get sample levels at target.module
-sample.levels <- tissue_MEs %>% dplyr::select(sampleID, quo_name(target.module)) %>% arrange_at(.vars=2) %>% dplyr::select(sampleID) %>% as_vector()
+colnames(tissue_MEs)[-2:-1] <- temp.target.module
+# get sample levels by leaf_avg_std
+sample.levels <- tissue_MEs %>% dplyr::select(sampleID, leaf_avg_std,quo_name(target.module)) %>% arrange_at(.vars=2) %>% dplyr::select(sampleID) %>% as_vector()
 # add expression data 
 dat.voom.ME <- tissue_MEs %>% dplyr::select(sampleID,quo_name(target.module))  %>% inner_join(dat.voom.long,by="sampleID") %>%
   arrange_at(.vars=c(2,4)) %>% mutate(sampleID=factor(sampleID,levels=sample.levels))
@@ -253,12 +257,12 @@ p.TFall <- plot_grid(p.TF10.withinmod,p.TF10.notinmod)
 return(p.TFall)
 }
 # test 
-mod=ElasticNet0.5_multiCV_Pct_var.module[3]
+mod=ElasticNet0.5_multiCV_Pct_var.module[1]
 expression.module4()
 # 
-plot.root.list4 <- tibble(tissue_MEs=colnames(d)[-1]) %>% mutate(tissue_MEs = str_remove(tissue_MEs,"^ME")) %>% separate(tissue_MEs,c("module","tissue")) %>% unite(tissue.module,tissue,module,sep=".") %>% filter(str_detect(tissue.module,"^root")) %>% split(.$tissue.module) %>% map(~expression.module4(target.module=as.name(.$tissue.module),dat.voom=root.voom5.mod,tissue_MEs=rootMEs)) # takes minutes
+plot.root.list4 <- tibble(tissue_MEs=colnames(d)[-2:-1]) %>% mutate(tissue_MEs = str_remove(tissue_MEs,"^ME")) %>% separate(tissue_MEs,c("module","tissue")) %>% unite(tissue.module,tissue,module,sep=".") %>% filter(str_detect(tissue.module,"^root")) %>% split(.$tissue.module) %>% map(~expression.module4(target.module=as.name(.$tissue.module),dat.voom=root.voom5.mod,tissue_MEs=d.root)) # takes minutes
 
-plot.leaf.list4 <- tibble(tissue_MEs=colnames(d)[-1]) %>% mutate(tissue_MEs = str_remove(tissue_MEs,"^ME")) %>% separate(tissue_MEs,c("module","tissue")) %>% unite(tissue.module,tissue,module,sep=".") %>% filter(str_detect(tissue.module,"^leaf")) %>% split(.$tissue.module) %>% map(~expression.module4(target.module=as.name(.$tissue.module),dat.voom=leaf.voom5.mod,tissue_MEs=leafMEs)) # takes minutes
+plot.leaf.list4 <- tibble(tissue_MEs=colnames(d)[-2:-1]) %>% mutate(tissue_MEs = str_remove(tissue_MEs,"^ME")) %>% separate(tissue_MEs,c("module","tissue")) %>% unite(tissue.module,tissue,module,sep=".") %>% filter(str_detect(tissue.module,"^leaf")) %>% split(.$tissue.module) %>% map(~expression.module4(target.module=as.name(.$tissue.module),dat.voom=leaf.voom5.mod,tissue_MEs=d.leaf)) # takes minutes
 # ElasticNet0.5_multiCV_Pct_var plots
 plot.root.list4[[ElasticNet0.5_multiCV_Pct_var.module[1]]]
 plot.root.list4[[ElasticNet0.5_multiCV_Pct_var.module[2]]]
