@@ -35,14 +35,18 @@ Br.v3.0.At.BLAST <- read_csv(file.path("annotation","output","Brapa_v3.0_annotat
 # This annotation is redundant with name (Br grene). Eg 
 Br.v3.0.At.BLAST %>% filter(name=="BraA01g040570.3C")
 # reduce the redundancy (112418)
-Br.v3.0anno.At.BLAST.highscore <- Br.v3.0.At.BLAST %>% group_by(name) %>% arrange(desc(score)) %>% slice(1)
+Br.v3.0anno.At.BLAST.highscore <- Br.v3.0.At.BLAST %>% group_by(name) %>% arrange(desc(score)) %>% dplyr::slice(1)
 ```
 
 # Julin's Machine Learning selected modules
 ```{r eval=FALSE}
-# reading Julin's results of penalized regression (see slide)
-ElasticNet0.5_LOO_prop_var <- read_csv(file.path("plant","output","ElasticNet0.5_LOO_prop_var.csv"))
-ElasticNet0.5_LOO_prop_var <- ElasticNet0.5_LOO_prop_var %>% mutate(J.module=str_remove(ME,"ME")) %>% separate(J.module,into=c("module","tissue")) %>% mutate(module=str_to_upper(module)) %>% unite(tissue.module,c("tissue","module"),sep=".") 
+# reading Julin's results of penalized regression (see slide) (old version)
+# ElasticNet0.5_LOO_prop_var <- read_csv(file.path("plant","output","ElasticNet0.5_LOO_prop_var.csv")) 
+ElasticNet0.5_multiCV_Pct_var <- read_csv(file.path("plant","output","ElasticNet0.5_multiCV_Pct_var.csv")) # Updated version from 11_take2_Machine_Learning
+# 
+ElasticNet0.5_multiCV_Pct_var <- ElasticNet0.5_multiCV_Pct_var %>%
+  #mutate(Module_Name=str_to_upper(Module_Name)) %>%  # tissue is lowercase, module is uppercase
+  unite(tissue.module,c("Module_Organ","Module_Name"),sep=".") # all lower case
 ```
 
 # reading GSEA results (all WGCNA modules)
@@ -147,293 +151,144 @@ coregenes.yes.DF %>% View()
 write_csv(coregenes.yes.DF,file=file.path("RNA/output/core_enrichment_genes.csv"))
 ```
 
-# 
-
-# meaning of sign of cor (test with modTraitRP2.root.voom1[["combined"]] for voom_expression.e1and3.resid.exp_only.root) (090220)
+# all modules with only target module 
+* copied from 11_machine_learning.Rmd
+leafdata (copied from 11_machine_learning.Rmd)
 ```{r}
+leaf <- read_csv("plant/output/leaf_lengths_combined.csv") %>%
+  mutate(sampleID=str_remove(sampleID, "_(leaf|root)"),
+         sampleID=str_remove(sampleID, "^[a-h][1-8]_")) %>%
+  filter(!duplicated(sampleID))
 
-combined.longer <- modTraitRP2.root.voom1[["combined"]] %>% 
-  pivot_longer(cols=MEbisque4:MEyellowgreen,names_to="modules",values_to="Module Eigengenes") %>% mutate(rowname=factor(rowname,levels=modTraitRP2.root.voom1[["combined"]]$rowname[order(modTraitRP2.root.voom1[["combined"]]$leaf_avg_std)]))
-### combine all for some reasons does not work.. [["P"]] is not data.frame.
-P.longer <- modTraitRP2.root.voom1[["P"]] %>% as_tibble(rownames=NA) %>% rownames_to_column() %>% dplyr::select(rowname,leaf_avg_std)  %>% filter(rowname!="leaf_avg_std") %>% rename(modules=rowname) %>%  rename(p=leaf_avg_std) %>% mutate(p=round(p,3)) 
-PR.longer <- modTraitRP2.root.voom1[["R"]] %>% as_tibble(rownames=NA) %>% rownames_to_column() %>% dplyr::select(rowname,leaf_avg_std)  %>% filter(rowname!="leaf_avg_std") %>% rename(modules=rowname) %>%  rename(r=leaf_avg_std) %>% mutate(r=round(r,3)) %>% inner_join(P.longer, by="modules") %>% mutate(modules.r.p=str_c(modules,"\n",r," (",p,")")) 
-PR.longer <- PR.longer %>%  mutate(modules.r.p=factor(modules.r.p,levels=PR.longer[order(PR.longer$r),]$modules.r.p) )
-# plot
-q <- PR.longer  %>%  inner_join(combined.longer, by="modules") %>% ggplot(aes(x=leaf_avg_std,y=`Module Eigengenes`,color=modules)) + geom_point() + theme(axis.text.x=element_text(angle=90),legend.position = "none") + facet_wrap(~modules.r.p,ncol=11,scales="free")
-# 
-#ggsave(q,filename=file.path("..","output","voom_expression.e1and3.resid.exp_only.root.leaf_avg_std.VS.ME.plot.png"),height=20,width=8)
-ggsave(q,filename=file.path("..","output","voom_expression.e1and3.resid.exp_only.root.leaf_avg_std.VS.ME.plot2.png"),height=8,width=20)
-
+leaf %>% arrange(sampleID)
 ```
 
-# Gene relationship to trait and important modules: Gene Significance and Module Membership (see section 3b in "FemaleLiver-03-relateModsToExt.pdf" in WGCNA_2019 folder) and 3c "
+load root modules (copied from 11_machine_learning.Rmd)
 ```{r}
-load(file.path("..","output","voom_expression.e1and3.resid.exp_only.root.WGCNA.softthresh10.RData"))
-modTraitRP2.root.voom1[["combined"]]
+root.voom5 <- readr::read_tsv(file.path("RNA","output","voom_expression.e1and3.resid.exp_gt.root.plusR500.txt.gz"))
+load(file.path("RNA","output","voom_expression.e1and3.resid.exp_gt.root.plusR500.txt.gz.WGCNA.softthresh10.RData"))
+# adding module column
+#root.voom5.mod <- root.voom5 %>% mutate(dat.voom.module=str_c("ME",dynamicColors,"_root"))
+root.voom5.mod <- root.voom5 %>% mutate(dat.voom.module=str_c("root.",dynamicColors))
 
-MEs <- modTraitRP2.root.voom1[["combined"]] %>% dplyr::select(-leaf_avg_std)
-nSamples <- ncol(modTraitRP2.root.voom1[["combined"]]) #%>% dplyr::select(-rowname)
-
-voom.data <- root.voom1
-
-datExpr <- t(voom.data[,-1]) 
-colnames(datExpr) <- voom.data$genes
-rownames(datExpr) <- colnames(voom.data)[-1]
-
-dim(datExpr);dim(MEs)
-
-geneModuleMembership = as.data.frame(cor(datExpr, MEs[,-1], use = "p"));
-MMPvalue = as.data.frame(corPvalueStudent(as.matrix(geneModuleMembership), nSamples));
-
-#names(geneModuleMembership) = paste("MM", modNames, sep="");
-#names(MMPvalue) = paste("p.MM", modNames, sep="");
-geneTraitSignificance = as.data.frame(cor(datExpr, modTraitRP2.root.voom1[["combined"]][,"leaf_avg_std"], use = "p"));
-
-#geneTraitSignificance = modTraitRP2.root.voom1[["combined"]] %>% dplyr::select(-rowname)
-# 
-GSPvalue = as.data.frame(corPvalueStudent(as.matrix(geneTraitSignificance), nSamples));
-# names(geneTraitSignificance) = paste("GS.", names(weight), sep="");
-# names(GSPvalue) = paste("p.GS.", names(weight), sep="");
-
-##
-module = "thistle2"
-modNames = colnames(geneModuleMembership)
-column = match(paste("ME",module,sep=""), modNames); column
-moduleGenes = dynamicColors == module
-
-table(moduleGenes)
-
-#sizeGrWindow(7, 7);
-#par(mfrow = c(1,1));
-verboseScatterplot(abs(geneModuleMembership[moduleGenes, column]),
-abs(geneTraitSignificance[moduleGenes, 1]),
-                 xlab = paste("Module Membership in", module, "module"),
-                 ylab = "Gene significance for leaf_avg_std",
-                 main = paste("Module membership vs. gene significance\n"),
-                 cex.main = 1.2, cex.lab = 1.2, cex.axis = 1.2, col = module)
+# MEs
+rootMEs <- MEs %>% as_tibble() %>%
+  rename_all(str_c, "_root") %>%
+  mutate(sampleID=colnames(root.voom5)[-1],
+         sampleID=str_remove(sampleID, "_root"),
+         sampleID=str_remove(sampleID, "_S[0-9]{1,3}$"),
+         sampleID=str_remove(sampleID, "^[a-h][1-8]_")) %>%
+  dplyr::select(sampleID, everything())
+rootMEs
+rm(MEs)
 ```
 
-# writing more general version with ggplot
+load leaf modules (copied from 11_machine_learning.Rmd)
 ```{r}
-load(file.path("..","output","voom_expression.e1and3.resid.exp_only.root.WGCNA.softthresh10.RData"))
-modTraitRP2.root.voom1[["combined"]]
+leaf.voom5 <- readr::read_tsv(file.path("RNA","output","voom_expression.e1and3.resid.exp_gt.leaf.plusR500.txt.gz"))
+load(file.path("RNA","output","voom_expression.e1and3.resid.exp_gt.leaf.plusR500.txt.gz.WGCNA.softthresh10.RData"))
+# adding module column (tissue.module all lowercase that is consistent with )
+#leaf.voom5.mod <- leaf.voom5 %>% mutate(dat.voom.module=str_c("ME",dynamicColors,"_leaf"))
+leaf.voom5.mod <- leaf.voom5 %>% mutate(dat.voom.module=str_c("leaf.",dynamicColors))
 
-MEs <- modTraitRP2.root.voom1[["combined"]] %>% dplyr::select(-leaf_avg_std)
-nSamples <- ncol(modTraitRP2.root.voom1[["combined"]]) #%>% dplyr::select(-rowname)
-
-voom.data <- root.voom1
-
-datExpr <- t(voom.data[,-1]) 
-colnames(datExpr) <- voom.data$genes
-rownames(datExpr) <- colnames(voom.data)[-1]
-
-dim(datExpr);dim(MEs)
-
-geneModuleMembership = as.data.frame(cor(datExpr, MEs[,-1], use = "p"));
-MMPvalue = as.data.frame(corPvalueStudent(as.matrix(geneModuleMembership), nSamples));
-
-#names(geneModuleMembership) = paste("MM", modNames, sep="");
-#names(MMPvalue) = paste("p.MM", modNames, sep="");
-geneTraitSignificance = as.data.frame(cor(datExpr, modTraitRP2.root.voom1[["combined"]][,"leaf_avg_std"], use = "p"));
-
-#geneTraitSignificance = modTraitRP2.root.voom1[["combined"]] %>% dplyr::select(-rowname)
 # 
-GSPvalue = as.data.frame(corPvalueStudent(as.matrix(geneTraitSignificance), nSamples));
-# names(geneTraitSignificance) = paste("GS.", names(weight), sep="");
-# names(GSPvalue) = paste("p.GS.", names(weight), sep="");
-
-##
-module = "thistle2"
-modNames = colnames(geneModuleMembership)
-column = match(paste("ME",module,sep=""), modNames); column
-moduleGenes = dynamicColors == module
-
-table(moduleGenes)
-#####
-geneTraitSignificance %>% head()
-# https://stackoverflow.com/questions/28100780/use-with-replacement-functions-like-colnames/28100903
-geneTraitSignificance <- geneTraitSignificance %>% magrittr::set_names("GS") %>% rownames_to_column() #%>% head()
-length(dynamicColors);dim(geneModuleMembership)
-
-MM.GM <- geneModuleMembership %>% rownames_to_column()  %>% mutate(modules=dynamicColors) %>% pivot_longer(-c(rowname,modules),names_to="ME",values_to="MM") %>% left_join(geneTraitSignificance,by="rowname") %>% mutate(MM.abs=abs(MM),GS.abs=abs(GS))
-
-MM.GM.withinmodule <- MM.GM %>% mutate(ME=str_remove(ME,"ME")) %>% filter(modules==ME)
-
-MM.GM.withinmodule.PR <- PR.longer %>% mutate(modules=str_remove(modules,"ME")) %>% mutate(modules.r.p=factor(modules.r.p,levels=PR.longer[order(PR.longer$r),]$modules.r.p) ) %>% inner_join(MM.GM.withinmodule,by="modules")
-
-temp.p <- MM.GM.withinmodule.PR %>% ggplot(aes(x=MM.abs,y=GS.abs,color=modules)) + geom_point(aes(alpha=0.3)) + theme(legend.position = "none") + facet_wrap(.~modules.r.p,ncol=4,scale="free") 
-ggsave(filename="MM.GM.root.voom1.png",path=file.path("..","output"),plot=temp.p,height=20,width=8)
+leafMEs <- MEs %>% as_tibble() %>%
+  rename_all(str_c, "_leaf") %>%
+  mutate(sampleID=colnames(leaf.voom5)[-1],
+         sampleID=str_remove(sampleID, "_leaf"),
+         sampleID=str_remove(sampleID, "_S[0-9]{1,3}$"),
+         sampleID=str_remove(sampleID, "^[a-h][1-8]_")) %>%
+  dplyr::select(sampleID, everything())
+leafMEs
+rm(MEs)
 ```
 
-#  module eigengene vs expression (within module vs outside module)
+bring it all together (copied from 11_machine_learning.Rmd)
 ```{r}
-# extract module eigengenes in a given module
-modTraitRP2.root.voom1[["combined"]]
-root.voom1.mod3 <- root.voom1 %>% mutate(dat.voom.module=dynamicColors)
-
-# save objects for working on the function below
-save(modTraitRP2.root.voom1,root.voom1.mod3, file=file.path("..","output","data.for.expression.module.Rdata"))
-
-# 
-load(file.path("..","output","data.for.expression.module.Rdata"))
-mod = "thistle2"
-expression.module <- function(target.module=mod,dat.voom=root.voom1.mod3,modTraitRP2=modTraitRP2.root.voom1) {
-  print(str_c("The target.module is ",target.module,"."))
-  # add withi/outside of target.module info
-dat.voom <- dat.voom %>% mutate(TF=ifelse(dat.voom.module==target.module,"within the module","not in the module"),.keep="unused")
-# longer format
-dat.voom.long <- dat.voom %>% pivot_longer(-c(genes,TF),names_to="rowname",values_to="value") 
-# making levels to sort samples according to module eigengenes
-sample.levels <- modTraitRP2[["combined"]] %>% dplyr::select(rowname,str_c("ME",target.module)) %>% arrange_at(.vars=2) %>% dplyr::select(rowname) %>% as_vector()
-# add expression data
-dat.voom.ME <- modTraitRP2[["combined"]] %>% dplyr::select(rowname,str_c("ME",target.module))  %>% inner_join(dat.voom.long,by="rowname") %>%
-  arrange_at(.vars=c(2,4)) %>% mutate(rowname=factor(rowname,levels=sample.levels))
-# number of genes in each sample
-# dat.voom.mod3.ME   %>% group_by(rowname) %>% summarize(n())
-
+d <- leaf %>% dplyr::select(sampleID, leaf_avg_std) %>%
+  inner_join(leafMEs, by="sampleID") %>% 
+  inner_join(rootMEs, by="sampleID") %>% 
+  dplyr::select(-sampleID) %>%
+  as_data_frame()
+d
+```
 
 # plot
-p.TF <- dat.voom.ME  %>%  ggplot(aes(x=rowname,y=value,color=TF,group=genes)) + geom_line(alpha=0.1) + theme(axis.text.x=element_text(angle=90),legend.position="none") + facet_grid(.~TF) + labs(title=target.module)
-#p.TF2 <- dat.voom.mod3.ME  %>%  ggplot(aes(x=MEthistle2,y=value,color=TF,group=genes)) + geom_line(alpha=0.1) + geom_point(alpha=0.1) + theme(axis.text.x=element_text(angle=90),legend.position="none") + facet_grid(.~TF) + labs(title=target.module) # works only for MEthistle2
-
-# p.TF3 <- dat.voom.mod3.ME  %>%  ggplot(aes(x=str_c("ME",target.module),y=value,color=TF,group=genes)) + geom_line(alpha=0.1) + geom_point(alpha=0.1) + theme(axis.text.x=element_text(angle=90),legend.position="none") + facet_grid(.~TF) + labs(title=target.module) # str_c("ME",target.module) does not work I expected
-dat.voom.ME.1 <- dat.voom.ME  %>%  filter(TF=="within the module")
-
-p.TF4 <- dat.voom.ME.1 %>% ggplot(aes(x=rowname,y=value,color=TF,group=genes)) + geom_line(alpha=0.1) +  theme(axis.text.x=element_text(angle=90),legend.position="none")  + labs(title=target.module)
-#p.TF5 <- p.TF4  + geom_line(aes(x=rowname,y=MEthistle2),color="black",size=1) # works only MEthistle2
-# https://ggplot2.tidyverse.org/reference/aes_.html
-# p.TF4  + geom_line(aes_string(x="rowname",y=str_c("ME",target.module)),color="blue",size=1) #works
-#p.TF4  + geom_line(aes_(x=~rowname,y=str_c("ME",target.module)),color="blue",size=1) # error
-
-# because
-#aes_string(data=dat.voom.mod3.ME.1,x="rowname",y=str_c("ME",target.module))
-#aes_(data=quote(dat.voom.mod3.ME.1),x=quote(rowname),y=str_c("ME",target.module))
-#aes_(data=~dat.voom.mod3.ME.1,x=~rowname,y=str_c("ME",target.module))
-
-# but aes_() will be soft deprecated, so that need to use quasiquotation (!!, !!!, :=)  (https://www.tidyverse.org/blog/2018/07/ggplot2-tidy-evaluation/)
-# https://adv-r.hadley.nz/quasiquotation.html
-#rowname <- enquo(rowname)
-# MEtarget.module <- enquo(str_c("ME",target.module))
-# MEtarget.module <- !!str_c("ME",target.module)
-print(dat.voom.ME.1)
-
-MEtarget.module <- str_c("ME",target.module)
-print(MEtarget.module)
-y <- enquo(MEtarget.module)
-print(y)
-
-#p.TF5 <- p.TF4  + geom_line(aes(x=rowname,y=!!str_c("ME",target.module)),color="blue",size=1)
-#p.TF5 <- p.TF4  + geom_line(aes(x=rowname,y:=str_c("ME",target.module)),color="blue",size=1)
-#p.TF5 <- p.TF4  + geom_line(aes(x=rowname,y=!!MEtarget.module),color="blue",size=1)
-#p.TF5 <- p.TF4  + geom_line(aes(x=rowname,y=!!y),color="blue",size=1)
-#p.TF5 <- p.TF4  + geom_line(aes(x=rowname,y=!!y))
-p.TF5 <- p.TF4  + geom_line(aes(x=rowname,y=y))
-# test
-p.TF6 <- dat.voom.ME.1 %>% ggplot(aes(x=rowname,y=quote(y),color=TF,group=genes)) + geom_line(alpha=0.1) +  theme(axis.text.x=element_text(angle=90),legend.position="none")  + labs(title=target.module)
-
-# different solution
-# remove "ME" from colunm name
-dat.voom.ME.1 <- dat.voom.ME.1 %>% rename_with(~gsub("ME","",.x),starts_with("ME"))
-#
-yy <- enquo(target.module)
-yy
-#yyy <- !!yy #Error: Quosures can only be unquoted within a quasiquotation context.)
-#yyy
-#p.TF7 <- dat.voom.ME.1 %>% ggplot(aes(x=rowname,y={{ target.module }},color=TF,group=genes)) + geom_line(alpha=0.1) +  theme(axis.text.x=element_text(angle=90),legend.position="none")  + labs(title=target.module)
-p.TF7 <- dat.voom.ME.1 %>% ggplot(aes(x=rowname,y=target.module,color=TF,group=genes)) + geom_line(alpha=0.1) +  theme(axis.text.x=element_text(angle=90),legend.position="none")  + labs(title=target.module)
-return(p.TF5)
-}
-
-```
-
-
-# 
+* see Julin's request (https://trello.com/c/Y4GWD7KJ/35-wgcna-and-mr-analysis)
 ```{r}
-expression.module2 <- function(target.module=mod,dat.voom=root.voom1.mod3,modTraitRP2=modTraitRP2.root.voom1) {
+# new ver (tissue.module lowercase)
+ElasticNet0.5_multiCV_Pct_var.module <- ElasticNet0.5_multiCV_Pct_var %>% dplyr::select(tissue.module) %>% as_vector()
+# new ver. use anti_join()
+nonElasticNet0.5_multiCV_Pct_var.module <- tibble(all = colnames(d)[-1]) %>% separate(all, c("module","tissue")) %>% mutate(module=str_remove(module,"ME")) %>% unite(tissue.module.all,tissue,module,sep=".") %>% anti_join(ElasticNet0.5_multiCV_Pct_var,by=c("tissue.module.all"="tissue.module")) %>% as_vector()
+# 
+mod <- ElasticNet0.5_multiCV_Pct_var.module[3]
+# making expression pattern plot function (compare within/outside module)
+expression.module4 <- function(target.module=mod,dat.voom=root.voom5.mod,tissue_MEs=rootMEs) { 
   print(str_c("The target.module is ",target.module,"."))
-  # add withi/outside of target.module info
-dat.voom <- dat.voom %>% mutate(TF=ifelse(dat.voom.module==target.module,"within the module","not in the module"),.keep="unused")
+# add within target.module info
+dat.voom <- dat.voom %>% mutate(TF=ifelse(dat.voom.module==target.module,"within the module","not in the module"),.keep="unused") %>% mutate(TF.module=str_c(target.module,"\n",TF))
+# number of genes with/not in the module
+dat.voom %>% group_by(TF) %>% summarize(nTF=n())
 # longer format
-dat.voom.long <- dat.voom %>% pivot_longer(-c(genes,TF),names_to="rowname",values_to="value") 
-# making levels to sort samples according to module eigengenes
-sample.levels <- modTraitRP2[["combined"]] %>% dplyr::select(rowname,str_c("ME",target.module)) %>% arrange_at(.vars=2) %>% dplyr::select(rowname) %>% as_vector()
-# add expression data
-dat.voom.ME <- modTraitRP2[["combined"]] %>% dplyr::select(rowname,str_c("ME",target.module))  %>% inner_join(dat.voom.long,by="rowname") %>%
-  arrange_at(.vars=c(2,4)) %>% mutate(rowname=factor(rowname,levels=sample.levels))
-# plot (only "within the module")
-dat.voom.ME.1 <- dat.voom.ME  %>%  filter(TF=="within the module")
-print(dat.voom.ME.1)
-p.TF4 <- dat.voom.ME.1 %>% ggplot(aes(x=rowname,y=value,color=TF,group=genes)) + geom_line(alpha=0.1) +  theme(axis.text.x=element_text(angle=90),legend.position="none")  + labs(title=target.module)
-# https://ggplot2.tidyverse.org/reference/aes_.html
-p.TF5 <- p.TF4  + geom_line(aes_string(x="rowname",y=str_c("ME",target.module)),color="blue",size=1) #works
-
+dat.voom.long <- dat.voom %>% pivot_longer(-c(genes,TF,TF.module),names_to="sampleID",values_to="value") %>% mutate(sampleID=str_remove(sampleID,"_root")) %>% mutate(sampleID=str_remove(sampleID,"_leaf"))
+# modify for new ME
+temp.target.module <- tibble(tissue_MEs=colnames(tissue_MEs)[-1]) %>% mutate(tissue_MEs = str_remove(tissue_MEs,"^ME")) %>% separate(tissue_MEs,c("module","tissue")) %>% unite(tissue.module,tissue,module,sep=".") %>% as_vector()
+# change format of colnames of tissue_MEs
+colnames(tissue_MEs)[-1] <- temp.target.module
+# get sample levels at target.module
+sample.levels <- tissue_MEs %>% dplyr::select(sampleID, quo_name(target.module)) %>% arrange_at(.vars=2) %>% dplyr::select(sampleID) %>% as_vector()
+# add expression data 
+dat.voom.ME <- tissue_MEs %>% dplyr::select(sampleID,quo_name(target.module))  %>% inner_join(dat.voom.long,by="sampleID") %>%
+  arrange_at(.vars=c(2,4)) %>% mutate(sampleID=factor(sampleID,levels=sample.levels))
+# plot 
+print(dat.voom.ME)
 # but aes_() will be soft deprecated, so that need to use quasiquotation (!!, !!!, :=)  (https://www.tidyverse.org/blog/2018/07/ggplot2-tidy-evaluation/)
 # https://adv-r.hadley.nz/quasiquotation.html
-print(dat.voom.ME.1)
-
-
-# different solution
-# remove "ME" from colunm name
-dat.voom.ME.2 <- dat.voom.ME.1 %>% rename_with(~gsub("ME","",.x),starts_with("ME"))
-print("dat.voom.ME.2")
-print(dat.voom.ME.2)
-# works only for "bisque4" with aes_string()
-p.TF7 <- dat.voom.ME.2 %>%  ggplot(aes(x=rowname,y=value,color=TF,group=genes)) + geom_line(alpha=0.1)  + geom_point(aes_string(x="rowname",y="bisque4"),color="black",size=1) +  theme(axis.text.x=element_text(angle=90),legend.position="none")  + labs(title=target.module)
-
-p.TF8 <- dat.voom.ME.2 %>% ggplot() + geom_line(aes_string(x="rowname",y=target.module,group="genes"),color="black",size=1) +  theme(axis.text.x=element_text(angle=90),legend.position="none")  + labs(title=target.module)
-
-p.TF9 <- dat.voom.ME.2 %>% ggplot() + geom_line(aes_string(x="rowname",y=target.module,group="genes"),color="black",size=1) +  theme(axis.text.x=element_text(angle=90),legend.position="none")  + labs(title=target.module) # works
-print("aes(x=rowname,y=!!target.module) is");print(aes(x=rowname,y=!!target.module))
-p.TF10 <- dat.voom.ME.2 %>% ggplot(aes(x=rowname,y=value,color=TF,group=genes)) + geom_line(alpha=0.1) + geom_line(aes(x=rowname,y=!!target.module,group="genes"),color="black",size=1) +  theme(axis.text.x=element_text(angle=90),legend.position="none")  + labs(title=target.module)
-# 
-yy <- enquo(target.module)
-yy
-print("yy")
-print(yy)
-p.TF11 <- dat.voom.ME.2 %>% ggplot() + geom_line(aes(x=rowname,y=!!yy,group="genes"),color="black",size=1) +  theme(axis.text.x=element_text(angle=90),legend.position="none")  + labs(title=target.module)
-
-# how about {{}} ? What is it?
-p.TF12 <- dat.voom.ME.2 %>% ggplot() + geom_line(aes(x=rowname,y={{target.module}},group="genes"),color="black",size=1) +  theme(axis.text.x=element_text(angle=90),legend.position="none")  + labs(title=target.module)
-
-return(p.TF10)
+# plot expression value plus ME within the module
+p.TF10.withinmod <- dat.voom.ME  %>%  filter(TF=="within the module") %>% ggplot(aes(x=sampleID,y=value,color=TF,group=genes)) + geom_line(alpha=0.1)  + geom_line(aes_string(x="sampleID",y=target.module,group="genes"),color="black",size=1) + theme(axis.text.x=element_text(angle=90),legend.position="none")  + facet_grid(.~TF.module) +  labs(ylab="normalized expression") #title=str_remove(target.module,"ME"),
+# plot expression value not in the module
+p.TF10.notinmod <- dat.voom.ME  %>%  filter(TF=="not in the module") %>% ggplot(aes(x=sampleID,y=value,color=TF,group=genes)) + geom_line(alpha=0.1)  +  theme(axis.text.x=element_text(angle=90),legend.position="none")  + facet_grid(.~TF.module) +  labs(ylab="normalized expression") #title=str_remove(target.module,"ME"),
+# combine the two plots
+p.TFall <- plot_grid(p.TF10.withinmod,p.TF10.notinmod)
+return(p.TFall)
 }
+# test 
+mod=ElasticNet0.5_multiCV_Pct_var.module[3]
+expression.module4()
+# 
+plot.root.list4 <- tibble(tissue_MEs=colnames(d)[-1]) %>% mutate(tissue_MEs = str_remove(tissue_MEs,"^ME")) %>% separate(tissue_MEs,c("module","tissue")) %>% unite(tissue.module,tissue,module,sep=".") %>% filter(str_detect(tissue.module,"^root")) %>% split(.$tissue.module) %>% map(~expression.module4(target.module=as.name(.$tissue.module),dat.voom=root.voom5.mod,tissue_MEs=rootMEs)) # takes minutes
 
+plot.leaf.list4 <- tibble(tissue_MEs=colnames(d)[-1]) %>% mutate(tissue_MEs = str_remove(tissue_MEs,"^ME")) %>% separate(tissue_MEs,c("module","tissue")) %>% unite(tissue.module,tissue,module,sep=".") %>% filter(str_detect(tissue.module,"^leaf")) %>% split(.$tissue.module) %>% map(~expression.module4(target.module=as.name(.$tissue.module),dat.voom=leaf.voom5.mod,tissue_MEs=leafMEs)) # takes minutes
+# ElasticNet0.5_multiCV_Pct_var plots
+plot.root.list4[[ElasticNet0.5_multiCV_Pct_var.module[1]]]
+plot.root.list4[[ElasticNet0.5_multiCV_Pct_var.module[2]]]
+plot.root.list4[[ElasticNet0.5_multiCV_Pct_var.module[3]]]
+# nonElasticNet0.5_multiCV_Pct_var plots
+plot.root.list4[[nonElasticNet0.5_multiCV_Pct_var.module[1]]]
+plot.root.list4[[nonElasticNet0.5_multiCV_Pct_var.module[2]]]
+plot.root.list4[[nonElasticNet0.5_multiCV_Pct_var.module[3]]]
 ```
 
-
-# test the function
+# how to write figs for plots?
 ```{r}
-# 1
-mod = "bisque4"
-expression.module2(target.module=mod,dat.voom=root.voom1.mod3,modTraitRP2=modTraitRP2.root.voom1)
-# 2
-expression.module2(target.module=mod,dat.voom=root.voom1.mod3,modTraitRP2=modTraitRP2.root.voom1)
-# 3
-mod = as.name("bisque4") # works see example in aes() https://ggplot2.tidyverse.org/reference/aes_.html
-expression.module2(target.module=a,dat.voom=root.voom1.mod3,modTraitRP2=modTraitRP2.root.voom1) #p.TF10
+p.root.all <- plot_grid(plot.root.list4[[1]],plot.root.list4[[2]],plot.root.list4[[3]],plot.root.list4[[4]],
+                   plot.root.list4[[5]],plot.root.list4[[6]],plot.root.list4[[7]],plot.root.list4[[8]],
+                   plot.root.list4[[9]],plot.root.list4[[10]],plot.root.list4[[11]],plot.root.list4[[12]],
+                   plot.root.list4[[13]],plot.root.list4[[14]],plot.root.list4[[15]],plot.root.list4[[16]],
+                   plot.root.list4[[17]],plot.root.list4[[18]],plot.root.list4[[19]],plot.root.list4[[20]],
+                   plot.root.list4[[21]],plot.root.list4[[22]])
+ggsave(p.root.all,path=file.path("RNA","output"),filename="p.root.all2.png",height=40,width=20,dpi=72)
+p.leaf.all <- plot_grid(plot.leaf.list4[[1]],plot.leaf.list4[[2]],plot.leaf.list4[[3]],plot.leaf.list4[[4]],
+                   plot.leaf.list4[[5]],plot.leaf.list4[[6]],plot.leaf.list4[[7]],plot.leaf.list4[[8]],
+                   plot.leaf.list4[[9]],plot.leaf.list4[[10]],plot.leaf.list4[[11]],plot.leaf.list4[[12]],
+                   plot.leaf.list4[[13]],plot.leaf.list4[[14]],plot.leaf.list4[[15]],plot.leaf.list4[[16]],
+                   plot.leaf.list4[[17]],plot.leaf.list4[[18]],plot.leaf.list4[[19]],plot.leaf.list4[[20]],
+                   plot.leaf.list4[[21]],plot.leaf.list4[[22]],plot.leaf.list4[[23]],plot.leaf.list4[[24]],
+                   plot.leaf.list4[[25]],plot.leaf.list4[[26]],plot.leaf.list4[[27]],plot.leaf.list4[[28]],
+                   plot.leaf.list4[[29]],plot.leaf.list4[[30]],plot.leaf.list4[[31]],plot.leaf.list4[[32]],
+                  plot.leaf.list4[[33]],plot.leaf.list4[[34]])
+ggsave(p.leaf.all,path=file.path("RNA","output"),filename="p.leaf.all2.png",height=40,width=20,dpi=72)
 
 ```
 
-# all modules
-```{r}
-plot.list <- tibble(dynamicColors=names(table(dynamicColors))) %>% split(.$dynamicColors) %>% map(~expression.module(target.module=.$dynamicColors,dat.voom=root.voom1,modTraitRP2=modTraitRP2.root.voom1))
-
-# save(plot.list,file=file.path("..","output","root.voom1.plot.list.Rdata")) # 1.62 GB too big.
-
-p <- plot.list[[49]] + 
-ggsave(p,path=file.path("..","output"),filename="root.voom1.plot.list.thistle2.png")
-ggsave(p,path=file.path("..","output"),filename="root.voom1.plot.list.thistle2.pdf")
-
-ggsave(p.TF5,path=file.path("..","output"),filename="root.voom1.plot.list.thistle2.png")
-
-save(p,file=file.path("..","output","root.voom1.plot.list.thistle2.Rdata")) # 
-```
-
-# all modules with only target module
-```{r}
-plot.list2 <- tibble(dynamicColors=names(table(dynamicColors))) %>% split(.$dynamicColors) %>% map(~expression.module2(target.module=as.name(.$dynamicColors),dat.voom=root.voom1.mod3,modTraitRP2=modTraitRP2.root.voom1)) # work????
-plot.list2[[1]];plot.list2[[2]]
-
-
-```
 
