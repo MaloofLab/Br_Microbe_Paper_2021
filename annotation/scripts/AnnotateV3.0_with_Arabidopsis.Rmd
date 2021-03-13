@@ -1,0 +1,158 @@
+---
+title: "B. rapa annotation"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(stringr)
+library(rtracklayer)
+library(org.At.tair.db)
+```
+
+Want to get Arabidopsis best hits for each B.rapa gene.
+
+Use the [Chifu V3.0 file](http://brassicadb.org/brad/datasets/pub/Genomes/Brassica_rapa/V3.0/)
+
+BLAST against [TAIR10 CDS](ftp://ftp.arabidopsis.org/home/tair/Sequences/blast_datasets/TAIR10_blastsets/TAIR10_cds_20110103_representative_gene_model_updated)
+
+Because these organisms are relatively closely related I will use blastn instead of blastp to focus on best match
+
+Get sequences
+```{r, engine='bash', eval=FALSE}
+cd /Users/jmaloof/Sequences/ref_genomes/A_thaliana
+wget -nv https://www.arabidopsis.org/download_files/Sequences/TAIR10_blastsets/TAIR10_cds_20110103_representative_gene_model_updated
+mv TAIR10_cds_20110103_representative_gene_model_updated TAIR10_cds_20110103_representative_gene_model_updated.fa
+
+cd /Users/jmaloof/Sequences/ref_genomes/B_rapa/genome/V3.0
+wget  http://brassicadb.org/brad/datasets/pub/Genomes/Brassica_rapa/V3.0/Brapa_genome_v3.0_cds.fasta.gz
+gunzip Brapa_genome_v3.0_cds.fasta.gz
+```
+
+```{r, engine='bash', eval=FALSE}
+cd /Users/jmaloof/Sequences/ref_genomes/A_thaliana
+makeblastdb -in TAIR10_cds_20110103_representative_gene_model_updated.fa -dbtype nucl
+```
+
+```{r, engine='bash', eval=FALSE}
+cd ../input
+ln -s /Users/jmaloof/Sequences/ref_genomes/A_thaliana/TAIR10_cds_20110103_representative_gene_model_updated.fa ./
+ln -s /Users/jmaloof/Sequences/ref_genomes/B_rapa/genome/V3.0/Brapa_genome_v3.0_cds.fasta ./
+```
+
+```{r, engine='bash', eval=FALSE}
+cd ../input
+
+blastn -query Brapa_genome_v3.0_cds.fasta \
+  -db /Users/jmaloof/Sequences/ref_genomes/A_thaliana/TAIR10_cds_20110103_representative_gene_model_updated.fa \
+  -strand both \
+  -task dc-megablast \
+  -outfmt 10 \
+  -culling_limit 1 \
+  -max_hsps 1 \
+  -evalue 10e-4 \
+  -num_threads 3 \
+  -template_type coding \
+  -template_length 16 \
+  -out Brapa3.0_vs_At_dc-megablast_out.csv
+  
+head Brapa3.0_vs_At_dc-megablast_out.csv
+# move the csv to v3.0annotation folder
+mv ../input/Brapa3.0_vs_At_dc-megablast_out.csv ../input/v3.0annotation/Brapa3.0_vs_At_dc-megablast_out.csv
+```
+
+
+Import results
+```{r}
+brapa.blast <- read_csv("../input/v3.0annotation/Brapa3.0_vs_At_dc-megablast_out.csv", col_names = FALSE)
+colnames(brapa.blast) <- c("query","subject","perc_ID","aln_length","mismatch","gap_open","qstart","qend","sstart","send","eval","score")
+brapa.blast
+summary(brapa.blast)
+```
+
+Compare hits vs queries
+```{r, engine='bash'}
+cd ../input
+grep -c ">" Brapa_genome_v3.0_cds.fasta  # total number of query sequences
+```
+
+```{r}
+brapa.blast %>% pull(query) %>% unique %>% length # total number queries with a hit
+```
+
+38905 of 46250 queries had a hit.
+
+filter to retain best hit
+```{r}
+brapa.blast.best <- brapa.blast %>% group_by(query) %>% filter(score==max(score))
+brapa.blast.best
+brapa.blast.best %>% pull(query) %>% duplicated %>% sum
+duplicates <- brapa.blast.best %>% pull(query) %>% .[duplicated(.)]
+brapa.blast.best %>% filter(query %in% duplicates)
+brapa.blast.best <- brapa.blast.best %>% group_by(query) %>%
+  filter(perc_ID==max(perc_ID)) %>% #for queries with multiple best hits based on score, keep the one with higher perc_ID (which will also have shorter alignment length if it has the same score)
+  filter(row_number()==1) # and finally just choose the first one if anything is left.
+brapa.blast.best
+```
+
+
+Add annotations from TAIR
+
+download from https://www.arabidopsis.org/download/index-auto.jsp?dir=/download_files/Subscriber_Data_Releases
+
+```{r}
+atDesc <- read_tsv("../input/Araport11_functional_descriptions_20181231.txt.gz") %>%
+  mutate(name = str_remove(name, "\\..*$")) %>%
+  rename_all(funs(str_c("At_", .))) %>%
+    filter(!duplicated(At_name)) #not ideal
+atDesc
+```
+
+```{r}
+atSymbol <- read_tsv("../input/gene_aliases_20181231.txt.gz") %>%
+    rename_all(funs(str_c("At_", .))) %>%
+  filter(!duplicated(At_name)) #not ideal
+atSymbol
+```
+
+
+Add the annotation
+```{r}
+brapa.blast <- brapa.blast %>%
+  mutate(AGI = str_remove(subject, "\\..*$")) %>%
+  left_join(atSymbol, by = c("AGI" = "At_name")) %>%
+  left_join(atDesc, by = c("AGI" = "At_name"))
+
+brapa.blast
+```
+
+Now add location information
+
+Get gff
+
+```{r, engine='bash'}
+cd /Users/jmaloof/Sequences/ref_genomes/B_rapa/genome/V3.0
+wget http://brassicadb.org/brad/datasets/pub/Genomes/Brassica_rapa/V3.0/Brapa_genome_v3.0_genes.gff3.gz
+```
+
+```{r}
+gff <- import("/Users/jmaloof/Sequences/ref_genomes/B_rapa/genome/V3.0/Brapa_genome_v3.0_genes.gff3.gz")
+gff <- gff[gff$type=="mRNA",]
+gff <- as_tibble(gff) %>%
+  mutate(geneID=str_extract(ID,"Bra.*$")) %>%
+  dplyr::select(geneID, chrom=seqnames, start,end)
+head(gff)
+```
+
+
+```{r}
+Brapa.annotated <- brapa.blast %>% left_join(gff,by = c("query" = "geneID")) %>%
+  dplyr::select(name=query, chrom, start, end, subject, AGI, matches("At_"), perc_ID, aln_length, mismatch, gap_open, qstart, qend, sstart, send, eval, score) %>%
+  arrange(chrom, start)
+head(Brapa.annotated)
+```
+
+```{r}
+write.csv(Brapa.annotated,"../output/v3.0annotation/Brapa_V3.0_annotated.csv")
+```
+

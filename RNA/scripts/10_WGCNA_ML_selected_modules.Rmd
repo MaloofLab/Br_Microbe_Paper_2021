@@ -13,6 +13,7 @@ editor_options:
 
 # To Do
 * Use "ElasticNet0.5_multiCV_Pct_var" instead of "ElasticNet0.5_LOO_prop_var" (031021)
+* consistant format for tissue.module with lowercase (031221)
 
 ```{r setup}
 rm(list=ls())
@@ -38,9 +39,7 @@ library(ggnewscale)
 # ElasticNet0.5_LOO_prop_var <- ElasticNet0.5_LOO_prop_var %>% mutate(J.module=str_remove(ME,"ME")) %>% separate(J.module,into=c("module","tissue")) %>% mutate(module=str_to_upper(module)) %>% unite(tissue.module,c("tissue","module"),sep=".") 
 ElasticNet0.5_multiCV_Pct_var <- read_csv(file.path("plant","output","ElasticNet0.5_multiCV_Pct_var.csv")) # Updated version from 11_take2_Machine_Learning
 #
-ElasticNet0.5_multiCV_Pct_var <- ElasticNet0.5_multiCV_Pct_var %>% unite(tissue.module,c("Module_Organ","Module_Name"),sep=".")
-
-
+ElasticNet0.5_multiCV_Pct_var <- ElasticNet0.5_multiCV_Pct_var %>% unite(tissue.module,c("Module_Organ","Module_Name"),sep=".")  # all lower case
 ```
 
 
@@ -116,15 +115,15 @@ GSEA_cust.root <- read_tsv(file.path("annotation","output","root.voom5.module.gm
 GSEA_cust.leaf <- read_tsv(file.path("annotation","output","leaf.voom5.module.gmx")) %>% dplyr::slice(-1) # # remove row1 that has "na"
 genes.count.root <- GSEA_cust.root %>% 
   pivot_longer(cols=colnames(GSEA_cust.root)) %>% 
-  mutate(name=str_to_upper(name)) %>%
+  #mutate(name=str_to_upper(name)) %>%
   group_by(name) %>% drop_na() %>% summarise(n=n()) %>% 
   dplyr::rename(NAME=name)
 genes.count.leaf <- GSEA_cust.leaf %>% 
   pivot_longer(cols=colnames(GSEA_cust.leaf)) %>% 
-  mutate(name=str_to_upper(name)) %>%
+  #mutate(name=str_to_upper(name)) %>%
   group_by(name) %>% drop_na() %>% summarise(n=n()) %>% 
   dplyr::rename(NAME=name)
-genes.count <- bind_rows(genes.count.root,genes.count.leaf) %>% mutate(NAME=str_remove(NAME,".VOOM5.MODULE") %>% str_replace("ROOT","root") %>% str_replace("LEAF","leaf")) 
+genes.count <- bind_rows(genes.count.root,genes.count.leaf) %>% mutate(NAME=str_remove(NAME,".voom5.module")) #%>% str_replace("ROOT","root") %>% str_replace("LEAF","leaf")) # 031221
 #GSEA_reports.DF <- GSEA_reports.DF %>% filter(`FDR q-val` < 0.3)
 ```
 
@@ -230,7 +229,8 @@ GSEA_reports.DF.plot
 if(modules=="fullmodule") {
   genes.count2 <- genes.count  %>% # filter(NAME %in% dendro.y.NAME$NAME) %>%
   mutate(NAME=factor(NAME,levels=c(as.vector(dendro.y.NAME$NAME),as.vector(missing.categories$NAME))))  %>% separate(NAME,into=c("tissue2","module"),sep="\\.",remove=FALSE) %>% #View()
- arrange(desc(NAME)) %>% left_join(leaf_avg_std.ML.data,by=c("NAME"="tissue.module")) %>% mutate(sign=ifelse(PropVar_0.5_LOO >0,"positive","negative")) # adding leaf_avg_std.ML.data
+ arrange(desc(NAME)) %>% left_join(leaf_avg_std.ML.data,by=c("NAME"="tissue.module")) # %>%    mutate(sign=ifelse(PropVar_0.5_LOO >0,"positive","negative")) # adding leaf_avg_std.ML.data
+
 } else if(modules=="selected") {
   genes.count2 <- genes.count  %>% # filter(NAME %in% dendro.y.NAME$NAME) %>%
   separate(NAME,into=c("tissue2","module"),sep="\\.",remove=FALSE) %>% #View()
@@ -253,11 +253,11 @@ genes.count2 <- genes.count2 %>% mutate(y=seq(dim(genes.count2)[1],1)) # bottom 
       labs(shape="") + #scale_shape_identity(name="") + 
       # for gene number (="n")
   geom_point(aes(x=0,y=y,size=n),color = "red",  inherit.aes = FALSE, data=genes.count2) +
-      # for PropVar_0.5_LOO (120820)
+      # for PropVar_0.5_LOO (120820), changed for leaf_avg_std.ML.data = ElasticNet0.5_multiCV_Pct_var (031221)
       new_scale_fill() + # error
       geom_point(aes(x=0.35,y=y,fill=Pct_Var_Explained,shape=Effect), size=3,inherit.aes = FALSE, data=genes.count2)  +
-      scale_fill_gradient2(limit=c(-0.15,0.15), high=muted("magenta"),low=muted("green"),mid="white") +
-      scale_shape_manual(values=c("positive"=24,"negative"=25)) + # trial to heve different shape 
+      scale_fill_gradient(limit=c(0,10)) +
+      scale_shape_manual(values=c("Increase"=24,"Decrease"=25)) + # trial to heve different shape 
     coord_cartesian(xlim = c(0,4)) 
     GSEA_reports.DF.plot.alt # needs to work on abs(FC.mean) scale
 
@@ -271,7 +271,7 @@ dendro.plot <- dendro.plot + theme(
   #plot.margin = margin(470, 0, 40, 0, "pt")) # Top, right, bottom, left. 
   plot.margin = margin(top.margin, 0, bottom.margin, 0, "pt")) # Top, right, bottom, left.
 # adding dendrogram or not
-if(dendtrogram=="TRUE") { 
+if(dendrogram=="TRUE") { 
 # combine plots
 GSEA_reports.plot <- plot_grid(GSEA_reports.DF.plot.alt, dendro.plot,rel_widths=c(4,1)) # worked!
 } else {
@@ -284,184 +284,6 @@ return(GSEA_reports.plot)
 
 
 # WGCNA modules vs custom categories
-
-# Signature of WGCNA modules by looking enrichement of custom categories
-```{r}
-WGCNA.voom5.all.modules.customcat.GOseq <- read_csv(file.path("RNA","output","WGCNA.voom5.all.modules.customcat.GOseq.csv"))
-#
-# genes.count # does not use
-# colnames(GSEA_cust.root)
-# colnames(GSEA_cust.leaf)
-# GSEA_reports.DF.formatted2 
-
-#str(GSEA_reports.DF.formatted2) # not needed?
-
-WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq <- WGCNA.voom5.all.modules.customcat.GOseq %>% mutate(name=str_replace(name,"_",".")) %>% filter(name %in% c(colnames(GSEA_cust.root),colnames(GSEA_cust.leaf))) %>% mutate(name=str_to_upper(name)) %>% dplyr::rename(NAME=name) %>% mutate(NAME=str_remove(NAME,"VOOM5.MODULE.") %>% str_replace("ROOT","root") %>% str_replace("LEAF","leaf")) # %>% mutate(NAME=factor(NAME,levels=levels(GSEA_reports.DF.formatted2$NAME)))
-                         
-WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq %>% View()
-str(WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq)
-```
-# WGCNA module ORA heatmap
-```{r}
-# # count gene numbers in each category
-# GSEA_cust.root <- read_tsv(file.path("..","output","root.voom5.moduleFDR0.3.gmx")) %>% dplyr::slice(-1) # # remove row1 that has "na"
-# GSEA_cust.leaf <- read_tsv(file.path("..","output","leaf.voom5.moduleFDR0.3.gmx")) %>% dplyr::slice(-1) # # remove row1 that has "na"
-# genes.count.root <- GSEA_cust.root %>% 
-#   pivot_longer(cols=colnames(GSEA_cust.root)) %>% 
-#   mutate(name=str_to_upper(name)) %>%
-#   group_by(name) %>% drop_na() %>% summarise(n=n()) %>% 
-#   dplyr::rename(NAME=name)
-# genes.count.leaf <- GSEA_cust.leaf %>% 
-#   pivot_longer(cols=colnames(GSEA_cust.leaf)) %>% 
-#   mutate(name=str_to_upper(name)) %>%
-#   group_by(name) %>% drop_na() %>% summarise(n=n()) %>% 
-#   dplyr::rename(NAME=name)
-# genes.count <- bind_rows(genes.count.root,genes.count.leaf) %>% mutate(NAME=str_remove(NAME,".VOOM5.MODULE") %>% str_replace("ROOT","root") %>% str_replace("LEAF","leaf")) 
-# re-format
-WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2 <- WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq  %>%  mutate(category2=
-  str_to_upper(category) %>%
-  str_replace_all("KAILASAM2019", "KAILASAM_2019") %>%
- str_replace_all("MINUSPI_1D","MINUSPI-1D") %>%
-  str_replace_all("MINUSPI_3D","MINUSPI-3D") %>%
-  str_replace_all("AARABI2016","AARABI_2016") %>%
-  str_replace_all("KIM2019","KIM_2019") %>%
-  str_replace_all("WANG2003","WANG_2003") %>%
-   str_replace_all("COLDKILIAN","COLD_KILIAN") %>%
-  str_replace_all("BL_SEEDLINGS","plusBL_Nemhauser_2006_seedlings") %>%
-  str_replace_all("IAA_SEEDLINGS","plusIAA_Nemhauser_2006_seedlings") ) %>% 
-  separate(category2,into=c("category3","au","yr","tissue3","FC","up_down"),sep="_") %>% # View()
-  mutate(category3=category3 %>% 
-           str_replace_all("MINUSMG","MG-") %>%
-           str_replace_all("PLUSMG","MG+") %>%
-           str_replace_all("MINUSFE","FE-") %>%
-    str_replace_all("PLUSFE","FE_PLUS") %>%
-  str_replace_all("MINUSPI-1D","PI-1D-") %>%
-    str_replace_all("PLUSPI-1D","PI-1D+") %>%
-  str_replace_all("MINUSPI-3D","PI-3D+") %>%
-    str_replace_all("PLUSPI-3D","PI-3D+") %>%
-  str_replace_all("MINUSN","N-") %>%
-  str_replace_all("PLUSN","N+") %>%
-  str_replace_all("MINUSMN","MN-") %>%
-  str_replace_all("PLUSMN","MN+") %>% 
-  str_replace_all("MINUSP","P-") %>% 
-    str_replace_all("PLUSP","P+") %>% 
-    str_replace_all("PLUSIAA","IAA+") %>% 
-    str_replace_all("PLUSAL","AL+") %>%
-    str_replace_all("MINUSCA","CA-") %>% 
-      str_replace_all("PLUSCA","CA+") %>%
-    str_replace_all("MINUSK","K-") %>% 
-    str_replace_all("PLUSK","K+") %>% 
-    str_replace_all("MINUSS","S-") %>% 
-    str_replace_all("PLUSS","S+")) %>%
-  drop_na(category3) %>%
-  unite(category3.au,c("category3","au"),remove=FALSE) %>% 
-  mutate(au2 = str_replace_all(au,"KAILASAM","(1)") %>% 
-           str_replace_all("KIM","(2)") %>% 
-           str_replace_all("NISHIDA","(3)") %>%
-           str_replace_all("NIU","(4)") %>%
-           str_replace_all("KILIAN","(5)") %>%
-           str_replace_all("RODRIGUEZ-CELMA","(6)") %>%
-           str_replace_all("LIU","(7)") %>%
-           str_replace_all("PENG","(8)") %>%
-           str_replace_all("AARABI","(9)") %>%
-           str_replace_all("LIGABA-OSENA","(10)") %>%
-           str_replace_all("NEMHAUSER","(11)") %>%
-           str_replace_all("WANG","(12)")) %>%
-  unite(category3.au.up_down,c("category3","up_down","au2"),sep=" ",remove=FALSE) 
-# check
-WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2 %>% View()
-# arbitrally convert value of 0 into 10^-10 for scale visualization
-WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2[WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2$over_represented_padjust < 10^-10,"over_represented_padjust"] <- 10^-10
-# select modules
-WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2 %>% View()
-WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected <- WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2 %>% 
-  inner_join(ElasticNet0.5_multiCV_Pct_var, by=c("NAME"="tissue.module")) %>%
-  arrange(Pct_Var_Explained) %>% drop_na(Pct_Var_Explained) #%>% View() # sorting modules
-# which categories are exclused from WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected
-missing.categories <- ElasticNet0.5_multiCV_Pct_var %>% dplyr::select(tissue.module) %>% filter(!tissue.module %in% WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected$NAME) %>% dplyr::rename(NAME=tissue.module)
-# format data to add missing categories to heatmap 
-WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected2 <- WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected %>% dplyr::select(NAME,category3.au.up_down,over_represented_padjust,tissue3)  
-# names of category3.au.up_down
-num.category3.au.up_down <- names(table(WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected2$category3.au.up_down))
-# adding missing categories to heatmap
-WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected2 <- 
-WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected2 %>% bind_rows(tibble(NAME=rep(missing.categories$NAME,length(num.category3.au.up_down)),category3.au.up_down=rep(num.category3.au.up_down,each=dim(missing.categories)[1]),over_represented_padjust=1,tissue3="ROOT")) #%>% View() # missing categories in GSEA reports. tissue3="root" is fake
-# check this is what I want
-WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected2 %>% group_by(NAME,category3.au.up_down) %>% summarize(n()) %>% View()
-
-# relevel using dendrogram in GSEA plot
-load(file.path("..","output","dendro.y.NAME.Rdata"))
-WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected2 <-  WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected2 %>%
-  mutate(NAME=factor(NAME,levels=dendro.y.NAME$NAME)) 
-str(WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected2)
-
-# plot 
-WGCNA.voom5.all.modules.customcat.GOseq.plot.selected2 <- ggplot(WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected2, aes(x=category3.au.up_down,y=NAME)) + geom_tile(aes(fill=-log10(over_represented_padjust)),colour="white") + scale_fill_gradient2(limit=c(0,10), high=muted("magenta")) + facet_grid(.~tissue3,scales="free_x",space="free")
-
-WGCNA.voom5.all.modules.customcat.GOseq.plot.selected2 <- WGCNA.voom5.all.modules.customcat.GOseq.plot.selected2 + theme(axis.text.x=element_text(size=8,angle=90,hjust=1),
-                                      axis.text.y=element_text(size=8),
-                                      axis.title=element_text(size=8),
-                                      axis.ticks = element_blank(),
-                                      strip.text.y = element_text(angle=0),
-                                      strip.text.x = element_text(size=8,angle=90),
-                                      panel.background = element_rect(fill = "white",colour="black"),
-                                      plot.title=element_text(size=14),
-                                      axis.line=element_blank()) + 
-      labs(x="",y="",fill="-log10\n FDR",title=" ")
-    WGCNA.voom5.all.modules.customcat.GOseq.plot.selected2
-ggsave(path=file.path("RNA","output"),filename="WGCNA.voom5.leaf_avg_std.correlated.modules.customcat.GOseq.4.selected.plot.png",height=8,width=11) 
-
-```
-
-# combine GSEA plot and WGCNA module ORA plot (under construction)
-```{r}
-# format GSEA plot
-plot.GSEA <- GSEA_reports.DF.plot.dendrogram.v9.WGCNAmodule.notitle.ML(data = GSEA_reports.DF.MLselected,
-                                            GSEA.FDR.cutoff = cutoff,
-                                            top.margin=290,
-                                            bottom.margin=30,
-                                            dendtrogram="FALSE",
-                                            legend.height=30,
-                                            legend.width=10,
-                                            modules="fullmodule") 
-#plot.GSEA  +  guides(fill = guide_legend(nrow=2)) # this is not what I want
-plot.GSEA <- plot.GSEA + theme(legend.position="left",legend.key.height=unit(10,"pt"),legend.text=element_text(size=10,angle=0),plot.margin = margin(74, 0, 50, 0, "pt")) 
-ggsave(plot.GSEA,filename="GSEA.RNAseq.plot.ML.full.png",path=file.path("RNA","output"),width=8,height=15)
-# only ML selected modules
-plot.GSEA <- GSEA_reports.DF.plot.dendrogram.v9.WGCNAmodule.notitle.ML(data = GSEA_reports.DF.MLselected,
-                                            GSEA.FDR.cutoff = cutoff,
-                                            top.margin=290,
-                                            bottom.margin=30,
-                                            dendtrogram="FALSE",
-                                            legend.height=30,
-                                            legend.width=10,
-                                            modules="selected") 
-#plot.GSEA  +  guides(fill = guide_legend(nrow=2)) # this is not what I want
-plot.GSEA <- plot.GSEA + theme(legend.position="left",legend.key.height=unit(10,"pt"),legend.text=element_text(size=10,angle=0),plot.margin = margin(75, 0, 35, 0, "pt")) 
-ggsave(plot.GSEA,filename="GSEA.RNAseq.plot.ML.selected.png",path=file.path("..","output"),width=6,height=8)
-# format WGCNA ORA plots
-WGCNA.voom5.all.modules.customcat.GOseq.plot.selected2 <- WGCNA.voom5.all.modules.customcat.GOseq.plot.selected2 + theme(plot.margin = margin(0, 0, 0, 0, "pt"),legend.position = "right",legend.key.height=unit(30,"pt"),axis.text.y=element_blank(),axis.text.x=element_text(size=10,hjust=1)) + # Top, right, bottom, left.)
-  labs(title="") 
-# combine two plots
-library(cowplot)
-plot.combined <- plot_grid(plot.GSEA,WGCNA.voom5.all.modules.customcat.GOseq.plot.selected2,rel_widths=c(1,1),labels=c("A","B"))
-#plot.combined
-ggsave(plot.combined,path=file.path("RNA","output"),filename="WGCNA.voom5.leaf_avg_std.correlated.modules.ML.customcat.GSEA.combined.png",height=8,width=11)
-# wider version
-plot.combined <- plot_grid(plot.GSEA,WGCNA.voom5.all.modules.customcat.GOseq.plot.selected2,rel_widths=c(3,4),labels=c("A","B"))
-#plot.combined
-ggsave(plot.combined,path=file.path("RNA","output"),filename="WGCNA.voom5.leaf_avg_std.correlated.modules.customcat.MLGSEA.combined.wider.png",height=8,width=15)
-
-```
-
-# GOseq of all WGCNA modules (leaf.voom5, root.voom5 version) with custom categories  (copied from "10_WGCNA_including_R500.Rmd")
-
-# GOseq ORA prep
-# load Brgo.v3.0anno.Atgoslim.BP.list for GOseq analysis (GO terms) (using split() and map() to avoid long loop)
-```{r eval=TRUE,error=TRUE}
-load(file.path("annotation","output","Brgo.v3.0anno.Atgoslim.BP.list.Rdata"))
-```
-
 # load GO.ORA function (copy from "04b_Br.mbio.e3.subset.v3.)
 # GOseq function for Brassica rapa (v3.0)
 ```{r eval=TRUE,error=TRUE}
@@ -475,6 +297,9 @@ Bra.v3.0_cdna<-readDNAStringSet(file.path("annotation","input","Brapa_genome_v3.
 Bra.v3.0_cdna
 ## remove fasta file
 system(paste("rm ",file.path("annotation","input","Brapa_genome_v3.0_cds.fa"),sep=""))
+
+#
+Br.v3.0anno.At.BLAST.highscore.modules2 <- read_csv(file.path("RNA","output","WGCNA.modules2.voom5.csv.gz"))
 
 # GOseq function
 GOseq.Brgo.v3.0.Atgoslim.BP.list.ORA2<-function(genelist,padjust=0.05,ontology="BP",custom.category.list=Brgo.v3.0anno.Atgoslim.BP.list,Br_cdna=Bra.v3.0_cdna) { # return GO enrichment table, padjus, padjust=0.05. 
@@ -531,23 +356,212 @@ head(Bra.v3.0_cdna)
 ```
 
 
+# GOseq with custom categories (Sep 30, 2020; Oct 28, 2020)
+```{r}
+# annotation
+Br.v3.0anno.At.BLAST.highscore.modules2 <- read_csv(file.path("RNA","output","WGCNA.modules2.voom5.csv.gz"))
+# custom categories list
+load(file.path("annotation","output","GSEA_cust_rootshoot_updown2.list.Rdata"))
+#modTrait.leaf_avg_std.P2.summary.FDR0.25 %>% View()
+# all modules
+GOseq.temp <- Br.v3.0anno.At.BLAST.highscore.modules2 %>% ungroup() %>% dplyr::select(name,root.voom5.module,leaf.voom5.module) %>%
+pivot_longer(cols=-1,names_to = "voom")  %>% drop_na(value) %>% unite(voom.module,c("voom","value")) %>%  split(.$voom.module) %>% map(~GOseq.Brgo.v3.0.Atgoslim.BP.list.ORA2(genelist=.$name,custom.category.list=GSEA_cust_rootshoot_updown2.list,ontology="none")) # ,custom.category.list=GSEA_cust_rootshoot_updown2.list
+GOseq.temp %>% enframe() %>% unnest(value) %>% write_csv(file.path("..","output","WGCNA.voom5.all.modules.customcat.GOseq.csv"))
+
+
+# check results on "voom_expression.e1and3.resid.exp_only.root_plum1", which has "iron" in GOseq? which modules?
+GOseq.temp2 <- Br.v3.0anno.At.BLAST.highscore.modules2 %>% ungroup() %>% dplyr::select(name,root.voom5.module,leaf.voom5.module) %>%
+pivot_longer(cols=-1,names_to = "voom")  %>% drop_na(value) %>% unite(voom.module,c("voom","value")) %>% filter(voom.module=="root.voom5.module_plum1") %>% 
+  split(.$voom.module) %>% map(~GOseq.Brgo.v3.0.Atgoslim.BP.list.ORA2(genelist=.$name,custom.category.list=GSEA_cust_rootshoot_updown2.list,ontology="none")) # OK. Good. Fe categoreis enriched
+```
+
+# GOseq of all WGCNA modules (leaf.voom5, root.voom5 version) with custom categories 
+```{r}
+GOseq.temp <- Br.v3.0anno.At.BLAST.highscore.modules2 %>% ungroup() %>% dplyr::select(name,root.voom5.module,leaf.voom5.module) %>%
+pivot_longer(cols=-1,names_to = "voom") %>% drop_na(value) %>% unite(voom.module,c("voom","value")) %>% split(.$voom.module) %>% map(~GOseq.Brgo.v3.0.Atgoslim.BP.list.ORA2(genelist=.$name,custom.category.list=GSEA_cust_rootshoot_updown2.list,ontology="none")) # ,custom.category.list=GSEA_cust_rootshoot_updown2.list
+GOseq.temp %>% enframe() %>% unnest(value) %>% write_csv(file.path("RNA","output","WGCNA.voom5.all.modules.customcat.GOseq.csv"))
+
+```
+
+# Signature of WGCNA modules by looking enrichement of custom categories
+```{r}
+WGCNA.voom5.all.modules.customcat.GOseq <- read_csv(file.path("RNA","output","WGCNA.voom5.all.modules.customcat.GOseq.csv"))
+#
+# genes.count # does not use
+# colnames(GSEA_cust.root)
+# colnames(GSEA_cust.leaf)
+# GSEA_reports.DF.formatted2 
+
+WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq <- WGCNA.voom5.all.modules.customcat.GOseq %>% mutate(name=str_replace(name,"_",".")) %>% filter(name %in% c(colnames(GSEA_cust.root) %>% str_remove(".voom5.module"),colnames(GSEA_cust.leaf))) %>% dplyr::rename(NAME=name) 
+                         
+WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq %>% View()
+str(WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq)
+```
+# WGCNA module ORA heatmap
+```{r}
+WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2 <- WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq  %>%  mutate(category2=
+  str_to_upper(category) %>%
+  str_replace_all("KAILASAM2019", "KAILASAM_2019") %>%
+ str_replace_all("MINUSPI_1D","MINUSPI-1D") %>%
+  str_replace_all("MINUSPI_3D","MINUSPI-3D") %>%
+  str_replace_all("AARABI2016","AARABI_2016") %>%
+  str_replace_all("KIM2019","KIM_2019") %>%
+  str_replace_all("WANG2003","WANG_2003") %>%
+   str_replace_all("COLDKILIAN","COLD_KILIAN") %>%
+  str_replace_all("BL_SEEDLINGS","plusBL_Nemhauser_2006_seedlings") %>%
+  str_replace_all("IAA_SEEDLINGS","plusIAA_Nemhauser_2006_seedlings") ) %>% 
+  separate(category2,into=c("category3","au","yr","tissue3","FC","up_down"),sep="_") %>% # View()
+  mutate(category3=category3 %>% 
+           str_replace_all("MINUSMG","MG-") %>%
+           str_replace_all("PLUSMG","MG+") %>%
+           str_replace_all("MINUSFE","FE-") %>%
+    str_replace_all("PLUSFE","FE_PLUS") %>%
+  str_replace_all("MINUSPI-1D","PI-1D-") %>%
+    str_replace_all("PLUSPI-1D","PI-1D+") %>%
+  str_replace_all("MINUSPI-3D","PI-3D+") %>%
+    str_replace_all("PLUSPI-3D","PI-3D+") %>%
+  str_replace_all("MINUSN","N-") %>%
+  str_replace_all("PLUSN","N+") %>%
+  str_replace_all("MINUSMN","MN-") %>%
+  str_replace_all("PLUSMN","MN+") %>% 
+  str_replace_all("MINUSP","P-") %>% 
+    str_replace_all("PLUSP","P+") %>% 
+    str_replace_all("PLUSIAA","IAA+") %>% 
+    str_replace_all("PLUSAL","AL+") %>%
+    str_replace_all("MINUSCA","CA-") %>% 
+      str_replace_all("PLUSCA","CA+") %>%
+    str_replace_all("MINUSK","K-") %>% 
+    str_replace_all("PLUSK","K+") %>% 
+    str_replace_all("MINUSS","S-") %>% 
+    str_replace_all("PLUSS","S+")) %>%
+  drop_na(category3) %>%
+  unite(category3.au,c("category3","au"),remove=FALSE) %>% 
+  mutate(au2 = str_replace_all(au,"KAILASAM","(1)") %>% 
+           str_replace_all("KIM","(2)") %>% 
+           str_replace_all("NISHIDA","(3)") %>%
+           str_replace_all("NIU","(4)") %>%
+           str_replace_all("KILIAN","(5)") %>%
+           str_replace_all("RODRIGUEZ-CELMA","(6)") %>%
+           str_replace_all("LIU","(7)") %>%
+           str_replace_all("PENG","(8)") %>%
+           str_replace_all("AARABI","(9)") %>%
+           str_replace_all("LIGABA-OSENA","(10)") %>%
+           str_replace_all("NEMHAUSER","(11)") %>%
+           str_replace_all("WANG","(12)")) %>%
+  unite(category3.au.up_down,c("category3","up_down","au2"),sep=" ",remove=FALSE) 
+# check
+WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2 %>% View()
+# arbitrally convert value of 0 into 10^-10 for scale visualization
+WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2[WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2$over_represented_padjust < 10^-10,"over_represented_padjust"] <- 10^-10
+# select modules
+WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2 %>% View()
+WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected <- WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2 %>% mutate(NAME=str_remove(NAME,".voom5.module")) %>%   inner_join(ElasticNet0.5_multiCV_Pct_var, by=c("NAME"="tissue.module")) %>% arrange(Pct_Var_Explained) %>% drop_na(Pct_Var_Explained) #%>% View() # sorting modules
+# which categories are exclused from WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected
+missing.categories <- ElasticNet0.5_multiCV_Pct_var %>% dplyr::select(tissue.module) %>% filter(!tissue.module %in% WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected$NAME) %>% dplyr::rename(NAME=tissue.module)
+# format data to add missing categories to heatmap 
+WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected2 <- WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected %>% dplyr::select(NAME,category3.au.up_down,over_represented_padjust,tissue3)  
+# names of category3.au.up_down
+num.category3.au.up_down <- names(table(WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected2$category3.au.up_down))
+# adding missing categories to heatmap
+WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected2 <- 
+WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected2 %>% bind_rows(tibble(NAME=rep(missing.categories$NAME,length(num.category3.au.up_down)),category3.au.up_down=rep(num.category3.au.up_down,each=dim(missing.categories)[1]),over_represented_padjust=1,tissue3="ROOT")) #%>% View() # missing categories in GSEA reports. tissue3="root" is fake
+# check this is what I want
+WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected2 %>% group_by(NAME,category3.au.up_down) %>% summarize(n()) %>% View() # none, why?
+
+# relevel using dendrogram in GSEA plot
+load(file.path("RNA","output","dendro.y.NAME.Rdata"))
+WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected2 <-  WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected2 %>%
+  mutate(NAME=factor(NAME,levels=dendro.y.NAME$NAME)) 
+str(WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected2)
+
+# plot 
+WGCNA.voom5.all.modules.customcat.GOseq.plot.selected2 <- ggplot(WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected2, aes(x=category3.au.up_down,y=NAME)) + geom_tile(aes(fill=-log10(over_represented_padjust)),colour="white") + scale_fill_gradient2(limit=c(0,10), high=muted("magenta")) + facet_grid(.~tissue3,scales="free_x",space="free")
+
+WGCNA.voom5.all.modules.customcat.GOseq.plot.selected2 <- WGCNA.voom5.all.modules.customcat.GOseq.plot.selected2 + theme(axis.text.x=element_text(size=8,angle=90,hjust=1),
+                                      axis.text.y=element_text(size=8),
+                                      axis.title=element_text(size=8),
+                                      axis.ticks = element_blank(),
+                                      strip.text.y = element_text(angle=0),
+                                      strip.text.x = element_text(size=8,angle=90),
+                                      panel.background = element_rect(fill = "white",colour="black"),
+                                      plot.title=element_text(size=14),
+                                      axis.line=element_blank()) + 
+      labs(x="",y="",fill="-log10\n FDR",title=" ")
+    WGCNA.voom5.all.modules.customcat.GOseq.plot.selected2
+ggsave(path=file.path("RNA","output"),filename="WGCNA.voom5.leaf_avg_std.correlated.modules.customcat.GOseq.4.selected.plot.png",height=8,width=11) 
+
+```
+
+# combine GSEA plot and WGCNA module ORA plot (under construction)
+```{r}
+# format GSEA plot
+plot.GSEA <- GSEA_reports.DF.plot.dendrogram.v9.WGCNAmodule.notitle.ML(data = GSEA_reports.DF.MLselected,
+                                            GSEA.FDR.cutoff = cutoff,
+                                            top.margin=290,
+                                            bottom.margin=30,
+                                            dendrogram="FALSE",
+                                            legend.height=30,
+                                            legend.width=10,
+                                            modules="fullmodule") 
+#plot.GSEA  +  guides(fill = guide_legend(nrow=2)) # this is not what I want
+plot.GSEA <- plot.GSEA + theme(legend.position="left",legend.key.height=unit(10,"pt"),legend.text=element_text(size=10,angle=0),plot.margin = margin(74, 0, 50, 0, "pt")) 
+ggsave(plot.GSEA,filename="GSEA.RNAseq.plot.ML.full2.png",path=file.path("RNA","output"),width=8,height=15)
+# only ML selected modules
+plot.GSEA <- GSEA_reports.DF.plot.dendrogram.v9.WGCNAmodule.notitle.ML(data = GSEA_reports.DF.MLselected,
+                                            GSEA.FDR.cutoff = cutoff,
+                                            top.margin=290,
+                                            bottom.margin=30,
+                                            dendrogram="FALSE",
+                                            legend.height=30,
+                                            legend.width=10,
+                                            modules="selected") 
+#plot.GSEA  +  guides(fill = guide_legend(nrow=2)) # this is not what I want
+plot.GSEA <- plot.GSEA + theme(legend.position="left",legend.key.height=unit(10,"pt"),legend.text=element_text(size=10,angle=0),plot.margin = margin(75, 0, 35, 0, "pt")) 
+ggsave(plot.GSEA,filename="GSEA.RNAseq.plot.ML.selected.png",path=file.path("RNA","output"),width=6,height=8)
+# format WGCNA ORA plots
+WGCNA.voom5.all.modules.customcat.GOseq.plot.selected2 <- WGCNA.voom5.all.modules.customcat.GOseq.plot.selected2 + theme(plot.margin = margin(0, 0, 0, 0, "pt"),legend.position = "right",legend.key.height=unit(30,"pt"),axis.text.y=element_blank(),axis.text.x=element_text(size=10,hjust=1)) + # Top, right, bottom, left.)
+  labs(title="") 
+# combine two plots
+library(cowplot)
+plot.combined <- plot_grid(plot.GSEA,WGCNA.voom5.all.modules.customcat.GOseq.plot.selected2,rel_widths=c(1,1),labels=c("A","B"))
+#plot.combined
+ggsave(plot.combined,path=file.path("RNA","output"),filename="WGCNA.voom5.leaf_avg_std.correlated.modules.ML.customcat.GSEA.combined2.png",height=8,width=11)
+# wider version
+plot.combined <- plot_grid(plot.GSEA,WGCNA.voom5.all.modules.customcat.GOseq.plot.selected2,rel_widths=c(3,4),labels=c("A","B"))
+#plot.combined
+ggsave(plot.combined,path=file.path("RNA","output"),filename="WGCNA.voom5.leaf_avg_std.correlated.modules.customcat.MLGSEA.combined2.wider.png",height=8,width=15)
+
+```
+
+# GOseq of all WGCNA modules (leaf.voom5, root.voom5 version) with custom categories  (copied from "10_WGCNA_including_R500.Rmd")
+
+
+
+# GOseq ORA prep
+# load Brgo.v3.0anno.Atgoslim.BP.list for GOseq analysis (GO terms) (using split() and map() to avoid long loop)
+```{r eval=TRUE,error=TRUE}
+load(file.path("annotation","output","Brgo.v3.0anno.Atgoslim.BP.list.Rdata"))
+```
+
+
 # GOseq of all WGCNA modules (leaf.voom5, root.voom5 version) with GO terms
 ```{r}
-Br.v3.0anno.At.BLAST.highscore.modules2 <- read_csv(file.path("RNA","output","WGCNA.modules2.voom5.csv.gz"))
+#Br.v3.0anno.At.BLAST.highscore.modules2 <- read_csv(file.path("RNA","output","WGCNA.modules2.voom5.csv.gz"))
 # stats of modules
 Br.v3.0anno.At.BLAST.highscore.modules2 %>% group_by(root.voom5.module) %>% summarise(root.voom5.module.num=n()) %>% dim() # 41 2
 Br.v3.0anno.At.BLAST.highscore.modules2 %>% group_by(leaf.voom5.module) %>% summarise(leaf.voom5.module.num=n()) %>% dim() # 66 2
 GOseq.temp <- Br.v3.0anno.At.BLAST.highscore.modules2 %>% ungroup() %>% dplyr::select(name,root.voom5.module,leaf.voom5.module) %>%
 pivot_longer(cols=-1,names_to = "voom") %>% drop_na(value) %>% unite(voom.module,c("voom","value")) %>% split(.$voom.module) %>% map(~GOseq.Brgo.v3.0.Atgoslim.BP.list.ORA2(genelist=.$name)) # ,custom.category.list=GSEA_cust_rootshoot_updown2.list
-GOseq.temp %>% enframe() %>% unnest(value) %>% write_csv(file.path("RNA","output","WGCNA.voom5.all.modules.GOseq.csv"))
+GOseq.temp %>% enframe() %>% unnest(value) %>% mutate(name = str_remove(name,".voom5.module")) %>% write_csv(file.path("RNA","output","WGCNA.voom5.all.modules.GOseq.csv"))
 
 ```
 
 # GO ORA with custom categories
 ```{r}
+load(file.path("annotation","output","GSEA_cust_rootshoot_updown2.list.Rdata"))
 GOseq.temp <- Br.v3.0anno.At.BLAST.highscore.modules2 %>% ungroup() %>% dplyr::select(name,root.voom5.module,leaf.voom5.module) %>%
 pivot_longer(cols=-1,names_to = "voom") %>% drop_na(value) %>% unite(voom.module,c("voom","value")) %>% split(.$voom.module) %>% map(~GOseq.Brgo.v3.0.Atgoslim.BP.list.ORA2(genelist=.$name,custom.category.list=GSEA_cust_rootshoot_updown2.list,ontology="none")) # ,custom.category.list=GSEA_cust_rootshoot_updown2.list
-GOseq.temp %>% enframe() %>% unnest(value) %>% write_csv(file.path("RNA","output","WGCNA.voom5.all.modules.customcat.GOseq.csv"))
+GOseq.temp %>% enframe() %>% unnest(value) %>% mutate(name=str_remove(name,".voom5.module")) %>%  write_csv(file.path("RNA","output","WGCNA.voom5.all.modules.customcat.GOseq.csv"))
 
 ```
 
@@ -556,8 +570,8 @@ GOseq.temp %>% enframe() %>% unnest(value) %>% write_csv(file.path("RNA","output
 ```{r}
 WGCNA.voom5.all.modules.GOseq <- read_csv(file.path("RNA","output","WGCNA.voom5.all.modules.GOseq.csv"))
 WGCNA.voom5.all.modules.GOseq %>% dplyr::select(name)
-ElasticNet0.5_multiCV_Pct_var %>% mutate(temp=str_remove_all(ME,"^ME")) %>% separate(temp,c("module","tissue"),sep="_") %>% mutate(tissue=str_c(tissue,".voom5.module")) %>% unite(tissue.module,tissue,module,sep="_") %>% inner_join(WGCNA.voom5.all.modules.GOseq,by=c("tissue.module"="name"))  %>% #View()
-mutate(tissue.module=str_remove(tissue.module,".voom5.module")) %>% separate(tissue.module,into=c("tissue","module")) %>% dplyr::select(tissue,module,category,over_represented_pvalue,over_represented_padjust,term) %>% drop_na(category) %>% #View() 
+
+ElasticNet0.5_multiCV_Pct_var  %>% inner_join(WGCNA.voom5.all.modules.GOseq,by=c("tissue.module"="name")) %>% separate(tissue.module,into=c("tissue","module")) %>% dplyr::select(tissue,module,category,over_represented_pvalue,over_represented_padjust,term) %>% drop_na(category) %>% #View() 
   write_csv(file.path("RNA","output","WGCNA.voom5.growth.related.modules.GOseq.csv"))
 ```
 
