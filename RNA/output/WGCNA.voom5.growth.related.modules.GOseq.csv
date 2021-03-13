@@ -60,4 +60,7 @@ root,plum1,GO:0036529,1.263176612535628e-4,0.036816739883826874,"protein deglyca
 root,plum1,GO:0106046,1.263176612535628e-4,0.036816739883826874,"guanine deglycation, glyoxal removal"
 root,plum1,GO:0033215,1.3659033812620037e-4,0.0369671993685838,iron assimilation by reduction and transport
 root,plum1,GO:0042343,1.7389043627489377e-4,0.04392472420303816,indole glucosinolate metabolic process
+leaf,midnightblue,GO:0043622,1.3213356299690134e-5,0.041062977907516875,cortical microtubule organization
+leaf,midnightblue,GO:0005983,2.167483658354018e-5,0.041062977907516875,starch catabolic process
+leaf,midnightblue,GO:0009825,3.3759046469328595e-5,0.04263767569076202,multidimensional cell growth
 leaf,brown4,GO:0006413,3.0825296350425335e-6,0.01167970478717616,translational initiation
