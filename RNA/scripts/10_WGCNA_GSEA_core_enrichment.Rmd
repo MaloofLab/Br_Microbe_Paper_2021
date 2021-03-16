@@ -293,6 +293,20 @@ p.leaf.all <- plot_grid(plot.leaf.list4[[1]],plot.leaf.list4[[2]],plot.leaf.list
                   plot.leaf.list4[[33]],plot.leaf.list4[[34]])
 ggsave(p.leaf.all,path=file.path("RNA","output"),filename="p.leaf.all2.png",height=40,width=20,dpi=72)
 
+# only leaf length associated modules
+p.root.leaf_length.associated <- plot_grid(plot.root.list4[[ElasticNet0.5_multiCV_Pct_var.module[1]]],
+                                           plot.root.list4[[ElasticNet0.5_multiCV_Pct_var.module[2]]],
+                                           plot.root.list4[[ElasticNet0.5_multiCV_Pct_var.module[3]]],
+                                           plot.root.list4[[ElasticNet0.5_multiCV_Pct_var.module[5]]])
+ggsave(p.root.leaf_length.associated,path=file.path("RNA","output"),filename="p.root.leaf_length.associated2.png",height=11,width=8,dpi=72)
+
+p.leaf.leaf_length.associated <- plot_grid(plot.leaf.list4[[ElasticNet0.5_multiCV_Pct_var.module[4]]],
+                                           plot.leaf.list4[[ElasticNet0.5_multiCV_Pct_var.module[6]]],
+                                           plot.leaf.list4[[ElasticNet0.5_multiCV_Pct_var.module[7]]],
+                                           plot.leaf.list4[[ElasticNet0.5_multiCV_Pct_var.module[8]]],
+                                           plot.leaf.list4[[ElasticNet0.5_multiCV_Pct_var.module[9]]])
+ggsave(p.leaf.leaf_length.associated,path=file.path("RNA","output"),filename="p.leaf.leaf_length.associated2.png",height=11,width=12,dpi=72)
+
 ```
 
 
