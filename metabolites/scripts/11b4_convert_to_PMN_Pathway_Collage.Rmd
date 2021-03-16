@@ -100,11 +100,15 @@ met_amt_rotation_out.brapa_fpsccyc_compounds.20180702_to_genes %>% group_by(Comp
 * File > Add or replace omics data
 * Overlay our RNAse data. Which? (option 1) live/dead relative expression values of soil treatment associated genes ("Yes" in GSEA) among leaf length correlated modules.(option 2)
 
-# Julin's Machine Learning selected WGCNA modules
-```{r}
-# reading Julin's results of penalized regression (see slide)
-ElasticNet0.5_LOO_prop_var <- read_csv(file.path("..","..","plant","output","ElasticNet0.5_LOO_prop_var.csv")) # fixed
-ElasticNet0.5_LOO_prop_var <- ElasticNet0.5_LOO_prop_var %>% mutate(J.module=str_remove(ME,"ME")) %>% separate(J.module,into=c("module","tissue")) %>% mutate(module=str_to_upper(module)) %>% unite(tissue.module,c("tissue","module"),sep=".") 
+# Julin's Machine Learning selected modules
+```{r eval=FALSE}
+# reading Julin's results of penalized regression (see slide) (old version)
+# ElasticNet0.5_LOO_prop_var <- read_csv(file.path("plant","output","ElasticNet0.5_LOO_prop_var.csv")) 
+ElasticNet0.5_multiCV_Pct_var <- read_csv(file.path("plant","output","ElasticNet0.5_multiCV_Pct_var.csv")) # Updated version from 11_take2_Machine_Learning
+# 
+ElasticNet0.5_multiCV_Pct_var <- ElasticNet0.5_multiCV_Pct_var %>%
+  #mutate(Module_Name=str_to_upper(Module_Name)) %>%  # tissue is lowercase, module is uppercase
+  unite(tissue.module,c("Module_Organ","Module_Name"),sep=".") # all lower case
 ```
 
 
@@ -205,41 +209,59 @@ read.coregenes <- function(default.path=gsea_report_path,
 }  
 ```
 
-
-
-
-
-### copy & paste from "10_GSEA_first_then_leaf_length_cor_with_WGCNA_including_R500.Rmd"
-# using map() or pmap() to add "core" gene list tata to each row of GSEA_reports.DF.all (ended up to use old Loop way...)
+# core enrichment genes (from 10_WGCNA_GSEA_core_enrichment.Rmd)
 ```{r}
-# loop (though this is not smart R way)
-coregenes <-list()
-temp <- GSEA_reports.DF %>% filter(`FDR q-val`< 0.3)
-for(i in 1:nrow(temp)) {
-  coregenes[[i]] <- read.coregenes(xls.file.in.GSEA_reports=as_vector(temp[i,"report3"]),
-                                   category.name = as_vector(temp[i,grep("MSigDB",names(temp),value=TRUE)]))
-}
-names(coregenes) <- temp$voom.module # none. needs to fix
-
-# select genes with "yes" in enrichment
-coregenes.yes <- list()
-for(i in 1:nrow(temp)) {
-  coregenes.yes[[i]] <- coregenes[[i]] %>% filter(`CORE ENRICHMENT`=="Yes") %>% dplyr::select(PROBE) %>% mutate(presence=as.numeric(1))
-}
-names(coregenes.yes) <- names(coregenes)
-# combine (different length of column)
-temp2 <- Br.v3.0anno.At.BLAST.highscore %>% dplyr::select(name,AGI,At_symbol, At_full_name,At_short_description) %>% left_join(coregenes.yes[[1]], by=c("name"="PROBE"))
-for(i in 2:length(names(coregenes.yes))) {
-  temp2 <- temp2 %>% left_join(coregenes.yes[[i]], by=c("name"="PROBE"))
-}
-temp2 %>% View()
-# rename colnames
-colnames(temp2)[str_detect(colnames(temp2),"presence")] <- names(coregenes.yes)
-coregenes.yes.DF <- temp2
-coregenes.yes.DF %>% View()
-# replcae NA into 0
-coregenes.yes.DF[is.na(coregenes.yes.DF)] <- 0
+coregenes.yes.DF <- read_csv(file.path("RNA/output/core_enrichment_genes.csv"))
 ```
+
+# Overlaying RNAseq data
+## reading expression data
+```{r}
+root.voom5 <- readr::read_tsv(file.path("RNA","output","voom_expression.e1and3.resid.exp_gt.root.plusR500.txt.gz"))
+leaf.voom5 <- readr::read_tsv(file.path("RNA","output","voom_expression.e1and3.resid.exp_gt.leaf.plusR500.txt.gz"))
+```
+## ratio of expression value for soil treated or dead plant
+###  sample description data frame {data-navmenu="Data import"}
+```{r}
+sample.description.e1 <- read_csv(file.path("RNA","input","Br.mbio.e1.sample.description.csv"))
+sample.description.e3 <- read_csv(file.path("RNA","input","Br.mbio.e3.sample.description.csv"))
+
+sample.description.e1 %>% summarize(n_distinct(group))
+sample.description.e1 %>% group_by(trt) %>% summarize(n())
+##
+root.voom5.e1 <- tibble(root.voom5 = colnames(root.voom5)[-1]) %>% inner_join(sample.description.e1[,c("sample","genotype","tissue","trt")],by=c("root.voom5"="sample"))
+root.voom5.e3 <- tibble(root.voom5 = colnames(root.voom5)[-1]) %>% mutate(genotype="FPsc") %>% inner_join(sample.description.e3[,c("sample","tissue","trt")],by=c("root.voom5"="sample"))  
+root.voom5.sample <- bind_rows(root.voom5.e1,root.voom5.e3) %>% mutate(trt=str_remove(trt,"5E_"))
+root.voom5.sample %>% group_by(genotype) %>% summarise(num=n())
+
+# leaf.voom5.sample
+leaf.voom5.e1 <- tibble(leaf.voom5 = colnames(leaf.voom5)[-1]) %>% inner_join(sample.description.e1[,c("sample","genotype","tissue","trt")],by=c("leaf.voom5"="sample"))
+leaf.voom5.e3 <- tibble(leaf.voom5 = colnames(leaf.voom5)[-1]) %>% mutate(genotype="FPsc") %>% inner_join(sample.description.e3[,c("sample","tissue","trt")],by=c("leaf.voom5"="sample"))  
+leaf.voom5.sample <- bind_rows(leaf.voom5.e1,leaf.voom5.e3) %>% mutate(trt=str_remove(trt,"5E_"))
+leaf.voom5.sample %>% group_by(genotype) %>% summarise(num=n())
+```
+
+# mean value
+```{r}
+# root
+root.voom5.soil.mean <- root.voom5 %>% pivot_longer(cols=-1,names_to="sampleID",values_to="value") %>% left_join(root.voom5.sample,by=c("sampleID"="root.voom5")) %>% group_by(genes,trt) %>% summarise(mean.value=mean(value)) 
+# leaf
+leaf.voom5.soil.mean <- leaf.voom5 %>% pivot_longer(cols=-1,names_to="sampleID",values_to="value") %>% left_join(leaf.voom5.sample,by=c("sampleID"="leaf.voom5")) %>% group_by(genes,trt) %>% summarise(mean.value=mean(value)) 
+```
+
+## select leaf length associated modules
+```{r}
+ElasticNet0.5_multiCV_Pct_var
+WGCNA.modules2.voom5 <- read_csv(file.path("RNA","output","WGCNA.modules2.voom5.csv.gz"))
+
+root.voom5.soil.mean 
+```
+
+## convert gene ID from V3.0 to PMN ()
+```{r}
+
+```
+
 
 
 

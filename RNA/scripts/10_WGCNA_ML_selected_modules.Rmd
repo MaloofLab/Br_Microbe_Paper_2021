@@ -492,7 +492,7 @@ ggsave(path=file.path("RNA","output"),filename="WGCNA.voom5.leaf_avg_std.correla
 
 ```
 
-# combine GSEA plot and WGCNA module ORA plot (under construction)
+# combine GSEA plot and WGCNA module ORA plot 
 ```{r}
 # format GSEA plot
 plot.GSEA <- GSEA_reports.DF.plot.dendrogram.v9.WGCNAmodule.notitle.ML(data = GSEA_reports.DF.MLselected,
@@ -536,13 +536,11 @@ ggsave(plot.combined,path=file.path("RNA","output"),filename="WGCNA.voom5.leaf_a
 # GOseq of all WGCNA modules (leaf.voom5, root.voom5 version) with custom categories  (copied from "10_WGCNA_including_R500.Rmd")
 
 
-
 # GOseq ORA prep
 # load Brgo.v3.0anno.Atgoslim.BP.list for GOseq analysis (GO terms) (using split() and map() to avoid long loop)
 ```{r eval=TRUE,error=TRUE}
 load(file.path("annotation","output","Brgo.v3.0anno.Atgoslim.BP.list.Rdata"))
 ```
-
 
 # GOseq of all WGCNA modules (leaf.voom5, root.voom5 version) with GO terms
 ```{r}
