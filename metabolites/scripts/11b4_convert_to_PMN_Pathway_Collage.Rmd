@@ -4,7 +4,7 @@ author: "Kazunari Nozue"
 date: "2/15/2021"
 output: html_document
 editor_options: 
-  chunk_output_type: inline
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -152,11 +152,6 @@ ifelse(dim(GSEA_reports.DF)[1]==0,print("no significnat categories"),return(GSEA
 }
 ```
 
-
-
-
-
-
 # data: leaf.voom5.module or root,voom5.module (WGCNA modules calculated either from voom_expression.e1and3.resid.exp_gt.root.plusR500 or voom_expression.e1and3.resid.exp_gt.leaf.plusR500). Expression data is "voom_expression.e1and3.resid.exp_gt_block.root.plusR500.txt" or "voom_expression.e1and3.resid.exp_gt_block.leaf.plusR500.txt
 ```{r}
 type="resid";cutoff <- 1;
@@ -242,9 +237,9 @@ leaf.voom5.sample %>% group_by(genotype) %>% summarise(num=n())
 ```
 
 # mean value (all of ratio are -1 or 1,which is strange)
-```{r}
+```{r eval=FALSE}
 # root (test, only FPsc)
-root.voom5.soil.mean.ratio <- root.voom5 %>% pivot_longer(cols=-1,names_to="sampleID",values_to="value") %>% left_join(root.voom5.sample,by=c("sampleID"="root.voom5")) %>% filter(genotype=="FPsc") %>% group_by(genes,trt) %>% summarise(mean.value=mean(value)) %>% dplyr::select(genes,trt,mean.value) %>% pivot_wider(names_from="trt",values_from="mean.value") %>% mutate(ratio=live/dead) %>% ungroup() %>% count(ratio) # %>% ungroup() %>% count(ratio) # strange. only -1 and 1
+root.voom5.soil.mean.ratio <- root.voom5 %>% pivot_longer(cols=-1,names_to="sampleID",values_to="value") %>% left_join(root.voom5.sample,by=c("sampleID"="root.voom5")) %>% filter(genotype=="FPsc") %>% group_by(genes,trt) %>% summarise(mean.value=mean(value)) %>% dplyr::select(genes,trt,mean.value) %>% pivot_wider(names_from="trt",values_from="mean.value") %>% mutate(ratio=live/dead) %>% ungroup() %>% count(ratio) # %>% ungroup() %>% count(ratio) # strange. only -1 and 1. This is because of centered.
 
 # test "BraA01g000010.3C"
 root.voom5 %>% pivot_longer(cols=-1,names_to="sampleID",values_to="value") %>% filter(genes=="BraA01g000010.3C",str_detect(sampleID,"FPsc")) %>% left_join(root.voom5.sample,by=c("sampleID"="root.voom5")) %>% group_by(genes,trt,genotype) %>% summarise(mean.value=mean(value)) 
@@ -253,7 +248,18 @@ root.voom5 %>% pivot_longer(cols=-1,names_to="sampleID",values_to="value") %>% f
 temp <- root.voom5 %>% pivot_longer(cols=-1,names_to="sampleID",values_to="value") %>% filter(genes=="BraA01g000010.3C",str_detect(sampleID,"FPsc")) %>% left_join(root.voom5.sample,by=c("sampleID"="root.voom5")) %>% arrange(trt)
 mean(temp$value[1:6]) # [1] -0.1480089
 mean(temp$value[7:12]) # [1] 0.1480089 the same value with opposite sign.
+
 ```
+# diff of soil treatment
+```{r}
+# root
+root.voom5.soil.mean.diff <- root.voom5 %>% pivot_longer(cols=-1,names_to="sampleID",values_to="value") %>% left_join(root.voom5.sample,by=c("sampleID"="root.voom5")) %>% filter(genotype=="FPsc") %>% group_by(genes,trt) %>% summarise(mean.value=mean(value)) %>% dplyr::select(genes,trt,mean.value) %>% pivot_wider(names_from="trt",values_from="mean.value") %>% mutate(diff=dead-live)
+# leaf
+leaf.voom5.soil.mean.diff <- leaf.voom5 %>% pivot_longer(cols=-1,names_to="sampleID",values_to="value") %>% left_join(leaf.voom5.sample,by=c("sampleID"="leaf.voom5")) %>% filter(genotype=="FPsc") %>% group_by(genes,trt) %>% summarise(mean.value=mean(value)) %>% dplyr::select(genes,trt,mean.value) %>% pivot_wider(names_from="trt",values_from="mean.value") %>% mutate(diff=dead-live)
+
+```
+
+
 
 ## select leaf length associated modules (pending)
 ```{r}
@@ -261,17 +267,36 @@ ElasticNet0.5_multiCV_Pct_var
 WGCNA.modules2.voom5 <- read_csv(file.path("RNA","output","WGCNA.modules2.voom5.csv.gz"))
 head(WGCNA.modules2.voom5$root.voom5.module)
 # 
-root.voom5.soil.mean.leaf_length.associated <- root.voom5.soil.mean %>% filter(genotype=="FPsc") %>% inner_join(WGCNA.modules2.voom5 %>% dplyr::select(name,root.voom5.module) %>% drop_na(root.voom5.module),by=c("genes"="name")) %>% semi_join(ElasticNet0.5_multiCV_Pct_var %>% separate(tissue.module,c("tissue","module")),by=c("root.voom5.module"="module")) 
+root.voom5.soil.mean.leaf_length.associated <- root.voom5.soil.mean.diff %>% inner_join(WGCNA.modules2.voom5 %>% dplyr::select(name,root.voom5.module) %>% drop_na(root.voom5.module),by=c("genes"="name")) %>% semi_join(ElasticNet0.5_multiCV_Pct_var %>% separate(tissue.module,c("tissue","module")),by=c("root.voom5.module"="module")) 
 # 
-leaf.voom5.soil.mean.leaf_length.associated <- leaf.voom5.soil.mean %>% filter(genotype=="FPsc") %>% inner_join(WGCNA.modules2.voom5 %>% dplyr::select(name,leaf.voom5.module) %>% drop_na(leaf.voom5.module),by=c("genes"="name")) %>% semi_join(ElasticNet0.5_multiCV_Pct_var %>% separate(tissue.module,c("tissue","module")),by=c("leaf.voom5.module"="module"))
+leaf.voom5.soil.mean.leaf_length.associated <- leaf.voom5.soil.mean.diff %>% inner_join(WGCNA.modules2.voom5 %>% dplyr::select(name,leaf.voom5.module) %>% drop_na(leaf.voom5.module),by=c("genes"="name")) %>% semi_join(ElasticNet0.5_multiCV_Pct_var %>% separate(tissue.module,c("tissue","module")),by=c("leaf.voom5.module"="module")) 
+ 
 ```
 
 ## convert gene ID from V3.0 to PMN () (pending)
 ```{r}
-orthologs <- read_csv(file.path("annotation","input","PMN","Brapa_V3.0_pep_PMN_brapa_fpsccyc_recip_orthologs2.csv"))
-# 
-root.voom5.soil.mean.leaf_length.associated %>% dplyr::select(genes,trt,mean.value) %>% pivot_wider(names_from="trt",values_from="mean.value") %>% mutate(ratio=live/dead) %>% ungroup() %>% count(ratio) # strange. only -1 and 1... 031621
+orthologs <- read_csv(file.path("annotation","input","PMN","Brapa_V3.0_pep_PMN_brapa_fpsccyc_recip_orthologs2.csv")) %>% mutate(query_id=str_remove_all(query_id,"-MONOMER")) %>% filter(str_detect(query_id,"^BRARA")) %>% mutate(query_id=str_replace(query_id,"BRARA","Brara"))
+# root
+root.voom5.soil.mean.leaf_length.associated.diff <- root.voom5.soil.mean.leaf_length.associated %>% ungroup() %>% inner_join(orthologs %>% dplyr::select(query_id,subject_id),by=c("genes"="subject_id")) %>% dplyr::select(query_id,diff) 
+## write csv
+root.voom5.soil.mean.leaf_length.associated.diff %>%  write_tsv(file.path("RNA","output","root.voom5.soil.mean.leaf_length.associated.tsv")) # data column should be "1" to export to PMN cellular view. Pathway collague is stored as root.voom5.soil.mean.leaf_length.associated.json 
 
-  inner_join(orthologs %>% dplyr::select(query_id,subject_id),by=c("genes"="subject_id")) %>% dplyr::select(suject_id,) write_csv(file.path("RNA","output","root.voom5.soil.mean.leaf_length.associated.csv"))
+# leaf
+leaf.voom5.soil.mean.leaf_length.associated.diff <- leaf.voom5.soil.mean.leaf_length.associated %>% ungroup() %>% inner_join(orthologs %>% dplyr::select(query_id,subject_id),by=c("genes"="subject_id")) %>% dplyr::select(query_id,diff) 
+## write csv
+leaf.voom5.soil.mean.leaf_length.associated.diff %>%  write_tsv(file.path("RNA","output","leaf.voom5.soil.mean.leaf_length.associated.tsv")) # data column should be "1" to export to PMN cellular view. Pathway collague is stored as leaf.voom5.soil.mean.leaf_length.associated.json 
 ```
+
+
+# combine metatolite and RNA expression data (both leaf_length associated) in a one file
+```{r}
+# root
+root.voom5.soil.mean.leaf_length.associated.diff <- read_tsv(file.path("RNA","output","root.voom5.soil.mean.leaf_length.associated.tsv")) %>% rename(value=diff) %>% rename(ID=query_id) %>% mutate(PC="") 
+
+Leaf_associated_metabolites_raw_NOBLANK.PMN.root_PC3 <- read_tsv(file.path("metabolites","output","Leaf_associated_metabolites_raw_NOBLANK.PMN.root_PC3.tsv")) %>% mutate(value=loading*10) %>% rename(ID=Compound_id) %>% dplyr::select(-loading)# increased value 10 times due to common scale with "diff" in RNA data
+ 
+# combine (root)
+  bind_rows(Leaf_associated_metabolites_raw_NOBLANK.PMN.root_PC3, root.voom5.soil.mean.leaf_length.associated.diff2) %>% write_tsv(file.path("RNA","output","root.voom5.soil.mean.leaf_length.associated.genes.Compounds.PC3.tsv")) # opend to create Pathway Collague and save it as "root.voom5.soil.mean.leaf_length.associated.genes.Compounds.PC3.json"
+  ```
+
 
