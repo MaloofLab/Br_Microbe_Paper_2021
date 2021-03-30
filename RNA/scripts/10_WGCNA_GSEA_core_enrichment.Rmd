@@ -148,7 +148,7 @@ coregenes.yes.DF[,-5:-1][is.na(coregenes.yes.DF[,-5:-1])] <- 0
 # check
 coregenes.yes.DF %>% View()
 # write csv
-write_csv(coregenes.yes.DF,file=file.path("RNA/output/core_enrichment_genes.csv"))
+write_csv(coregenes.yes.DF,file=file.path("RNA/output/GSEA_leaf_length_soil_core_enrichment_genes.csv"))
 ```
 
 # all modules with only target module 
