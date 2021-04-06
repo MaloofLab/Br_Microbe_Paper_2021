@@ -286,7 +286,7 @@ return(GSEA_reports.plot)
 # WGCNA modules vs custom categories
 # load GO.ORA function (copy from "04b_Br.mbio.e3.subset.v3.)
 # GOseq function for Brassica rapa (v3.0)
-```{r eval=TRUE,error=TRUE}
+```{r eval=FALSE,error=TRUE}
 # GOseq
 library(ShortRead);library(goseq);library(GO.db);library("annotate")
 # for ggplot heatmap
@@ -357,7 +357,7 @@ head(Bra.v3.0_cdna)
 
 
 # GOseq with custom categories (Sep 30, 2020; Oct 28, 2020)
-```{r}
+```{r eval=FALSE}
 # annotation
 Br.v3.0anno.At.BLAST.highscore.modules2 <- read_csv(file.path("RNA","output","WGCNA.modules2.voom5.csv.gz"))
 # custom categories list
@@ -366,8 +366,7 @@ load(file.path("annotation","output","GSEA_cust_rootshoot_updown2.list.Rdata"))
 # all modules
 GOseq.temp <- Br.v3.0anno.At.BLAST.highscore.modules2 %>% ungroup() %>% dplyr::select(name,root.voom5.module,leaf.voom5.module) %>%
 pivot_longer(cols=-1,names_to = "voom")  %>% drop_na(value) %>% unite(voom.module,c("voom","value")) %>%  split(.$voom.module) %>% map(~GOseq.Brgo.v3.0.Atgoslim.BP.list.ORA2(genelist=.$name,custom.category.list=GSEA_cust_rootshoot_updown2.list,ontology="none")) # ,custom.category.list=GSEA_cust_rootshoot_updown2.list
-GOseq.temp %>% enframe() %>% unnest(value) %>% write_csv(file.path("..","output","WGCNA.voom5.all.modules.customcat.GOseq.csv"))
-
+GOseq.temp %>% enframe() %>% unnest(value) %>% write_csv(file.path("RNA","output","WGCNA.voom5.all.modules.customcat.GOseq.csv"))
 
 # check results on "voom_expression.e1and3.resid.exp_only.root_plum1", which has "iron" in GOseq? which modules?
 GOseq.temp2 <- Br.v3.0anno.At.BLAST.highscore.modules2 %>% ungroup() %>% dplyr::select(name,root.voom5.module,leaf.voom5.module) %>%

@@ -149,6 +149,10 @@ coregenes.yes.DF[,-5:-1][is.na(coregenes.yes.DF[,-5:-1])] <- 0
 coregenes.yes.DF %>% View()
 # write csv
 write_csv(coregenes.yes.DF,file=file.path("RNA/output/GSEA_leaf_length_soil_core_enrichment_genes.csv"))
+# 
+coregenes.yes.DF <- read_csv(file.path("RNA/output/GSEA_leaf_length_soil_core_enrichment_genes.csv"))
+coregenes.yes.DF %>% mutate(num=sum(colnames(coregenes.yes.DF)[6:12])) %>% dplyr::select(num) # does not work
+coregenes.yes.DF %>% mutate(total=sum(leaf_tissue.root.yellowgreen,root_tissue.leaf.lightsteelblue1)) %>% dplyr::select(total)
 ```
 
 # all modules with only target module 
