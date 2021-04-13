@@ -115,6 +115,8 @@ return(core.data)
 }  
 ```
 # using map() or pmap() to add "core" gene list tata to each row of GSEA_reports.DF.all (ended up to use old Loop way...)
+## Is this script correct? Modules/tissue are not all used found in GSEA heatmap plot (Fig 3) (041321)
+##
 ```{r}
 gsea_report_path=file.path("~","Box","gsea_home","output","oct30")
 # loop (though this is not smart R way)
@@ -125,7 +127,11 @@ for(i in 1:nrow(temp)) {
   coregenes[[i]] <- read.coregenes(xls.file.in.GSEA_reports=as_vector(temp[i,"report3"]),
                            category.name = as_vector(temp[i,grep("MSigDB",names(temp),value=TRUE)]))
 } 
-names(coregenes) <- str_c(temp$tissue,"_tissue.",temp$NAME) # error fixed (temp$voom.module did not work)
+#names(coregenes) <- str_c(temp$tissue,"_tissue.",temp$NAME) # error fixed (temp$voom.module did not work) # this info misses LorD (041321)
+###### needs to fix
+
+
+#####################
 
 # select genes with "yes" in enrichment
 coregenes.yes <- list()
@@ -151,9 +157,137 @@ coregenes.yes.DF %>% View()
 write_csv(coregenes.yes.DF,file=file.path("RNA/output/GSEA_leaf_length_soil_core_enrichment_genes.csv"))
 # 
 coregenes.yes.DF <- read_csv(file.path("RNA/output/GSEA_leaf_length_soil_core_enrichment_genes.csv"))
+# find common core genes
 coregenes.yes.DF %>% mutate(num=sum(colnames(coregenes.yes.DF)[6:12])) %>% dplyr::select(num) # does not work
-coregenes.yes.DF %>% mutate(total=sum(leaf_tissue.root.yellowgreen,root_tissue.leaf.lightsteelblue1)) %>% dplyr::select(total)
+str(coregenes.yes.DF)
+# test
+coregenes.yes.DF %>% mutate(num=leaf_tissue.root.yellowgreen + root_tissue.leaf.lightsteelblue1) %>% View() # works
+coregenes.yes.DF %>% mutate(num=sum(leaf_tissue.root.yellowgreen,root_tissue.leaf.lightsteelblue1)) %>% View() # works
+# use rowwise() and c_across()
+coregenes.yes.DF <- coregenes.yes.DF %>% rowwise() %>% mutate(total=sum(c_across(leaf_tissue.root.yellowgreen:root_tissue.root.yellowgreen)))# %>% View()
 ```
+
+# how many genes are "Yes" in each module
+```{r}
+coregenes.yes.DF %>% summarise(across(leaf_tissue.root.yellowgreen:root_tissue.root.yellowgreen,sum)) # why does not work?
+coregenes.yes.DF %>% summarise(across(leaf_tissue.root.yellowgreen:root_tissue.root.yellowgreen,mean)) # why does not work?
+coregenes.yes.DF %>% dplyr::select(leaf_tissue.root.yellowgreen:root_tissue.root.yellowgreen) %>% colSums()# work
+```
+
+
+
+# expression pattern
+## expression data
+```{r}
+# plus R500 in residual
+root.voom5 <- readr::read_tsv(file.path("RNA","output","voom_expression.e1and3.resid.exp_gt.root.plusR500.txt.gz"))
+leaf.voom5 <- readr::read_tsv(file.path("RNA","output","voom_expression.e1and3.resid.exp_gt.leaf.plusR500.txt.gz"))
+```
+
+## WGCNA module
+```{r}
+Br.v3.0anno.At.BLAST.highscore.modules2 <- read_csv(file.path("RNA","output","WGCNA.modules2.voom5.csv.gz"))
+head(Br.v3.0anno.At.BLAST.highscore.modules2)
+```
+
+## sample info
+```{r}
+sample.description.e1 <- read_csv(file.path("plant","output","Br.mbio.e1.sample.description.csv"))
+sample.description.e3 <- read_csv(file.path("plant","output","Br.mbio.e3.sample.description.csv"))
+
+sample.description.e1 %>% summarize(n_distinct(group))
+sample.description.e1 %>% group_by(trt) %>% summarize(n())
+##
+root.voom5.e1 <- tibble(root.voom5 = colnames(root.voom5)[-1]) %>% inner_join(sample.description.e1[,c("sample","genotype","tissue","trt")],by=c("root.voom5"="sample"))
+root.voom5.e3 <- tibble(root.voom5 = colnames(root.voom5)[-1]) %>% mutate(genotype="FPsc") %>% inner_join(sample.description.e3[,c("sample","tissue","trt")],by=c("root.voom5"="sample"))  
+root.voom5.sample <- bind_rows(root.voom5.e1,root.voom5.e3) %>% mutate(trt=str_remove(trt,"5E_"))
+root.voom5.sample %>% group_by(genotype) %>% summarise(num=n())
+
+# leaf.voom5.sample
+leaf.voom5.e1 <- tibble(leaf.voom5 = colnames(leaf.voom5)[-1]) %>% inner_join(sample.description.e1[,c("sample","genotype","tissue","trt")],by=c("leaf.voom5"="sample"))
+leaf.voom5.e3 <- tibble(leaf.voom5 = colnames(leaf.voom5)[-1]) %>% mutate(genotype="FPsc") %>% inner_join(sample.description.e3[,c("sample","tissue","trt")],by=c("leaf.voom5"="sample"))  
+leaf.voom5.sample <- bind_rows(leaf.voom5.e1,leaf.voom5.e3) %>% mutate(trt=str_remove(trt,"5E_"))
+leaf.voom5.sample %>% group_by(genotype) %>% summarise(num=n())
+```
+
+# plotting expresion patterns
+```{r}
+# BraA01g010990.3C is ATIRT1
+plotgene <- function(cpm=root.voom5, target="BraA01g010990.3C",samples=root.voom5.sample) {
+  print(colnames(samples))
+  print(unique(samples$tissue))
+  data <- cpm %>% filter(genes %in% target) %>% 
+    pivot_longer(cols=-genes,names_to="sampleID",values_to="log2value") %>%
+    inner_join(samples,by=c("sampleID"=colnames(samples)[1]))
+  print(data)
+  plot <- data %>%
+    ggplot(aes(y=log2value,x=trt,color=trt,shape=genotype)) + geom_jitter() +
+    facet_wrap(genotype~genes, ncol=4, scales = "free_y") +
+    theme(axis.text.x = element_text(angle = 90, hjust=1)) + labs(title=unique(samples$tissue))
+  return(plot)
+}
+
+plotgene() # BraA01g010990.3C is ATIRT1
+
+plotgene(cpm=leaf.voom5,samples=leaf.voom5.sample) # error due to not in leaf data
+plotgene(cpm=leaf.voom5,samples=leaf.voom5.sample,target=leaf.voom5$genes[1]
+) # no error. 
+```
+
+# leaf_tissue.root.yellowgreen (40 genes)
+```{r}
+GSEA.leaf_tissue.root.yellowgreen.coregenes.yes <- coregenes.yes.DF %>% filter(leaf_tissue.root.yellowgreen==1) %>% dplyr::select(name) %>% as_vector()
+p <- plotgene(target=GSEA.leaf_tissue.root.yellowgreen.coregenes.yes)
+ggsave(p,filename="GSEA.leaf_tissue.root.yellowgreen.yes.plot.png",path=file.path("RNA","output"),height=50,width=8,limitsize=FALSE)
+```
+
+# root_tissue.leaf.lightsteelblue1 (54 genes)
+```{r}
+GSEA.root_tissue.leaf.lightsteelblue1.coregenes.yes <- coregenes.yes.DF %>% filter(root_tissue.leaf.lightsteelblue1==1) %>% dplyr::select(name) %>% as_vector()
+p <- plotgene(target=GSEA.root_tissue.leaf.lightsteelblue1.coregenes.yes)
+ggsave(p,filename="GSEA.root_tissue.leaf.lightsteelblue1.yes.plot.png",path=file.path("RNA","output"),height=50,width=8,limitsize=FALSE)
+```
+# root_tissue.leaf.midnightblue (140 ngenes)
+```{r}
+GSEA.root_tissue.leaf.midnightblue.coregenes.yes <- coregenes.yes.DF %>% filter(root_tissue.leaf.midnightblue==1) %>% dplyr::select(name) %>% as_vector()
+p <- plotgene(target=GSEA.root_tissue.leaf.midnightblue.coregenes.yes)
+ggsave(p,filename="GSEA.root_tissue.leaf.midnightblue.yes.plot.png",path=file.path("RNA","output"),height=50,width=8,limitsize=FALSE)
+```
+
+# root_tissue.leaf.thistle2 (31 genes)
+```{r}
+GSEA.root_tissue.leaf.thistle2.coregenes.yes <- coregenes.yes.DF %>% filter(root_tissue.leaf.thistle2==1) %>% dplyr::select(name) %>% as_vector()
+p <- plotgene(target=GSEA.root_tissue.leaf.thistle2.coregenes.yes)
+ggsave(p,filename="GSEA.root_tissue.leaf.thistle2.coregenes.yes.plot.png",path=file.path("RNA","output"),height=50,width=8,limitsize=FALSE)
+```
+
+
+# root_tissue.leaf.red (223 genes)
+```{r}
+GSEA.root_tissue.leaf.red.coregenes.yes <- coregenes.yes.DF %>% filter(root_tissue.leaf.red==1) %>% dplyr::select(name) %>% as_vector()
+p <- plotgene(target=GSEA.root_tissue.leaf.red.coregenes.yes)
+ggsave(p,filename="GSEA.root_tissue.leaf.red.coregenes.yes.plot.png",path=file.path("RNA","output"),height=50,width=8,limitsize=FALSE)
+```
+
+# root_tissue.root.plum1
+```{r}
+GSEA.root_tissue.root.plum1.coregenes.yes <- coregenes.yes.DF %>% filter(root_tissue.root.plum1==1) %>% dplyr::select(name) %>% as_vector()
+p <- plotgene(target=GSEA.root_tissue.root.plum1.coregenes.yes)
+ggsave(p,filename="GSEA.root_tissue.root.plum1.coregenes.yes.plot.png",path=file.path("RNA","output"),height=50,width=8,limitsize=FALSE)
+
+```
+
+
+# leaf_tissue.root.yellowgreen (76 genes)
+```{r}
+GSEA.leaf_tissue.root.yellowgreen.coregenes.yes <- coregenes.yes.DF %>% filter(leaf_tissue.root.yellowgreen==1) %>% dplyr::select(name) %>% as_vector()
+p <- plotgene(target=GSEA.leaf_tissue.root.yellowgreen.coregenes.yes)
+ggsave(p,filename="GSEA.leaf_tissue.root.yellowgreen.coregenes.yes.plot.png",path=file.path("RNA","output"),height=50,width=8,limitsize=FALSE)
+```
+
+
+
+
 
 # all modules with only target module 
 * copied from 11_machine_learning.Rmd

@@ -131,6 +131,7 @@ genes.count <- bind_rows(genes.count.root,genes.count.leaf) %>% mutate(NAME=str_
 # modify GSEA plot function
 ```{r}
 # plot function
+## modules=c("fullmodule","selected") should be modules=c("fullmodule","MLselected")
 GSEA_reports.DF.plot.dendrogram.v9.WGCNAmodule.notitle.ML <- function(data = GSEA_reports.DF,
                                             #setCutoff = set, 
                                             # ts="root",
@@ -144,7 +145,7 @@ GSEA_reports.DF.plot.dendrogram.v9.WGCNAmodule.notitle.ML <- function(data = GSE
                                             dendrogram=c("TRUE", "FALSE"),
                                             legend.height=45,
                                             legend.width=25,
-                                            modules=c("fullmodule","selected")) {
+                                            modules=c("fullmodule","MLselected")) {
   # Scale each measurement (independently) to have a mean of 0 and variance of 1
   # 
 # GSEA_reports.DF.formatted <- data %>% filter(type==tp,tissue==ts,LorD==LD) %>%  dplyr::select(setCutoff,tissue,LorD,NAME,`FDR q-val`) %>% mutate(`-log10FDR`=-log10(`FDR q-val`)) %>% dplyr::select(-`FDR q-val`) %>% unite(tissue_LorD_set,tissue, LorD,setCutoff,remove=TRUE) %>%  pivot_wider(names_from=tissue_LorD_set,values_from=`-log10FDR`) %>% group_by(NAME) %>% arrange(NAME) 
@@ -225,7 +226,7 @@ GSEA_reports.DF.plot
 # format tissue.module in leaf_avg_std.ML.data (correct?)
 #leaf_avg_std.ML.data <- leaf_avg_std.ML.data %>% dplyr::rename(tissue.module=voom) %>% #mutate(module=str_to_upper(module)) %>% #mutate(NAME=str_remove(NAME,"voom_expression.e1and3.resid.exp_gt.")) %>% 
 #  mutate(NAME=str_remove(NAME,".plusR500")) %>% unite(NAME,c(NAME,module),sep=".")
-
+# what is "fullmodule" vs "selected"? (041321)
 if(modules=="fullmodule") {
   genes.count2 <- genes.count  %>% # filter(NAME %in% dendro.y.NAME$NAME) %>%
   mutate(NAME=factor(NAME,levels=c(as.vector(dendro.y.NAME$NAME),as.vector(missing.categories$NAME))))  %>% separate(NAME,into=c("tissue2","module"),sep="\\.",remove=FALSE) %>% #View()
@@ -246,7 +247,7 @@ print(dim(genes.count2))
 genes.count2 <- genes.count2 %>% mutate(y=seq(dim(genes.count2)[1],1)) # bottom is y=1, 
 # draw gene number inside heatmap
     GSEA_reports.DF.plot.alt <- GSEA_reports.DF.plot + 
-      # for tissue for modules
+      # for tissue for modules (omit?)
       geom_point(aes(x=-0.35,y=y,color=tissue2),stroke=3, size=.8,inherit.aes = FALSE, data=genes.count2) +
       scale_color_manual(name = "", values = c("root"="brown", "leaf"="lawngreen")) + 
       #scale_shape_manual(values=c("increase"=2,"decrease"=6)) +
