@@ -10,6 +10,8 @@ editor_options:
 * For Julin's machine learning selected WGCNA modules correlated to standardized leaf growth ("leaf_avg_std").
 * GSEA: soil treatment effects. RNAseq data is voom transformed by considering exp, gt, block effects (voom.root6 or voom.leaf6 data)
 * WGCNA ORA: custom categories
+* Adding GSEA.FDR.cutoff part in GSEA_reports.DF.plot.dendrogram.v9.WGCNAmodule.notitle.ML() (041321)
+
 
 # To Do
 * Use "ElasticNet0.5_multiCV_Pct_var" instead of "ElasticNet0.5_LOO_prop_var" (031021)
@@ -128,10 +130,11 @@ genes.count <- bind_rows(genes.count.root,genes.count.leaf) %>% mutate(NAME=str_
 ```
 
 
-# modify GSEA plot function
+# modify GSEA plot function GSEA_reports.DF.plot.dendrogram.v9.WGCNAmodule.notitle.ML()
 ```{r}
 # plot function
-## modules=c("fullmodule","selected") should be modules=c("fullmodule","MLselected")
+## modules=c("fullmodule","selected")  is for ML selected or not.
+## After adding GSEA.FDR.cutoff below, selected plot is wired. needs to fix (041321)
 GSEA_reports.DF.plot.dendrogram.v9.WGCNAmodule.notitle.ML <- function(data = GSEA_reports.DF,
                                             #setCutoff = set, 
                                             # ts="root",
@@ -145,15 +148,19 @@ GSEA_reports.DF.plot.dendrogram.v9.WGCNAmodule.notitle.ML <- function(data = GSE
                                             dendrogram=c("TRUE", "FALSE"),
                                             legend.height=45,
                                             legend.width=25,
-                                            modules=c("fullmodule","MLselected")) {
+                                            modules=c("fullmodule","selected")) {
   # Scale each measurement (independently) to have a mean of 0 and variance of 1
   # 
 # GSEA_reports.DF.formatted <- data %>% filter(type==tp,tissue==ts,LorD==LD) %>%  dplyr::select(setCutoff,tissue,LorD,NAME,`FDR q-val`) %>% mutate(`-log10FDR`=-log10(`FDR q-val`)) %>% dplyr::select(-`FDR q-val`) %>% unite(tissue_LorD_set,tissue, LorD,setCutoff,remove=TRUE) %>%  pivot_wider(names_from=tissue_LorD_set,values_from=`-log10FDR`) %>% group_by(NAME) %>% arrange(NAME) 
 # new version (zero in `FDR q-val` is arbitrally converted into 0.000000001 because -log10(0) gave me "Inf")
 GSEA_reports.DF.formatted <- data  %>%  dplyr::select(tissue,LorD,NAME,`FDR q-val`) %>%
-  mutate(`FDR q-val`=as.numeric(str_replace(`FDR q-val`,"^0$","0.01"))) %>% #View()
+  mutate(`FDR q-val`=as.numeric(str_replace(`FDR q-val`,"^0$","0.01"))) %>% 
+  filter(`FDR q-val` < GSEA.FDR.cutoff) %>% #View()
   mutate(`-log10FDR`=-log10(`FDR q-val`)) %>% dplyr::select(-`FDR q-val`) %>% unite(tissue_LorD,tissue, LorD,remove=TRUE) %>%  pivot_wider(names_from=tissue_LorD,values_from=`-log10FDR`)  %>% mutate(NAME=str_remove(NAME,"voom_expression.e1and3.resid.exp_gt.")) %>% 
-  mutate(NAME=str_remove(NAME,"plusR500.")) %>%
+  mutate(NAME=str_remove(NAME,"plusR500.")) %>% 
+  mutate(NAME=str_remove(NAME,".VOOM5")) %>% 
+  mutate(NAME=str_replace(NAME,"_",".")) %>% 
+  mutate(NAME=str_to_lower(NAME)) %>%
   group_by(NAME) %>% arrange(NAME) 
 GSEA_reports.DF.formatted %>% View()
 #### think about how to treat with "NA" #########
@@ -203,8 +210,18 @@ if(modules=="fullmodule") {
   str(GSEA_reports.DF.formatted2)
   GSEA_reports.DF.formatted2 %>% View()
 } else if(modules=="selected") {
-  GSEA_reports.DF.formatted2 <- GSEA_reports.DF.formatted %>% as_tibble() %>%   pivot_longer(cols=-1,names_to="tissue_LorD_set",values_to="-log10 FDR q-val") %>% mutate(NAME=factor(NAME,levels=as.vector(dendro.y.NAME$NAME))) 
-  str(GSEA_reports.DF.formatted2)
+  # missing categories among leaf_avg_std.ML.data
+  missing.categories2 <- leaf_avg_std.ML.data %>% dplyr::rename(NAME=tissue.module) %>% dplyr::select(NAME) %>% filter(!NAME %in% GSEA_reports.DF.formatted$NAME)
+  print("missing.categories2 is")
+  print(missing.categories2)
+    # adding missing categories to heatmap 
+  GSEA_reports.DF.formatted2 <- GSEA_reports.DF.formatted %>% as_tibble() %>%   pivot_longer(cols=-1,names_to="tissue_LorD_set",values_to="-log10 FDR q-val") %>% bind_rows(tibble(NAME=rep(missing.categories2$NAME,4),tissue_LorD_set=rep(vars[-1],each=dim(missing.categories2)[1]),`-log10 FDR q-val`=0)) #%>% View() # missing categories in GSEA reports
+## relevel
+  GSEA_reports.DF.formatted2 <- GSEA_reports.DF.formatted2 %>% 
+ mutate(NAME=factor(NAME,levels=c(as.vector(dendro.y.NAME$NAME),as.vector(missing.categories2$NAME)))) 
+  # original
+  # GSEA_reports.DF.formatted2 <- GSEA_reports.DF.formatted %>% as_tibble() %>%   pivot_longer(cols=-1,names_to="tissue_LorD_set",values_to="-log10 FDR q-val") #%>% mutate(NAME=factor(NAME,levels=as.vector(dendro.y.NAME$NAME))) 
+  # str(GSEA_reports.DF.formatted2)
   GSEA_reports.DF.formatted2 %>% View()
 }
 # plot (base)
@@ -221,12 +238,13 @@ GSEA_reports.DF.plot <- GSEA_reports.DF.plot +     theme(axis.text.x=element_tex
       plot.title=element_text(size=20),
       axis.line=element_blank()) + 
 labs(x="",y="",fill="-log10\n FDR")
-GSEA_reports.DF.plot
+print(GSEA_reports.DF.plot)
+
 ##  gene number, custom category, etc. shape is growth increase/decrease (instead of UP/DOWN), plus correlation of modules to leaf_avg_std from modTrait.leaf_avg_std.RP2.cor.summary.voom5
 # format tissue.module in leaf_avg_std.ML.data (correct?)
 #leaf_avg_std.ML.data <- leaf_avg_std.ML.data %>% dplyr::rename(tissue.module=voom) %>% #mutate(module=str_to_upper(module)) %>% #mutate(NAME=str_remove(NAME,"voom_expression.e1and3.resid.exp_gt.")) %>% 
 #  mutate(NAME=str_remove(NAME,".plusR500")) %>% unite(NAME,c(NAME,module),sep=".")
-# what is "fullmodule" vs "selected"? (041321)
+# what is "fullmodule" vs "selected"?. "selected" is ML selected shown. (041321)
 if(modules=="fullmodule") {
   genes.count2 <- genes.count  %>% # filter(NAME %in% dendro.y.NAME$NAME) %>%
   mutate(NAME=factor(NAME,levels=c(as.vector(dendro.y.NAME$NAME),as.vector(missing.categories$NAME))))  %>% separate(NAME,into=c("tissue2","module"),sep="\\.",remove=FALSE) %>% #View()
@@ -235,7 +253,10 @@ if(modules=="fullmodule") {
 } else if(modules=="selected") {
   genes.count2 <- genes.count  %>% # filter(NAME %in% dendro.y.NAME$NAME) %>%
   separate(NAME,into=c("tissue2","module"),sep="\\.",remove=FALSE) %>% #View()
- arrange(desc(NAME)) %>% inner_join(leaf_avg_std.ML.data,by=c("NAME"="tissue.module")) %>% mutate(NAME=factor(NAME,levels=as.vector(leaf_avg_std.ML.data$tissue.module))) # %>% mutate(sign=ifelse(PropVar_0.5_LOO >0,"positive","negative"))# adding leaf_avg_std.ML.data
+ arrange(desc(NAME)) %>% inner_join(leaf_avg_std.ML.data,by=c("NAME"="tissue.module")) %>% mutate(NAME=factor(NAME,levels=levels(GSEA_reports.DF.formatted2$NAME))) # %>% mutate(sign=ifelse(PropVar_0.5_LOO >0,"positive","negative"))# adding leaf_avg_std.ML.data
+  print("genes.count2 after modules is selected.")
+  print(genes.count2)
+  save(genes.count2,file=file.path("RNA","output","genes.count2.MLselected.Rdata"))
 }
 
 # check genes.count2
@@ -248,10 +269,10 @@ genes.count2 <- genes.count2 %>% mutate(y=seq(dim(genes.count2)[1],1)) # bottom 
 # draw gene number inside heatmap
     GSEA_reports.DF.plot.alt <- GSEA_reports.DF.plot + 
       # for tissue for modules (omit?)
-      geom_point(aes(x=-0.35,y=y,color=tissue2),stroke=3, size=.8,inherit.aes = FALSE, data=genes.count2) +
-      scale_color_manual(name = "", values = c("root"="brown", "leaf"="lawngreen")) + 
+      #geom_point(aes(x=-0.35,y=y,color=tissue2),stroke=3, size=.8,inherit.aes = FALSE, data=genes.count2) +
+      #scale_color_manual(name = "", values = c("root"="brown", "leaf"="lawngreen")) + 
       #scale_shape_manual(values=c("increase"=2,"decrease"=6)) +
-      labs(shape="") + #scale_shape_identity(name="") + 
+      #labs(shape="") + #scale_shape_identity(name="") + 
       # for gene number (="n")
   geom_point(aes(x=0,y=y,size=n),color = "red",  inherit.aes = FALSE, data=genes.count2) +
       # for PropVar_0.5_LOO (120820), changed for leaf_avg_std.ML.data = ElasticNet0.5_multiCV_Pct_var (031221)
@@ -468,10 +489,13 @@ WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected2 %>% 
 # check this is what I want
 WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected2 %>% group_by(NAME,category3.au.up_down) %>% summarize(n()) %>% View() # none, why?
 
-# relevel using dendrogram in GSEA plot
-load(file.path("RNA","output","dendro.y.NAME.Rdata"))
+# relevel using dendrogram in GSEA plot (better to use GSEA plot data itself due to missing modules??? 041321)
+#load(file.path("RNA","output","dendro.y.NAME.Rdata"))
+load(file.path("RNA","output","genes.count2.MLselected.Rdata"))
+
 WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected2 <-  WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected2 %>%
-  mutate(NAME=factor(NAME,levels=dendro.y.NAME$NAME)) 
+#  mutate(NAME=factor(NAME,levels=dendro.y.NAME$NAME)) 
+mutate(NAME=factor(NAME,levels=genes.count2$NAME)) 
 str(WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected2)
 
 # plot 
@@ -495,6 +519,7 @@ ggsave(path=file.path("RNA","output"),filename="WGCNA.voom5.leaf_avg_std.correla
 # combine GSEA plot and WGCNA module ORA plot 
 ```{r}
 # format GSEA plot
+cutoff <- 0.3
 plot.GSEA <- GSEA_reports.DF.plot.dendrogram.v9.WGCNAmodule.notitle.ML(data = GSEA_reports.DF.MLselected,
                                             GSEA.FDR.cutoff = cutoff,
                                             top.margin=290,
@@ -505,8 +530,8 @@ plot.GSEA <- GSEA_reports.DF.plot.dendrogram.v9.WGCNAmodule.notitle.ML(data = GS
                                             modules="fullmodule") 
 #plot.GSEA  +  guides(fill = guide_legend(nrow=2)) # this is not what I want
 plot.GSEA <- plot.GSEA + theme(legend.position="left",legend.key.height=unit(10,"pt"),legend.text=element_text(size=10,angle=0),plot.margin = margin(74, 0, 50, 0, "pt")) 
-ggsave(plot.GSEA,filename="GSEA.RNAseq.plot.ML.full2.png",path=file.path("RNA","output"),width=8,height=15)
-# only ML selected modules
+ggsave(plot.GSEA,filename="GSEA.RNAseq.plot.ML.full2.FDR0.3.png",path=file.path("RNA","output"),width=8,height=15)
+# only ML selected modules in plot
 plot.GSEA <- GSEA_reports.DF.plot.dendrogram.v9.WGCNAmodule.notitle.ML(data = GSEA_reports.DF.MLselected,
                                             GSEA.FDR.cutoff = cutoff,
                                             top.margin=290,
@@ -517,7 +542,8 @@ plot.GSEA <- GSEA_reports.DF.plot.dendrogram.v9.WGCNAmodule.notitle.ML(data = GS
                                             modules="selected") 
 #plot.GSEA  +  guides(fill = guide_legend(nrow=2)) # this is not what I want
 plot.GSEA <- plot.GSEA + theme(legend.position="left",legend.key.height=unit(10,"pt"),legend.text=element_text(size=10,angle=0),plot.margin = margin(75, 0, 35, 0, "pt")) 
-ggsave(plot.GSEA,filename="GSEA.RNAseq.plot.ML.selected.png",path=file.path("RNA","output"),width=6,height=8)
+ggsave(plot.GSEA,filename="GSEA.RNAseq.plot.ML.selected.FDR0.3.png",path=file.path("RNA","output"),width=6,height=8) # needs to fix
+
 # format WGCNA ORA plots
 WGCNA.voom5.all.modules.customcat.GOseq.plot.selected2 <- WGCNA.voom5.all.modules.customcat.GOseq.plot.selected2 + theme(plot.margin = margin(0, 0, 0, 0, "pt"),legend.position = "right",legend.key.height=unit(30,"pt"),axis.text.y=element_blank(),axis.text.x=element_text(size=10,hjust=1)) + # Top, right, bottom, left.)
   labs(title="") 
@@ -525,11 +551,11 @@ WGCNA.voom5.all.modules.customcat.GOseq.plot.selected2 <- WGCNA.voom5.all.module
 library(cowplot)
 plot.combined <- plot_grid(plot.GSEA,WGCNA.voom5.all.modules.customcat.GOseq.plot.selected2,rel_widths=c(1,1),labels=c("A","B"))
 #plot.combined
-ggsave(plot.combined,path=file.path("RNA","output"),filename="WGCNA.voom5.leaf_avg_std.correlated.modules.ML.customcat.GSEA.combined2.png",height=8,width=11)
+ggsave(plot.combined,path=file.path("RNA","output"),filename="WGCNA.voom5.leaf_avg_std.correlated.modules.ML.customcat.GSEA.combined3.FDR0.3.png",height=8,width=11)
 # wider version
 plot.combined <- plot_grid(plot.GSEA,WGCNA.voom5.all.modules.customcat.GOseq.plot.selected2,rel_widths=c(3,4),labels=c("A","B"))
 #plot.combined
-ggsave(plot.combined,path=file.path("RNA","output"),filename="WGCNA.voom5.leaf_avg_std.correlated.modules.customcat.MLGSEA.combined2.wider.png",height=8,width=15)
+ggsave(plot.combined,path=file.path("RNA","output"),filename="WGCNA.voom5.leaf_avg_std.correlated.modules.customcat.MLGSEA.combined3.FDR0.3.wider.png",height=8,width=15)
 
 ```
 

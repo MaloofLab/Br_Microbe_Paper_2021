@@ -91,7 +91,7 @@ ifelse(dim(GSEA_reports.DF)[1]==0,print("no significnat categories"),return(GSEA
 
 # Finding soil treatment responsive genes in WGCNA module (significant one) for GSEA_reports.DF.MLselected
 ```{r}
-GSEA_reports.DF.MLselected <- read_csv(file.path("RNA","output","GSEA_reports.DF.MLselected.csv"))
+GSEA_reports.DF.MLselected <- read_csv(file.path("RNA","output","GSEA_reports.DF.MLselected.csv")) 
 
 GSEA_reports.DF.MLselected %>% View()
 xls.file <- GSEA_reports.DF.MLselected %>% dplyr::select(report3) %>% as_vector()
@@ -121,7 +121,7 @@ return(core.data)
 gsea_report_path=file.path("~","Box","gsea_home","output","oct30")
 # loop (though this is not smart R way)
 coregenes <-list()
-temp <- GSEA_reports.DF.MLselected %>% filter(`FDR q-val`< 0.3)
+temp <- GSEA_reports.DF.MLselected %>% filter(`FDR q-val`< 0.3) # filtered significant modules in GSEA
 temp %>% View()
 for(i in 1:nrow(temp)) {
   coregenes[[i]] <- read.coregenes(xls.file.in.GSEA_reports=as_vector(temp[i,"report3"]),
