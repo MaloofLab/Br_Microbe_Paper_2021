@@ -200,7 +200,7 @@ dendro.plot <- ggdendrogram(data = GSEA_reports.DF.scaled.dendro, rotate = TRUE)
 print(dendro.plot)
 #
 dendro.y.NAME <- tibble(NAME=dendro_data(GSEA_reports.DF.scaled.dendro)$label$label) 
-save(dendro.y.NAME,file=file.path("RNA","output","dendro.y.NAME.Rdata"))
+# save(dendro.y.NAME,file=file.path("RNA","output","dendro.y.NAME.Rdata"))
 if(modules=="fullmodule") {
   # adding missing categories to heatmap 
   GSEA_reports.DF.formatted2 <- GSEA_reports.DF.formatted %>% as_tibble() %>%   pivot_longer(cols=-1,names_to="tissue_LorD_set",values_to="-log10 FDR q-val") %>% bind_rows(tibble(NAME=rep(missing.categories$NAME,4),tissue_LorD_set=rep(vars[-1],each=dim(missing.categories)[1]),`-log10 FDR q-val`=0)) #%>% View() # missing categories in GSEA reports
