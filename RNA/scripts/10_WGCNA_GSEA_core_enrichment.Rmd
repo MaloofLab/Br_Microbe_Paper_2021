@@ -295,14 +295,14 @@ Br.v3.0anno.At.BLAST.highscore.modules2
 # find genes in leaf.red module with enriched GO terms
 Brgo.v3.0anno.Atgoslim.BP.list.DF <- Brgo.v3.0anno.Atgoslim.BP.list %>% enframe() %>% unnest(value)
 # 
-genes.category.module <- Brgo.v3.0anno.Atgoslim.BP.list.DF %>% left_join(Br.v3.0anno.At.BLAST.highscore.modules2[,c("name","leaf.voom5.module")],by="name")
+genes.category.module <- Brgo.v3.0anno.Atgoslim.BP.list.DF %>% left_join(Br.v3.0anno.At.BLAST.highscore.modules2[,c("name","root.voom5.module","leaf.voom5.module")],by="name")
 #
 target.GO <- WGCNA.voom5.all.modules.GOseq %>% dplyr::select(name,category,term) %>% filter(name=="leaf.red")
 target.GO
 #
 target.genes <- genes.category.module %>% filter(leaf.voom5.module=="red") %>% filter(value==target.GO$category[1]) %>% distinct(name)
 target.genes
-#
+# expression pattern ~ soil treatment 
 p.target <- plotgene(target=target.genes$name,numcol=8)
 p.target
 ggsave(p.target,filename="leaf.red.coregenes.yes.plot.png",path=file.path("RNA","output"),height=100,width=8,limitsize=FALSE) # soil treatment
@@ -567,3 +567,41 @@ p.leaf.leaf.red.GO3 <- expression.module6(tissue="leaf",
 p.leaf.leaf.red.GO3
 ggsave(p.leaf.leaf.red.GO3,filename="p.leaf.leaf.red.GO3.leaf_length.associated.png",path=file.path("RNA","output"))
 ```
+
+```{r}
+mod <- "root.plum1"
+target.GO <- WGCNA.voom5.all.modules.GOseq %>% dplyr::select(name,category,term) %>% filter(name==mod) %>% unite(category.term,c(category, term),sep=" ",remove=FALSE)
+target.GO
+# for root tissue expression pattern
+genes.category.module <- Brgo.v3.0anno.Atgoslim.BP.list.DF %>% left_join(Br.v3.0anno.At.BLAST.highscore.modules2[,c("name","root.voom5.module","leaf.voom5.module")],by="name")
+# GO 1
+target.genes <- genes.category.module %>% filter(root.voom5.module==str_remove(mod,"root.")) %>% filter(value==target.GO$category[1]) %>% distinct(name)
+p.root.root.plum1.GO1 <- expression.module6(tissue="root",
+                                        target.module=mod,
+                                        target=target.genes$name,
+                                        dat.voom=root.voom5.mod,
+                                        leaf_length=leaf,
+                                        target.GOterm=target.GO$category.term[1])
+p.root.root.plum1.GO1
+ggsave(p.root.root.plum1.GO1,filename="p.root.root.plum1.GO1.leaf_length.associated.png",path=file.path("RNA","output"))
+# GO 2
+target.genes <- genes.category.module %>% filter(root.voom5.module==str_remove(mod,"root.")) %>% filter(value==target.GO$category[2]) %>% distinct(name)
+p.root.root.plum1.GO2 <- expression.module6(tissue="root",
+                                        target.module=mod,
+                                        target=target.genes$name,
+                                        dat.voom=root.voom5.mod,
+                                        leaf_length=leaf,
+                                        target.GOterm=target.GO$category.term[2])
+p.root.root.plum1.GO2
+ggsave(p.root.root.plum1.GO2,filename="p.root.root.plum1.GO2.leaf_length.associated.png",path=file.path("RNA","output"))
+# GO 3
+target.genes <- genes.category.module %>% filter(root.voom5.module==str_remove(mod,"root.")) %>% filter(value==target.GO$category[3]) %>% distinct(name)
+p.root.root.plum1.GO3 <- expression.module6(tissue="root",
+                                        target.module=mod,
+                                        target=target.genes$name,
+                                        dat.voom=root.voom5.mod,
+                                        leaf_length=leaf,
+                                        target.GOterm=target.GO$category.term[3])
+p.root.root.plum1.GO3
+ggsave(p.root.root.plum1.GO3,filename="p.root.root.plum1.GO3.leaf_length.associated.png",path=file.path("RNA","output"))
+                                                   ```

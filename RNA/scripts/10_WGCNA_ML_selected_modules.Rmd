@@ -245,9 +245,10 @@ print(GSEA_reports.DF.plot)
 #leaf_avg_std.ML.data <- leaf_avg_std.ML.data %>% dplyr::rename(tissue.module=voom) %>% #mutate(module=str_to_upper(module)) %>% #mutate(NAME=str_remove(NAME,"voom_expression.e1and3.resid.exp_gt.")) %>% 
 #  mutate(NAME=str_remove(NAME,".plusR500")) %>% unite(NAME,c(NAME,module),sep=".")
 # what is "fullmodule" vs "selected"?. "selected" is ML selected shown. (041321)
+# change NAME levels using levels(GSEA_reports.DF.formatted2$NAME) (041521)
 if(modules=="fullmodule") {
   genes.count2 <- genes.count  %>% # filter(NAME %in% dendro.y.NAME$NAME) %>%
-  mutate(NAME=factor(NAME,levels=c(as.vector(dendro.y.NAME$NAME),as.vector(missing.categories$NAME))))  %>% separate(NAME,into=c("tissue2","module"),sep="\\.",remove=FALSE) %>% #View()
+  mutate(NAME=factor(NAME,levels=levels(GSEA_reports.DF.formatted2$NAME)))  %>% separate(NAME,into=c("tissue2","module"),sep="\\.",remove=FALSE) %>% #View()
  arrange(desc(NAME)) %>% left_join(leaf_avg_std.ML.data,by=c("NAME"="tissue.module")) # %>%    mutate(sign=ifelse(PropVar_0.5_LOO >0,"positive","negative")) # adding leaf_avg_std.ML.data
 
 } else if(modules=="selected") {
@@ -258,15 +259,18 @@ if(modules=="fullmodule") {
   print(genes.count2)
   save(genes.count2,file=file.path("RNA","output","genes.count2.MLselected.Rdata"))
 }
-
+load(file.path("RNA","output","genes.count2.MLselected.Rdata"))
 # check genes.count2
 print("genes.count2 after modules if/else")
 print(genes.count2)
 str(genes.count2)
 print("dim(genes.count2)")
 print(dim(genes.count2))
-genes.count2 <- genes.count2 %>% mutate(y=seq(dim(genes.count2)[1],1)) # bottom is y=1, 
-# draw gene number inside heatmap
+#genes.count2 <- genes.count2 %>% mutate(y=seq(dim(genes.count2)[1],1)) # bottom is y=1, 
+# draw gene number inside heatmap. This is wrong. Use levels(genes.count2$NAME)
+y.genes.count2 <- tibble(NAME=levels(genes.count2$NAME),y=seq(1,dim(genes.count2)[1]))
+# add y
+genes.count2 <- y.genes.count2 %>% left_join(genes.count2,by="NAME")
     GSEA_reports.DF.plot.alt <- GSEA_reports.DF.plot + 
       # for tissue for modules (omit?)
       #geom_point(aes(x=-0.35,y=y,color=tissue2),stroke=3, size=.8,inherit.aes = FALSE, data=genes.count2) +
