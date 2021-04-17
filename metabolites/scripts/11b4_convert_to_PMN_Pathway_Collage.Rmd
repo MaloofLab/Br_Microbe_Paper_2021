@@ -3,6 +3,8 @@ title: "PMN_Pathway Collage from an Omics Dataset"
 author: "Kazunari Nozue"
 date: "2/15/2021"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -12,7 +14,15 @@ knitr::opts_chunk$set(echo = TRUE)
 # [Pathway Collage from an Omics Dataset](https://pmn.plantcyc.org/PToolsWebsiteHowto.shtml#celOverview)
 
 ```{r}
-library(tidyverse);library(readxl)
+rm(list=ls())
+library(tidyverse);library(readr);library(readxl);library(openxlsx)
+# The following setting is important for WGCNA, do not omit.
+options(stringsAsFactors = FALSE)
+# install.packages(c("dynamicTreeCut", "cluster", "flashClust", "Hmisc", "reshape", "foreach", "doParallel") ) 
+library(WGCNA);library(flashClust) # for WGCNA in Whitney
+#allowWGCNAThreads(nThreads = NULL) # for Whitney
+#enableWGCNAThreads(4) # for Whitney
+
 ```
 
 # Automated + mannual compound name curration for PMN
@@ -21,21 +31,25 @@ library(tidyverse);library(readxl)
 * summarized in "new_unique_associated_metabolites_02_09_21_PMNcuration.xlsx"
 
 ```{r}
-mets.PMN <- read_xlsx("../output/new_unique_associated_metabolites_02_09_21_PMNcuration.xlsx")
+mets.PMN <- read_xlsx("metabolites/output/new_unique_associated_metabolites_02_09_21_PMNcuration.xlsx")
 mets.PMN <- mets.PMN %>% filter(!Compound_id=="0")
 
 ```
 
 # read csv file
 ```{r}
-met_amt_rotation_out <- read_csv("../output/Leaf_associated_metabolites_raw_NOBLANK.csv")
+met_amt_rotation_out <- read_csv("metabolites/output/Leaf_associated_metabolites_raw_NOBLANK.csv")
 
 ```
 
 # combine metabolite conversion table, which is readable by PMN
 ```{r}
+# root_PC3
 met_amt_rotation_out %>% inner_join(mets.PMN,by="metabolite") %>% dplyr::select(Compound_id,PC,loading) %>% #group_by(PC) %>% summarize(n())
-  filter(PC=="root_PC3") %>% write_tsv(file.path("..","output","Leaf_associated_metabolites_raw_NOBLANK.PMN.root_PC3.tsv"))
+  filter(PC=="root_PC3") %>% write_tsv(file.path("metabolites","output","Leaf_associated_metabolites_raw_NOBLANK.PMN.root_PC3.tsv"))
+# leaf_PC2
+met_amt_rotation_out %>% inner_join(mets.PMN,by="metabolite") %>% dplyr::select(Compound_id,PC,loading) %>% #group_by(PC) %>% summarize(n())
+  filter(PC=="leaf_PC2") %>% write_tsv(file.path("metabolites","output","Leaf_associated_metabolites_raw_NOBLANK.PMN.leaf_PC2.tsv"))
 ```
 
 # How to map the metabolite data onto PMN cellular view? (under construction)
@@ -52,13 +66,12 @@ met_amt_rotation_out %>% inner_join(mets.PMN,by="metabolite") %>% dplyr::select(
 # Pathways to genes tables
 # from compounds to genes
 ```{r}
-#brapa_fpsccyc_fast <- read_csv(file.path("..","..","..","Annotation","input","brapa_fpsccyc.fasta"))
 # compounds
-brapa_fpsccyc_compounds.20180702 <- read_tsv(file.path("..","..","annotation","input","PMN","brapa_fpsccyc_compounds.20180702"))
-write_csv(brapa_fpsccyc_compounds.20180702,file=file.path("..","..","annotation","input","PMN","brapa_fpsccyc_compounds.20180702.csv"))
+brapa_fpsccyc_compounds.20180702 <- read_tsv(file.path("annotation","input","PMN","brapa_fpsccyc_compounds.20180702"))
+write_csv(brapa_fpsccyc_compounds.20180702,file=file.path("annotation","input","PMN","brapa_fpsccyc_compounds.20180702.csv"))
 brapa_fpsccyc_compounds.20180702
 # pathways
-brapa_fpsccyc_pathways.20180702 <- read_tsv(file.path("..","..","annotation","input","PMN","brapa_fpsccyc_pathways.20180702"))
+brapa_fpsccyc_pathways.20180702 <- read_tsv(file.path("annotation","input","PMN","brapa_fpsccyc_pathways.20180702"))
 brapa_fpsccyc_pathways.20180702
 ```
 
@@ -70,33 +83,264 @@ brapa_fpsccyc_compounds.20180702_to_genes <- brapa_fpsccyc_compounds.20180702 %>
 brapa_fpsccyc_compounds.20180702_to_genes %>% group_by(Compound_id) %>% summarize(num=n())
 ```
 
-
 # comparison PMN compund names and Julin's ML_leaf_associated_normalized_metabolites 
 ```{r}
 met_amt_rotation_out.brapa_fpsccyc_compounds.20180702_to_genes <- met_amt_rotation_out %>% inner_join(mets.PMN,by="metabolite") %>% dplyr::select(Compound_id,PC,loading) %>% mutate(Compound_id=str_to_upper(Compound_id)) %>%  inner_join(brapa_fpsccyc_compounds.20180702_to_genes,by="Compound_id") 
 met_amt_rotation_out.brapa_fpsccyc_compounds.20180702_to_genes %>% View()
 # write csv
-write_csv(met_amt_rotation_out.brapa_fpsccyc_compounds.20180702_to_genes,file.path("..","output","met_amt_rotation_out.brapa_fpsccyc_compounds.20180702_to_genes.csv"))
+write_csv(met_amt_rotation_out.brapa_fpsccyc_compounds.20180702_to_genes,file.path("metabolites","output","met_amt_rotation_out.brapa_fpsccyc_compounds.20180702_to_genes.csv"))
 # how many metabolites in met_amt_rotation_out.brapa_fpsccyc_compounds.20180702_to_genes?
 # the original metabolite
 met_amt_rotation_out %>% group_by(metabolite) %>% summarise(n=n()) # 77
 # met_amt_rotation_out (corresponding "Compound_id" in PMN)
-met_amt_rotation_out %>% inner_join(mets.PMN,by="metabolite") %>% dplyr::select(Compound_id,PC,loading) %>% group_by(Compound_id) %>% summarise(n=n()) # 61
-# to_genes
-met_amt_rotation_out.brapa_fpsccyc_compounds.20180702_to_genes %>% group_by(Compound_id) %>% summarise(n=n()) # 18 compound_id ... too small. why?
-
-#
-ML_leaf_associated_normalized_metabolites$metabolite %in% unique(brapa_fpsccyc_compounds.20180702_to_genes$Compound_common_name) %>% summary()
-# only 8 TRUE. Needs to do ambiguous (or partial) search on the database? How to?
+met_amt_rotation_out %>% inner_join(mets.PMN,by="metabolite") %>% dplyr::select(Compound_id,PC,loading) %>% group_by(Compound_id) %>% summarise(n=n()) # 59
+# to_genes (something is wrong)
+met_amt_rotation_out.brapa_fpsccyc_compounds.20180702_to_genes %>% group_by(Compound_id) %>% summarise(n=n()) # 14 compound_id ... too small. why?????
 ```
-
-
-
-
-
-
 
 # How to add omics data to a Pathway Collage
 * File > Add or replace omics data
 * Overlay our RNAse data. Which? (option 1) live/dead relative expression values of soil treatment associated genes ("Yes" in GSEA) among leaf length correlated modules.(option 2)
+
+# Julin's Machine Learning selected modules
+```{r eval=FALSE}
+ElasticNet0.5_multiCV_Pct_var <- read_csv(file.path("plant","output","ElasticNet0.5_multiCV_Pct_var.csv")) # Updated version from 11_take2_Machine_Learning
+# 
+ElasticNet0.5_multiCV_Pct_var <- ElasticNet0.5_multiCV_Pct_var %>%  unite(tissue.module,c("Module_Organ","Module_Name"),sep=".") # all lower case
+```
+
+
+# reading GSEA results (all WGCNA modules)
+# GSEA analysis with WGCNA modules
+## read reports 
+## function for oct30 reports copied from "10_WGCNA_including_R500.Rmd"
+## copid new version (032321)
+```{r eval=FALSE}
+read.gsea_report_files_WGCNA <- function(gsea_report_path,GSEA.FDR.cutoff,tp=c("resid","removeblock"),data="exp_gt_block") {
+# open xsl files and save as csvs
+# gsea_report
+gsea_report_files <- list.files(path=gsea_report_path,full.names=FALSE,include.dirs = FALSE,recursive=TRUE, pattern="(gsea_report_for)([[:print:]]+)(\\.xls)")
+# ifelse(setCutoff=="Total", x <- "Total",if(setCutoff<10) {x <-  str_c("In0",setCutoff)} else {x <- str_c("In",setCutoff)})
+
+# gsea_report_files <- gsea_report_files[str_detect(gsea_report_files,x)]
+# print(str_c(x,"orless"))
+
+gsea_report_files
+# gsea_report (full name)
+gsea_report_files2 <- list.files(path=gsea_report_path,full.names=TRUE,recursive=TRUE, pattern="(gsea_report_for)([[:print:]]+)(\\.xls)")
+#gsea_report_files2 <- gsea_report_files2[str_detect(gsea_report_files2,x)] 
+#gsea_report_files2
+# read xls file (file name is "xls", actually tsv. That is why read_xls did not work)
+GSEA_reports<-lapply(gsea_report_files2, function(x) read_tsv(file=file.path(x)))
+# name
+names(GSEA_reports) <- gsea_report_files
+  gsub(".xls","",gsub("([[:print:]]+)(/)([[:print:]]+)","\\3",gsea_report_files))
+# convert list into one data.frame
+GSEA_reports.DF <- GSEA_reports %>% enframe(name="report") %>% unnest(value)
+#GSEA_reports.DF %>% View()
+# filter only significnt `FDR q-val` (GSEA.FDR.cutoff)
+GSEA_reports.DF <- GSEA_reports.DF #%>% filter(`FDR q-val`< GSEA.FDR.cutoff)
+# 
+GSEA_reports.DF <- GSEA_reports.DF %>% separate(report,into=c("report2","report3"),sep="/") %>% mutate(report2=str_replace(report2,"remove.block","removeblock")) %>% separate(report2,into=c("exp","type","type2","tissue","categories"),sep="\\.",fill="left",extra="drop") 
+# GSEA_reports.DF <- GSEA_reports.DF %>% filter(type2==data) # works?
+#GSEA_reports.DF$LorD <- gsub("(gsea_report_for_)(0|1)([[:print:]]+)","\\2",GSEA_reports.DF$report3)
+#GSEA_reports.DF <- GSEA_reports.DF %>% mutate(LorD=ifelse(LorD==0,"Live","Dead"))
+GSEA_reports.DF %>% View()
+ifelse(dim(GSEA_reports.DF)[1]==0,print("no significnat categories"),return(GSEA_reports.DF))
+}
+```
+# dot not use (old vesion)
+```{r eval=FALSE}
+read.gsea_report_files_WGCNA <- function(gsea_report_path,GSEA.FDR.cutoff,tp=c("resid","removeblock"),data="exp_gt_block") {
+# open xsl files and save as csvs
+# gsea_report
+gsea_report_files <- list.files(path=gsea_report_path,full.names=FALSE,include.dirs = FALSE,recursive=TRUE, pattern="(gsea_report_for)([[:print:]]+)(\\.xls)")
+# ifelse(setCutoff=="Total", x <- "Total",if(setCutoff<10) {x <-  str_c("In0",setCutoff)} else {x <- str_c("In",setCutoff)})
+
+# gsea_report_files <- gsea_report_files[str_detect(gsea_report_files,x)]
+# print(str_c(x,"orless"))
+
+gsea_report_files
+# gsea_report (full name)
+gsea_report_files2 <- list.files(path=gsea_report_path,full.names=TRUE,recursive=TRUE, pattern="(gsea_report_for)([[:print:]]+)(\\.xls)")
+#gsea_report_files2 <- gsea_report_files2[str_detect(gsea_report_files2,x)] 
+#gsea_report_files2
+# read xls file (file name is "xls", actually tsv. That is why read_xls did not work)
+GSEA_reports<-lapply(gsea_report_files2, function(x) read_tsv(file=file.path(x)))
+# name
+names(GSEA_reports) <- gsea_report_files
+  gsub(".xls","",gsub("([[:print:]]+)(/)([[:print:]]+)","\\3",gsea_report_files))
+# convert list into one data.frame
+GSEA_reports.DF <- GSEA_reports %>% enframe(name="report") %>% unnest(value)
+#GSEA_reports.DF %>% View()
+# filter only significnt `FDR q-val` (GSEA.FDR.cutoff)
+GSEA_reports.DF <- GSEA_reports.DF %>% filter(`FDR q-val`< GSEA.FDR.cutoff)
+# 
+GSEA_reports.DF <- GSEA_reports.DF %>% separate(report,into=c("report2","report3"),sep="/") %>% mutate(report2=str_replace(report2,"remove.block","removeblock")) %>% separate(report2,into=c("exp","type","type2","tissue","categories"),sep="\\.",fill="left",extra="drop") 
+#
+GSEA_reports.DF <- GSEA_reports.DF %>% filter(type2==data) # works?
+#GSEA_reports.DF$LorD <- gsub("(gsea_report_for_)(0|1)([[:print:]]+)","\\2",GSEA_reports.DF$report3)
+#GSEA_reports.DF <- GSEA_reports.DF %>% mutate(LorD=ifelse(LorD==0,"Live","Dead"))
+GSEA_reports.DF %>% View()
+ifelse(dim(GSEA_reports.DF)[1]==0,print("no significnat categories"),return(GSEA_reports.DF))
+}
+```
+
+# data: leaf.voom5.module or root,voom5.module (WGCNA modules calculated either from voom_expression.e1and3.resid.exp_gt.root.plusR500 or voom_expression.e1and3.resid.exp_gt.leaf.plusR500). Expression data is "voom_expression.e1and3.resid.exp_gt_block.root.plusR500.txt" or "voom_expression.e1and3.resid.exp_gt_block.leaf.plusR500.txt
+```{r}
+type="resid";cutoff <- 1;
+gsea_report_path=file.path("~","Box","gsea_home","output","oct30")
+GSEA_reports.DF <- read.gsea_report_files_WGCNA(gsea_report_path,GSEA.FDR.cutoff=cutoff) # 
+# select root.voom5 and leaf.voom5 data for categories
+GSEA_reports.DF <- GSEA_reports.DF %>% filter(str_detect(categories,"voom5")) #%>% View()
+
+# rename "NAME" column (for module names)
+GSEA_reports.DF <- GSEA_reports.DF %>% mutate(NAME= str_remove(NAME,"MODULE.")) #%>%
+  #str_replace("ROOT.VOOM5","voom_expression.e1and3.resid.exp_gt.root.plusR500") %>%
+  #str_replace("LEAF.VOOM5","voom_expression.e1and3.resid.exp_gt.leaf.plusR500"))  #%>% View()
+# adding L or D info
+GSEA_reports.DF$LorD <- gsub("(gsea_report_for_)(0|1)([[:print:]]+)","\\2",GSEA_reports.DF$report3)
+GSEA_reports.DF <- GSEA_reports.DF %>% mutate(LorD=ifelse(LorD==0,"Live","Dead"))
+GSEA_reports.DF %>% View()
+```
+
+# selecting GSEA results for Machine Learning selected modules
+```{r}
+GSEA_reports.DF.MLselected <- 
+GSEA_reports.DF %>% mutate(NAME=NAME %>% str_remove_all(".VOOM5") %>% str_replace_all("LEAF.","leaf.") %>% str_replace_all("ROOT.","root.")) %>% 
+inner_join(ElasticNet0.5_multiCV_Pct_var,by=c("NAME"="tissue.module")) #%>% View()
+```
+
+# modify this
+```{r}
+
+
+modTrait.leaf_avg.RP2.cor.GSEA.summary %>% View()
+gsea_report_path=file.path("~","Box","gsea_home","output","aug15")
+xls.file <- modTrait.leaf_avg.RP2.cor.GSEA.summary %>% dplyr::select(report3) %>% as_vector()
+
+# function
+read.coregenes <- function(default.path=gsea_report_path,
+                           xls.file.in.GSEA_reports=report3,
+                           category.name = NAME
+)
+  
+{
+  gsea_report_files <- list.files(path=default.path,full.names=FALSE,include.dirs = FALSE,recursive=TRUE, pattern="(gsea_report_for)([[:print:]]+)(\\.xls)")
+  
+  temp.dir <- gsea_report_files[str_detect(gsea_report_files,pattern=xls.file.in.GSEA_reports)] %>% str_split(pattern="/") %>% unlist() %>% .[1]
+  print(str_c("temp.dir is ",temp.dir))
+  # xls.file.name to read core gene list file
+  xls.file.name <- str_c(category.name,".xls") #%>% str_replace("UP","FC_UP") %>% str_replace("DOWN","FC_DOWN")
+  # 
+  core.data <- read_tsv(file.path(default.path,temp.dir,xls.file.name)) %>% mutate(dirname=temp.dir) # actually the xls file is tsv files (found by Julin...) 
+  return(core.data)
+}  
+```
+
+# core enrichment genes (from 10_WGCNA_GSEA_core_enrichment.Rmd)
+```{r}
+coregenes.yes.DF <- read_csv(file.path("RNA/output/core_enrichment_genes.csv"))
+```
+
+# Overlaying RNAseq data
+## reading expression data
+```{r}
+root.voom5 <- readr::read_tsv(file.path("RNA","output","voom_expression.e1and3.resid.exp_gt.root.plusR500.txt.gz"))
+leaf.voom5 <- readr::read_tsv(file.path("RNA","output","voom_expression.e1and3.resid.exp_gt.leaf.plusR500.txt.gz"))
+```
+## ratio of expression value for soil treated or dead plant
+###  sample description data frame {data-navmenu="Data import"}
+```{r}
+sample.description.e1 <- read_csv(file.path("RNA","input","Br.mbio.e1.sample.description.csv"))
+sample.description.e3 <- read_csv(file.path("RNA","input","Br.mbio.e3.sample.description.csv"))
+
+sample.description.e1 %>% summarize(n_distinct(group))
+sample.description.e1 %>% group_by(trt) %>% summarize(n())
+##
+root.voom5.e1 <- tibble(root.voom5 = colnames(root.voom5)[-1]) %>% inner_join(sample.description.e1[,c("sample","genotype","tissue","trt")],by=c("root.voom5"="sample"))
+root.voom5.e3 <- tibble(root.voom5 = colnames(root.voom5)[-1]) %>% mutate(genotype="FPsc") %>% inner_join(sample.description.e3[,c("sample","tissue","trt")],by=c("root.voom5"="sample"))  
+root.voom5.sample <- bind_rows(root.voom5.e1,root.voom5.e3) %>% mutate(trt=str_remove(trt,"5E_"))
+root.voom5.sample %>% group_by(genotype) %>% summarise(num=n())
+
+# leaf.voom5.sample
+leaf.voom5.e1 <- tibble(leaf.voom5 = colnames(leaf.voom5)[-1]) %>% inner_join(sample.description.e1[,c("sample","genotype","tissue","trt")],by=c("leaf.voom5"="sample"))
+leaf.voom5.e3 <- tibble(leaf.voom5 = colnames(leaf.voom5)[-1]) %>% mutate(genotype="FPsc") %>% inner_join(sample.description.e3[,c("sample","tissue","trt")],by=c("leaf.voom5"="sample"))  
+leaf.voom5.sample <- bind_rows(leaf.voom5.e1,leaf.voom5.e3) %>% mutate(trt=str_remove(trt,"5E_"))
+leaf.voom5.sample %>% group_by(genotype) %>% summarise(num=n())
+```
+
+# mean value (all of ratio are -1 or 1,which is strange). Wait this is log scale and centered at zero (among soil treatment)
+```{r eval=FALSE}
+# root (test, only FPsc)
+root.voom5.soil.mean.ratio <- root.voom5 %>% pivot_longer(cols=-1,names_to="sampleID",values_to="value") %>% left_join(root.voom5.sample,by=c("sampleID"="root.voom5")) %>% filter(genotype=="FPsc") %>% group_by(genes,trt) %>% summarise(mean.value=mean(value)) %>% dplyr::select(genes,trt,mean.value) %>% pivot_wider(names_from="trt",values_from="mean.value") %>% mutate(ratio=live/dead) %>% ungroup() %>% count(ratio) # %>% ungroup() %>% count(ratio) # strange. only -1 and 1. This is because of centered.
+
+# test "BraA01g000010.3C"
+root.voom5 %>% pivot_longer(cols=-1,names_to="sampleID",values_to="value") %>% filter(genes=="BraA01g000010.3C",str_detect(sampleID,"FPsc")) %>% left_join(root.voom5.sample,by=c("sampleID"="root.voom5")) %>% group_by(genes,trt,genotype) %>% summarise(mean.value=mean(value)) 
+
+# check "BraA01g000010.3C"
+temp <- root.voom5 %>% pivot_longer(cols=-1,names_to="sampleID",values_to="value") %>% filter(genes=="BraA01g000010.3C",str_detect(sampleID,"FPsc")) %>% left_join(root.voom5.sample,by=c("sampleID"="root.voom5")) %>% arrange(trt)
+mean(temp$value[1:6]) # [1] -0.1480089
+mean(temp$value[7:12]) # [1] 0.1480089 the same value with opposite sign.
+
+```
+# diff of soil treatment
+```{r}
+# root
+root.voom5.soil.mean.diff <- root.voom5 %>% pivot_longer(cols=-1,names_to="sampleID",values_to="value") %>% left_join(root.voom5.sample,by=c("sampleID"="root.voom5")) %>% filter(genotype=="FPsc") %>% group_by(genes,trt) %>% summarise(mean.value=mean(value)) %>% dplyr::select(genes,trt,mean.value) %>% pivot_wider(names_from="trt",values_from="mean.value") %>% mutate(diff=dead-live)
+# leaf
+leaf.voom5.soil.mean.diff <- leaf.voom5 %>% pivot_longer(cols=-1,names_to="sampleID",values_to="value") %>% left_join(leaf.voom5.sample,by=c("sampleID"="leaf.voom5")) %>% filter(genotype=="FPsc") %>% group_by(genes,trt) %>% summarise(mean.value=mean(value)) %>% dplyr::select(genes,trt,mean.value) %>% pivot_wider(names_from="trt",values_from="mean.value") %>% mutate(diff=dead-live)
+
+```
+
+
+
+## select leaf length associated modules (pending)
+```{r}
+ElasticNet0.5_multiCV_Pct_var
+WGCNA.modules2.voom5 <- read_csv(file.path("RNA","output","WGCNA.modules2.voom5.csv.gz"))
+head(WGCNA.modules2.voom5$root.voom5.module)
+# 
+root.voom5.soil.mean.leaf_length.associated <- root.voom5.soil.mean.diff %>% inner_join(WGCNA.modules2.voom5 %>% dplyr::select(name,root.voom5.module) %>% drop_na(root.voom5.module),by=c("genes"="name")) %>% semi_join(ElasticNet0.5_multiCV_Pct_var %>% separate(tissue.module,c("tissue","module")),by=c("root.voom5.module"="module")) 
+# 
+leaf.voom5.soil.mean.leaf_length.associated <- leaf.voom5.soil.mean.diff %>% inner_join(WGCNA.modules2.voom5 %>% dplyr::select(name,leaf.voom5.module) %>% drop_na(leaf.voom5.module),by=c("genes"="name")) %>% semi_join(ElasticNet0.5_multiCV_Pct_var %>% separate(tissue.module,c("tissue","module")),by=c("leaf.voom5.module"="module")) 
+ 
+```
+
+## convert gene ID from V3.0 to PMN () (pending)
+```{r}
+orthologs <- read_csv(file.path("annotation","input","PMN","Brapa_V3.0_pep_PMN_brapa_fpsccyc_recip_orthologs2.csv")) %>% mutate(query_id=str_remove_all(query_id,"-MONOMER")) %>% filter(str_detect(query_id,"^BRARA")) %>% mutate(query_id=str_replace(query_id,"BRARA","Brara"))
+# root
+root.voom5.soil.mean.leaf_length.associated.diff <- root.voom5.soil.mean.leaf_length.associated %>% ungroup() %>% inner_join(orthologs %>% dplyr::select(query_id,subject_id),by=c("genes"="subject_id")) %>% dplyr::select(query_id,diff) 
+## write csv
+root.voom5.soil.mean.leaf_length.associated.diff %>%  write_tsv(file.path("RNA","output","root.voom5.soil.mean.leaf_length.associated.tsv")) # data column should be "1" to export to PMN cellular view. Pathway collague is stored as root.voom5.soil.mean.leaf_length.associated.json 
+
+# leaf
+leaf.voom5.soil.mean.leaf_length.associated.diff <- leaf.voom5.soil.mean.leaf_length.associated %>% ungroup() %>% inner_join(orthologs %>% dplyr::select(query_id,subject_id),by=c("genes"="subject_id")) %>% dplyr::select(query_id,diff) 
+## write csv
+leaf.voom5.soil.mean.leaf_length.associated.diff %>%  write_tsv(file.path("RNA","output","leaf.voom5.soil.mean.leaf_length.associated.tsv")) # data column should be "1" to export to PMN cellular view. Pathway collague is stored as leaf.voom5.soil.mean.leaf_length.associated.json 
+```
+
+
+# combine metatolite and RNA expression data (both leaf_length associated) in a one file to visualize both data in one pathway map
+```{r}
+# root
+root.voom5.soil.mean.leaf_length.associated.diff <- read_tsv(file.path("RNA","output","root.voom5.soil.mean.leaf_length.associated.tsv")) %>% rename(value=diff) %>% rename(ID=query_id) %>% mutate(PC="") 
+
+Leaf_associated_metabolites_raw_NOBLANK.PMN.root_PC3 <- read_tsv(file.path("metabolites","output","Leaf_associated_metabolites_raw_NOBLANK.PMN.root_PC3.tsv")) %>% mutate(value=loading*10) %>% rename(ID=Compound_id) %>% dplyr::select(-loading)# increased value 10 times due to common scale with "diff" in RNA data
+ 
+# combine (root)
+  bind_rows(Leaf_associated_metabolites_raw_NOBLANK.PMN.root_PC3, root.voom5.soil.mean.leaf_length.associated.diff) %>% write_tsv(file.path("RNA","output","root.voom5.soil.mean.leaf_length.associated.genes.Compounds.PC3.tsv")) # opend to create Pathway Collague and save it as "root.voom5.soil.mean.leaf_length.associated.genes.Compounds.PC3.json"
+  
+# leaf
+leaf.voom5.soil.mean.leaf_length.associated.diff <- read_tsv(file.path("RNA","output","leaf.voom5.soil.mean.leaf_length.associated.tsv")) %>% rename(value=diff) %>% rename(ID=query_id) %>% mutate(PC="") 
+
+Leaf_associated_metabolites_raw_NOBLANK.PMN.leaf_PC2 <- read_tsv(file.path("metabolites","output","Leaf_associated_metabolites_raw_NOBLANK.PMN.leaf_PC2.tsv")) %>% mutate(value=loading*10) %>% rename(ID=Compound_id) %>% dplyr::select(-loading)# increased value 10 times due to common scale with "diff" in RNA data
+ 
+# combine (root)
+  bind_rows(Leaf_associated_metabolites_raw_NOBLANK.PMN.leaf_PC2, leaf.voom5.soil.mean.leaf_length.associated.diff) %>% write_tsv(file.path("RNA","output","leaf.voom5.soil.mean.leaf_length.associated.genes.Compounds.PC2.tsv")) # opend to create Pathway Collague and save it as "leaf.voom5.soil.mean.leaf_length.associated.genes.Compounds.PC2.json"
+```
+
+# combine metatolite and RNA expression data (both leaf_length associated ALSO soil-treatment associated) in a one file to visualize both data in one pathway map
+
 

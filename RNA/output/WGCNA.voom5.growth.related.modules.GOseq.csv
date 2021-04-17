@@ -1,0 +1,66 @@
+tissue,module,category,over_represented_pvalue,over_represented_padjust,term
+root,paleturquoise,GO:0010345,2.8681314591409094e-10,1.0867350098684906e-6,suberin biosynthetic process
+root,paleturquoise,GO:0006949,1.4981727046064214e-6,0.002838288188876865,syncytium formation
+root,paleturquoise,GO:0055114,3.146258193114884e-6,0.0034034135586483508,oxidation-reduction process
+root,paleturquoise,GO:0042761,4.315535406780971e-6,0.0034034135586483508,very long-chain fatty acid biosynthetic process
+root,paleturquoise,GO:0009828,4.491176509169109e-6,0.0034034135586483508,plant-type cell wall loosening
+root,paleturquoise,GO:0006631,1.866003645078492e-5,0.01012932113910304,fatty acid metabolic process
+root,paleturquoise,GO:0006072,1.9550979151594363e-5,0.01012932113910304,glycerol-3-phosphate metabolic process
+root,paleturquoise,GO:0051603,2.1386795754242365e-5,0.01012932113910304,proteolysis involved in cellular protein catabolic process
+root,lightyellow,GO:0015706,9.602207974149133e-12,3.6382766014051066e-8,nitrate transport
+root,lightyellow,GO:0010167,2.5608696036806335e-8,4.85156746417296e-5,response to nitrate
+root,lightyellow,GO:0042128,9.462960010405788e-8,1.195171849314251e-4,nitrate assimilation
+root,lightyellow,GO:0006821,2.1253726094197879e-7,2.013259204272894e-4,chloride transport
+root,lightyellow,GO:0071249,3.1253741278193486e-6,0.00201347814076378,cellular response to nitrate
+root,lightyellow,GO:0006355,3.188405606910182e-6,0.00201347814076378,"regulation of transcription, DNA-templated"
+root,lightyellow,GO:0005992,3.7483962635618353e-6,0.002028953348947971,trehalose biosynthetic process
+root,lightyellow,GO:0010200,7.874342267834967e-6,0.0037294853566033365,response to chitin
+root,lightyellow,GO:0009095,6.11232909807948e-5,0.023401623906444683,"aromatic amino acid family biosynthetic process, prephenate pathway"
+root,lightyellow,GO:0055085,6.176200555936839e-5,0.023401623906444683,transmembrane transport
+root,lightyellow,GO:0009414,8.188487616365675e-5,0.02820561779855413,response to water deprivation
+root,lightyellow,GO:0034765,9.583831682158057e-5,0.028714605010506766,regulation of ion transmembrane transport
+root,lightyellow,GO:0006873,9.851936266471047e-5,0.028714605010506766,cellular ion homeostasis
+root,lightyellow,GO:1902476,1.2129169700296401e-4,0.032826731424587904,chloride transmembrane transport
+root,lightyellow,GO:0006995,1.8205331062554715e-4,0.04598666626401321,cellular response to nitrogen starvation
+root,yellowgreen,GO:0055114,1.3291666422359583e-12,5.036212407432046e-9,oxidation-reduction process
+root,yellowgreen,GO:0019419,3.5531727621814214e-12,6.7314857979527025e-9,sulfate reduction
+root,yellowgreen,GO:0000103,1.3416608889193397e-11,1.6945177027051262e-8,sulfate assimilation
+root,yellowgreen,GO:0009051,1.990676553902664e-9,1.8856683656842984e-6,"pentose-phosphate shunt, oxidative branch"
+root,yellowgreen,GO:0042128,5.473436574724858e-8,4.147770236326497e-5,nitrate assimilation
+root,yellowgreen,GO:0009635,1.246776345352353e-7,7.873392620900109e-5,response to herbicide
+root,yellowgreen,GO:0006809,7.835258399996993e-7,4.241113439655516e-4,nitric oxide biosynthetic process
+root,yellowgreen,GO:0019344,2.6932449782933506e-6,0.001275588152844188,cysteine biosynthetic process
+root,yellowgreen,GO:0010167,5.507886568100424e-6,0.0023188202451702787,response to nitrate
+root,yellowgreen,GO:0006096,2.2805906863461894e-5,0.00864115811056571,glycolytic process
+root,yellowgreen,GO:0015979,5.1068907987934765e-5,0.016322288089872766,photosynthesis
+root,yellowgreen,GO:0046686,5.576544662463205e-5,0.016322288089872766,response to cadmium ion
+root,yellowgreen,GO:0019521,5.6001516275625754e-5,0.016322288089872766,D-gluconate metabolic process
+root,yellowgreen,GO:0050777,6.870084273066042e-5,0.018593392364748024,negative regulation of immune response
+root,yellowgreen,GO:0006006,9.811266587859166e-5,0.02478325940093225,glucose metabolic process
+root,yellowgreen,GO:0030418,1.3218515473735205e-4,0.030239512886563416,nicotianamine biosynthetic process
+root,yellowgreen,GO:0001887,1.356747741017625e-4,0.030239512886563416,selenium compound metabolic process
+root,yellowgreen,GO:0000956,1.5112241397967376e-4,0.031811268142721325,nuclear-transcribed mRNA catabolic process
+leaf,red,GO:0006412,9.584573261707648e-24,3.631594808861028e-20,translation
+leaf,red,GO:0009451,7.951653645733809e-19,1.5064407831842701e-15,RNA modification
+leaf,red,GO:0006364,6.44344930811706e-8,8.138076476151847e-5,rRNA processing
+leaf,red,GO:0002181,1.210271710807203e-6,0.001146429878062123,cytoplasmic translation
+leaf,red,GO:0000470,2.091798170987325e-6,0.0015851646539741947,maturation of LSU-rRNA
+root,plum1,GO:0055072,7.528398927868053e-11,2.8525103537692054e-7,iron ion homeostasis
+root,plum1,GO:0009407,1.064668097913485e-9,2.017013711497097e-6,toxin catabolic process
+root,plum1,GO:0006749,7.677123480449023e-9,9.696206955807116e-6,glutathione metabolic process
+root,plum1,GO:0010106,3.669625358969751e-8,3.476052621284097e-5,cellular response to iron ion starvation
+root,plum1,GO:0010039,3.428840276581567e-7,2.598375161593511e-4,response to iron ion
+root,plum1,GO:0071281,5.609313915621884e-7,3.5422817377152196e-4,cellular response to iron ion
+root,plum1,GO:0071732,3.4193786769672773e-6,0.0018508608295755736,cellular response to nitric oxide
+root,plum1,GO:0006357,4.513720043362457e-6,0.0021378106555375435,regulation of transcription by RNA polymerase II
+root,plum1,GO:0071369,5.6370407706428166e-6,0.002373194164440626,cellular response to ethylene stimulus
+root,plum1,GO:1900409,1.3856109214120274e-5,0.005250079781230171,positive regulation of cellular response to oxidative stress
+root,plum1,GO:0006355,1.2251015961277817e-4,0.036816739883826874,"regulation of transcription, DNA-templated"
+root,plum1,GO:0036529,1.263176612535628e-4,0.036816739883826874,"protein deglycation, glyoxal removal"
+root,plum1,GO:0106046,1.263176612535628e-4,0.036816739883826874,"guanine deglycation, glyoxal removal"
+root,plum1,GO:0033215,1.3659033812620037e-4,0.0369671993685838,iron assimilation by reduction and transport
+root,plum1,GO:0042343,1.7389043627489377e-4,0.04392472420303816,indole glucosinolate metabolic process
+leaf,midnightblue,GO:0043622,1.3213356299690134e-5,0.041062977907516875,cortical microtubule organization
+leaf,midnightblue,GO:0005983,2.167483658354018e-5,0.041062977907516875,starch catabolic process
+leaf,midnightblue,GO:0009825,3.3759046469328595e-5,0.04263767569076202,multidimensional cell growth
+leaf,brown4,GO:0006413,3.0825296350425335e-6,0.01167970478717616,translational initiation

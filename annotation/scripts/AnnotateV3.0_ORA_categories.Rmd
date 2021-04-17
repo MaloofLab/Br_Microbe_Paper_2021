@@ -1,0 +1,34 @@
+---
+title: "B. rapa annotation for ORA"
+author: "Kazu"
+date: "3/12/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+library(tidyverse)
+library(stringr)
+library(rtracklayer)
+library(org.At.tair.db)
+```
+
+# formatting custom categories for GOseq (Sep 29, 2020) (run once)
+```{r}
+filtered.custom.data <- read_csv(file=file.path("annotation","input","filtered.custom.data.rootshoot.csv.gz"),guess_max = 15000)
+# how many genes in the list?
+summary(!is.na(filtered.custom.data))
+# how many categories?
+TF <- names(filtered.custom.data) %>% str_detect(c("plus","minus"))
+categories.up.down <- names(filtered.custom.data)[TF] %>% gsub("_FC","",.) %>% gsub("_FDR","",.) %>% unique() # 58 categories
+categories.up.down.combined <- categories.up.down %>% gsub("_up","",.) %>% gsub("_down","",.) %>% unique() # 30 categories
+
+# convert into list object
+ GSEA_cust_rootshoot_updown2 <- filtered.custom.data %>%
+  dplyr::select(genes, ends_with("up"), ends_with("down"), -starts_with("exp")) %>%
+  pivot_longer(-genes) 
+#GSEA_cust_rootshoot_updown2 %>% drop_na(value) %>% View()
+GSEA_cust_rootshoot_updown2.list <- GSEA_cust_rootshoot_updown2 %>% drop_na(value) %>% filter(str_detect(name,"FC")) %>% dplyr::select(-value) %>%split(.$genes) %>%   map(~dplyr::select(.,name)) %>% map(~as_vector(.))
+save(GSEA_cust_rootshoot_updown2.list,file=file.path("annotation","output","GSEA_cust_rootshoot_updown2.list.Rdata"))
+```
