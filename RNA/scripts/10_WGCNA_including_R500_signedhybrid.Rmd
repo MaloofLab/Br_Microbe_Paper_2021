@@ -1,0 +1,636 @@
+---
+title: "10_WGCNA_including_R500_signedhybrid"
+author: "Kazu"
+date: "4/16/2021"
+output: 
+  flexdashboard::flex_dashboard:
+    css: libs/my-theme.css
+    orientation: columns
+    vertical_layout: scroll
+    #social: menu
+    source_code: embed
+    #theme: default
+editor_options: 
+  chunk_output_type: console
+---
+
+purpose: WGCNA analysis to look correlation of plant data and expression data
+background: 
+
+* Plus R500
+* GSEA with leaf length correlated modules only (110920)
+* bug fixed in making.gmx() which does not affect results in this, but affected in "10_WGCNA_including_R500_FDR_modules.Rmd" (111020)
+* serious bug fixed in WGCNA.module.trait.cor() (120220)
+* cleaning up for Br_Microbe_Paper_2021 repository (030521)
+* Switched to ""signed hybrid" in ,networkType (041621), which will results all WGCNA module related analysis.
+* see blog posts for [signed vs unsigned1](https://peterlangfelder.com/2018/11/25/signed-or-unsigned-which-network-type-is-preferable/]), [signed vs unsigned2](https://peterlangfelder.com/2018/11/25/__trashed/) (referred from Julin)
+
+```{r setup}
+rm(list=ls())
+knitr::opts_chunk$set(error = TRUE,warning=FALSE)
+library(tidyverse);library(readr);library(readxl);library(openxlsx)
+# The following setting is important for WGCNA, do not omit.
+ options(stringsAsFactors = FALSE)
+# install.packages(c("dynamicTreeCut", "cluster", "flashClust", "Hmisc", "reshape", "foreach", "doParallel") ) 
+library(WGCNA);library(flashClust) # for WGCNA in Whitney
+allowWGCNAThreads(nThreads = NULL) # for Whitney
+enableWGCNAThreads(4) # for Whitney
+
+```
+
+
+load normalized log2 expression data (Brassica genome v3.0 annotation) {data-navmenu="Data import"}
+=================================
+Row
+-----------------------
+```{r}
+# plus R500 in residual
+root.voom5 <- readr::read_tsv(file.path("RNA","output","voom_expression.e1and3.resid.exp_gt.root.plusR500.txt.gz"))
+leaf.voom5 <- readr::read_tsv(file.path("RNA","output","voom_expression.e1and3.resid.exp_gt.leaf.plusR500.txt.gz"))
+```
+
+Row
+------------------------------------
+### check if voom is log2 transformed
+```{r}
+root.voom5[1:1000,-1] %>% gather() %>% ggplot(aes(x=value))+geom_histogram() # yes. log2 transformed
+```
+
+make sample description data frame {data-navmenu="Data import"}
+=====================
+```{r}
+sample.description.e1 <- read_csv(file.path("plant","output","Br.mbio.e1.sample.description.csv"))
+sample.description.e3 <- read_csv(file.path("plant","output","Br.mbio.e3.sample.description.csv"))
+
+sample.description.e1 %>% summarize(n_distinct(group))
+sample.description.e1 %>% group_by(trt) %>% summarize(n())
+##
+root.voom5.e1 <- tibble(root.voom5 = colnames(root.voom5)[-1]) %>% inner_join(sample.description.e1[,c("sample","genotype","tissue","trt")],by=c("root.voom5"="sample"))
+root.voom5.e3 <- tibble(root.voom5 = colnames(root.voom5)[-1]) %>% mutate(genotype="FPsc") %>% inner_join(sample.description.e3[,c("sample","tissue","trt")],by=c("root.voom5"="sample"))  
+root.voom5.sample <- bind_rows(root.voom5.e1,root.voom5.e3) %>% mutate(trt=str_remove(trt,"5E_"))
+# for Whitney
+# root.voom5.sample <- bind_rows(root.voom5.e1,root.voom5.e3)
+# root.voom5.sample$trt <- gsub("5E_","",root.voom5.sample$trt)
+root.voom5.sample %>% group_by(genotype) %>% summarise(num=n())
+
+
+# leaf.voom5.sample
+leaf.voom5.e1 <- tibble(leaf.voom5 = colnames(leaf.voom5)[-1]) %>% inner_join(sample.description.e1[,c("sample","genotype","tissue","trt")],by=c("leaf.voom5"="sample"))
+leaf.voom5.e3 <- tibble(leaf.voom5 = colnames(leaf.voom5)[-1]) %>% mutate(genotype="FPsc") %>% inner_join(sample.description.e3[,c("sample","tissue","trt")],by=c("leaf.voom5"="sample"))  
+leaf.voom5.sample <- bind_rows(leaf.voom5.e1,leaf.voom5.e3) %>% mutate(trt=str_remove(trt,"5E_")) # str_remove did not work in Whitney (041721)
+# for Whitney
+# leaf.voom5.sample <- bind_rows(leaf.voom5.e1,leaf.voom5.e3)
+# leaf.voom5.sample$trt <- gsub("5E_","",root.voom5.sample$trt)
+leaf.voom5.sample %>% group_by(genotype) %>% summarise(num=n())
+
+```
+
+# creating Phenotype Data format for GSEA. 
+# CLS: Categorical (e.g tumor vs normal) class file format (*.cls) (http://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats#CLS:_Categorical_.28e.g_tumor_vs_normal.29_class_file_format_.28.2A.cls.29)
+## root.voom5
+```{r}
+# for plusR500 (root.voom5)
+Total.root.plusR500 <- dim(root.voom5.sample)[1]
+description <- "# LIVE DEAD"
+Live.Dead <- ifelse(root.voom5.sample$trt=="live",0,1) # 0 is live
+# writing cls file
+cat(paste(Total.root.plusR500,"2","1","\n"),file=file.path("plant","output","root.voom5.cls"))
+cat(paste(description,"\n"),file=file.path("plant","output","root.voom5.cls"),append=TRUE)
+cat(Live.Dead,file=file.path("plant","output","root.voom5.cls"),append=TRUE)
+```
+
+## leaf.voom5 phenotype data
+```{r}
+# for plusR500 (shoot.voom5)
+Total.leaf.plusR500 <- dim(leaf.voom5.sample)[1]
+description <- "# LIVE DEAD"
+Live.Dead <- ifelse(leaf.voom5.sample$trt=="live",0,1)
+# writing cls file
+cat(paste(Total.leaf.plusR500,"2","1","\n"),file=file.path("plant","output","leaf.voom5.cls"))
+cat(paste(description,"\n"),file=file.path("plant","output","leaf.voom5.cls"),append=TRUE)
+cat(Live.Dead,file=file.path("plant","output","leaf.voom5.cls"),append=TRUE)
+```
+
+
+Checking data for excessive missing values and identification of outlier samples {data-navmenu="Data import"}
+=======================
+```{r eval=FALSE, include=FALSE}
+dim(datExpr.root) # [1]    28 25682
+gsg<-goodSamplesGenes(datExpr.root,verbose=3)
+gsg$allOK # TRUE. If the this is "TRUE", all genes have passed the cuts. If not, we remove the offending genes and samples from the data.
+# if (!gsg$allOK)
+# {
+# # Optionally, print the gene and sample names that were removed:
+# if (sum(!gsg$goodGenes)>0)
+# printFlush(paste("Removing genes:", paste(names(datExpr)[!gsg$goodGenes], collapse = ", ")));
+# if (sum(!gsg$goodSamples)>0)
+# printFlush(paste("Removing samples:", paste(rownames(datExpr)[!gsg$goodSamples], collapse = ", ")));
+# # Remove the offending genes and samples from the data:
+# datExpr = datExpr[gsg$goodSamples, gsg$goodGenes]
+# }
+dim(datExpr.root) 
+```
+
+sample outliers? {data-navmenu="Data import"}
+===========================
+Row
+-------------------
+```{r eval=FALSE, include=FALSE}
+sampleTree.root = hclust(dist(datExpr.root), method = "average")
+# Plot the sample tree: Open a graphic output window of size 12 by 9 inches
+# The user should change the dimensions if the window is too large or too small.
+#sizeGrWindow(12,9)
+#pdf(file = "Plots/sampleClustering.pdf", width = 12, height = 9);
+#par(cex = 0.6);
+#par(mar = c(0,4,2,0))
+```
+
+Row
+---------------
+```{r eval=FALSE, include=FALSE}
+plot(sampleTree.root, main = "Sample clustering to detect outliers", sub="", xlab="", cex.lab = 1.5,
+cex.axis = 1.5, cex.main = 2)
+
+# no need to eliminate samples 
+```
+
+
+Network construction and module detection by WGCNA {data-navmenu="WGCNA"}
+========================
+```{r eval=FALSE, include=FALSE}
+voom.WGCNA.signedhybrid <- function(voom.data="",datname="") {
+  
+  datExpr<-t(voom.data[,-1]) 
+colnames(datExpr)<-voom.data$genes
+rownames(datExpr)<-colnames(voom.data)[-1]
+# Choose a set of soft-thresholding powers
+powers = c(c(1:10), seq(from = 12, to=20, by=2))
+# Call the network topology analysis function
+sft = pickSoftThreshold(datExpr, powerVector = powers, verbose = 5,networkType="signed hybrid") # add networkType="signed hybrid" (041621)
+# Plot the results:
+sizeGrWindow(9, 5)
+par(mfrow = c(1,2));
+cex1 = 0.9;
+# Scale-free topology fit index as a function of the soft-thresholding power
+plot(sft$fitIndices[,1], -sign(sft$fitIndices[,3])*sft$fitIndices[,2],
+     xlab="Soft Threshold (power)",ylab="Scale Free Topology Model Fit,signed R^2",type="n",
+    main = paste("Scale independence"));
+text(sft$fitIndices[,1], -sign(sft$fitIndices[,3])*sft$fitIndices[,2],
+    labels=powers,cex=cex1,col="red");
+# this line corresponds to using an R^2 cut-off of h
+abline(h=0.90,col="red")
+# Mean connectivity as a function of the soft-thresholding power
+plot(sft$fitIndices[,1], sft$fitIndices[,5],
+    xlab="Soft Threshold (power)",ylab="Mean Connectivity", type="n",
+    main = paste("Mean connectivity"))
+text(sft$fitIndices[,1], sft$fitIndices[,5], labels=powers, cex=cex1,col="red")
+# softPower is set as 4 (040119). how about 10?
+softPower = 10;
+adjacency = adjacency(datExpr, power = softPower,type = "signed hybrid");
+#type = "signed hybrid" (041621)
+# Turn adjacency into topological overlap
+TOM = TOMsimilarity(adjacency);
+dissTOM = 1-TOM
+#
+# Call the hierarchical clustering function
+geneTree = flashClust(as.dist(dissTOM), method = "average");
+# flashClust() not found! (080720)
+# Plot the resulting clustering tree (dendrogram)
+sizeGrWindow(12,9)
+plot(geneTree, xlab="", sub="", main = "Gene clustering on TOM-based dissimilarity",
+    labels = FALSE, hang = 0.04);
+#
+# We like large modules, so we set the minimum module size relatively high:
+minModuleSize = 30;
+# Module identification using dynamic tree cut:
+dynamicMods = cutreeDynamic(dendro = geneTree, distM = dissTOM,
+              deepSplit = 2, pamRespectsDendro = FALSE,
+              minClusterSize = minModuleSize);
+table(dynamicMods)
+#
+# Convert numeric lables into colors
+dynamicColors = labels2colors(dynamicMods)
+table(dynamicColors)
+# Plot the dendrogram and colors underneath
+sizeGrWindow(8,6)
+plotDendroAndColors(geneTree, dynamicColors, "Dynamic Tree Cut",
+                  dendroLabels = FALSE, hang = 0.03,
+                  addGuide = TRUE, guideHang = 0.05,
+                  main = "Gene dendrogram and module colors")
+#
+# Calculate eigengenes
+MEList = moduleEigengenes(datExpr, colors = dynamicColors)
+MEs = MEList$eigengenes
+# Calculate dissimilarity of module eigengenes
+MEDiss = 1-cor(MEs);
+# Cluster module eigengenes
+METree = flashClust(as.dist(MEDiss), method = "average");
+# Plot the result
+sizeGrWindow(7, 6)
+plot(METree, main = "Clustering of module eigengenes",
+xlab = "", sub = "")
+#
+MEDissThres = 0.25
+# Plot the cut line into the dendrogram
+abline(h=MEDissThres, col = "red")
+# Call an automatic merging function
+merge = mergeCloseModules(datExpr, dynamicColors, cutHeight = MEDissThres, verbose = 3)
+# The merged module colors
+mergedColors = merge$colors;
+# Eigengenes of the new merged modules:
+mergedMEs = merge$newMEs;
+#
+sizeGrWindow(12, 9)
+#pdf(file = "Plots/geneDendro-3.pdf", wi = 9, he = 6)
+plotDendroAndColors(geneTree, cbind(dynamicColors, mergedColors),
+c("Dynamic Tree Cut", "Merged dynamic"),
+dendroLabels = FALSE, hang = 0.03,
+addGuide = TRUE, guideHang = 0.05)
+#dev.off()
+#
+# Rename to moduleColors
+moduleColors = mergedColors
+# Construct numerical labels corresponding to the colors
+colorOrder = c("grey", standardColors(50));
+moduleLabels = match(moduleColors, colorOrder)-1;
+MEs = mergedMEs
+# Save module colors and labels for use in subsequent parts
+save(dynamicColors,MEs, moduleLabels, moduleColors, geneTree, file =paste(datname,".WGCNA.softthresh10.signedhybrid.RData",sep=""))
+}
+#  
+voom.WGCNA.signedhybrid(voom.data=root.voom5,datname="voom_expression.e1and3.resid.exp_gt.root.plusR500.signedhybrid.txt.gz")
+voom.WGCNA.signedhybrid(voom.data=leaf.voom5,datname="voom_expression.e1and3.resid.exp_gt.leaf.plusR500.signedhybrid.txt.gz")
+
+```
+
+# gene annotation
+```{r}
+# annotation file for v3.0annotation
+Br.v3.0.At.BLAST <- read_csv(file.path("annotation","output","Brapa_v3.0_annotated.csv")) 
+# This annotation is redundant with name (Br grene). Eg 
+Br.v3.0.At.BLAST %>% filter(name=="BraA01g040570.3C")
+# reduce the redundancy (112418)
+Br.v3.0anno.At.BLAST.highscore <- Br.v3.0.At.BLAST %>% group_by(name) %>% arrange(desc(score)) %>% slice(1)
+# reduce the redundancy for Br (051120) (do not use)
+Br.v3.0anno.At.BLAST.highscore.Br2 <- Br.v3.0anno.At.BLAST.highscore %>% group_by(AGI) %>% arrange(desc(score)) %>% dplyr::slice(1) #%>% View()
+```
+
+# Using dynamicColors (before merging): leaf_avg_std
+```{r}
+# load dynamicColors
+load(file.path("RNA","output","voom_expression.e1and3.resid.exp_gt.root.plusR500.signedhybrid.txt.gz.WGCNA.softthresh10.signedhybrid.RData")) # 041721
+length(dynamicColors);dim(root.voom5)
+root.voom5.mod2 <- root.voom5 %>% mutate(root.voom5.module.signedhybrid=dynamicColors) %>% dplyr::select(genes, root.voom5.module.signedhybrid)
+# size of 49 modules (root) 
+root.voom5.mod2 %>% dplyr::count(root.voom5.module.signedhybrid)
+# 
+load(file.path("RNA","output","voom_expression.e1and3.resid.exp_gt.leaf.plusR500.signedhybrid.txt.gz.WGCNA.softthresh10.signedhybrid.RData"))
+length(dynamicColors);dim(leaf.voom5)
+leaf.voom5.mod2 <- leaf.voom5 %>% mutate(leaf.voom5.module.signedhybrid=dynamicColors) %>% dplyr::select(genes, leaf.voom5.module.signedhybrid)
+# size of 68 modules (leaf) 
+leaf.voom5.mod2 %>% dplyr::count(leaf.voom5.module.signedhybrid)
+
+```
+
+
+# add modules (WGCNA.signedhybrid.modules.voom5.csv.gz)
+```{r}
+?matchLabels()
+Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid <- Br.v3.0anno.At.BLAST.highscore %>%
+  left_join(root.voom5.mod2,by=c("name"="genes")) %>%
+  left_join(leaf.voom5.mod2,by=c("name"="genes"))
+Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid %>% View()
+
+write_csv(Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid,file=file.path("RNA","output","WGCNA.signedhybrid.modules.voom5.csv.gz"))
+```
+
+# GOseq ORA
+# load GO.ORA function (copy from "04b_Br.mbio.e3.subset.v3.)
+# GOseq function for Brassica rapa (v3.0)
+# load Brgo.v3.0anno.Atgoslim.BP.list for GOseq analysis (GO terms) (using split() and map() to avoid long loop)
+```{r eval=TRUE,error=TRUE}
+load(file.path("annotation","output","Brgo.v3.0anno.Atgoslim.BP.list.Rdata"))
+```
+
+```{r eval=TRUE,error=TRUE}
+# GOseq
+library(ShortRead);library(goseq);library(GO.db);library("annotate")
+# for ggplot heatmap
+## uncompress gz file
+system(paste("gunzip -c ",file.path("annotation","input","Brapa_genome_v3.0_cds.gz")," > ",file.path("annotation","input","Brapa_genome_v3.0_cds.fa")))
+## read cDNA fasta file 
+Bra.v3.0_cdna<-readDNAStringSet(file.path("annotation","input","Brapa_genome_v3.0_cds.fa")) # copied from /Volumes/data_work/Data8/NGS_related/Brassica_rapa_Upendra/G3
+Bra.v3.0_cdna
+## remove fasta file
+system(paste("rm ",file.path("annotation","input","Brapa_genome_v3.0_cds.fa"),sep=""))
+
+# GOseq function
+GOseq.Brgo.v3.0.Atgoslim.BP.list.ORA2<-function(genelist,padjust=0.05,ontology="BP",custom.category.list=Brgo.v3.0anno.Atgoslim.BP.list,Br_cdna=Bra.v3.0_cdna) { # return GO enrichment table, padjus, padjust=0.05. 
+  print(genelist)
+  bias<-nchar(Br_cdna)
+  names(bias)<-names(Br_cdna)
+  # convert list of genelist into vector
+  genelist <- genelist %>% unlist()
+  TF<-(names(bias) %in% genelist)*1
+  names(TF)<-names(bias)
+  #print(TF)
+  pwf<-nullp(TF,bias.data=bias,plot.fit=FALSE)
+  #print(pwf$DEgenes)
+  GO.pval <- goseq(pwf,gene2cat=custom.category.list,use_genes_without_cat=TRUE) # format became different in new goseq version (021111). Does not work (042716)
+  #GO.pval <- goseq(pwf,gene2cat=Brgo.DF3,use_genes_without_cat=TRUE) # format became different in new goseq version (021111)
+  
+  #head(GO.pval) 
+  if(ontology=="BP") {
+    GO.pval2<-subset(GO.pval,ontology=="BP")
+  } else if(ontology=="CC") {
+    GO.pval2<-subset(GO.pval,ontology=="CC")
+  } else if(ontology=="MF") {
+    GO.pval2<-subset(GO.pval,ontology=="MF")
+  } else {
+    GO.pval2<-GO.pval
+  }
+    
+  GO.pval2$over_represented_padjust<-p.adjust(GO.pval2$over_represented_pvalue,method="BH")
+  if(GO.pval2$over_represented_padjust[1]>padjust) return("no enriched GO")
+  else {
+    enriched.GO<-GO.pval2[GO.pval2$over_represented_padjust<padjust,] 
+    print("enriched.GO is")
+    print(enriched.GO)
+    
+    ## write Term and Definition 
+    if(ontology=="BP"|ontology=="CC"|ontology=="MF") {
+    for(i in 1:dim(enriched.GO)[1]) {
+      if(is.null(Term(GOTERM[enriched.GO[i,"category"]]))) {next} else {
+      enriched.GO$Term[i]<-Term(GOTERM[[enriched.GO[i,"category"]]])
+      enriched.GO$Definition[i]<-Definition(GOTERM[[enriched.GO[i,"category"]]])
+      }
+    }
+    }
+    enriched.GO.tb <- as_tibble(enriched.GO)
+    print("As tibble enriched.GO is")
+    print(enriched.GO.tb)
+    return(enriched.GO.tb)
+  }
+}
+#
+head(Bra.v3.0_cdna)
+# length(bias) # 44239 > 45019 where the bias come from?
+#  bias.data vector must have the same length as DEgenes vector!
+```
+
+
+# convert gene list into list object and use map() (I gave up)
+# Instad split data frame to make list and apply GOseq function to each list.
+```{r eval=FALSE}
+# # learning
+# mtcars %>%
+#   split(.$cyl) %>% # making list?
+#   map(~ lm(mpg ~ wt, data = .x)) %>%
+#   map_dfr(~ as.data.frame(t(as.matrix(coef(.)))))
+# # 
+# GOseq.temp <- Br.v3.0anno.At.BLAST.highscore.modules2.voom5.FDR0.25 %>% ungroup() %>% dplyr::select(name,voom.module) %>%
+#   split(.$voom.module) %>% map(~GOseq.Brgo.v3.0.Atgoslim.BP.list.ORA2(genelist=.$name))
+# GOseq.temp %>% enframe() %>% unnest(value) %>% write_csv(file.path("..","output","voom5.FDR0.25.GOseq.csv"))
+```
+
+# GOseq of all WGCNA modules (leaf.voom5, root.voom5 version) with GO terms 
+```{r}
+#Br.v3.0anno.At.BLAST.highscore.modules2 <- read_csv(file.path("..","output","WGCNA.modules2.voom5.csv.gz")) # needs to update
+Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid <- read_csv(file.path("RNA","output","WGCNA.signedhybrid.modules.voom5.csv.gz"))
+
+GOseq.temp <- Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid %>% ungroup() %>% dplyr::select(name,root.voom5.module.signedhybrid,leaf.voom5.module.signedhybrid) %>%
+pivot_longer(cols=-1,names_to = "voom") %>% drop_na(value) %>% unite(voom.module,c("voom","value")) %>% split(.$voom.module) %>% map(~GOseq.Brgo.v3.0.Atgoslim.BP.list.ORA2(genelist=.$name)) # ,custom.category.list=GSEA_cust_rootshoot_updown2.list
+GOseq.temp %>% enframe() %>% unnest(value) %>% write_csv(file.path("RNA","output","WGCNA.voom5.signedhybrid.all.modules.GOseq.csv"))
+
+```
+
+# formatting custom categories for GOseq (Sep 29, 2020) (run once)
+```{r eval=FALSE}
+filtered.custom.data <- read_csv(file.path("annotation","output","filtered.custom.data.rootshoot.csv.gz"),guess_max = 3000)
+# howmany genes in the list?
+summary(!is.na(filtered.custom.data))
+# how many categories?
+TF <- names(filtered.custom.data) %>% str_detect(c("plus","minus"))
+categories.up.down <- names(filtered.custom.data)[TF] %>% gsub("_FC","",.) %>% gsub("_FDR","",.) %>% unique() # 58 categories
+categories.up.down.combined <- categories.up.down %>% gsub("_up","",.) %>% gsub("_down","",.) %>% unique() # 30 categories
+
+# convert into list object
+ GSEA_cust_rootshoot_updown2 <- filtered.custom.data %>%
+  dplyr::select(genes, ends_with("up"), ends_with("down"), -starts_with("exp")) %>%
+  pivot_longer(-genes) 
+#GSEA_cust_rootshoot_updown2 %>% drop_na(value) %>% View()
+GSEA_cust_rootshoot_updown2.list <- GSEA_cust_rootshoot_updown2 %>% drop_na(value) %>% filter(str_detect(name,"FC")) %>% dplyr::select(-value) %>%split(.$genes) %>%   map(~dplyr::select(.,name)) %>% map(~as_vector(.))
+save(GSEA_cust_rootshoot_updown2.list,file=file.path("annotation","output","GSEA_cust_rootshoot_updown2.list.Rdata"))
+```
+
+# GOseq with custom categories (Sep 30, 2020; Oct 28, 2020)
+```{r}
+# custom categories list
+load(file.path("annotation","output","GSEA_cust_rootshoot_updown2.list.Rdata"))
+# all modules
+GOseq.temp <- Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid %>% ungroup() %>% dplyr::select(name,root.voom5.module.signedhybrid,leaf.voom5.module.signedhybrid) %>%
+pivot_longer(cols=-1,names_to = "voom")  %>% drop_na(value) %>% unite(voom.module,c("voom","value")) %>%  split(.$voom.module) %>% map(~GOseq.Brgo.v3.0.Atgoslim.BP.list.ORA2(genelist=.$name,custom.category.list=GSEA_cust_rootshoot_updown2.list,ontology="none")) # ,custom.category.list=GSEA_cust_rootshoot_updown2.list
+GOseq.temp %>% enframe() %>% unnest(value) %>% write_csv(file.path("annotation","output","WGCNA.voom5.signedhybrid.all.modules.customcat.GOseq.csv"))
+
+# FDR0.3 (use GOseq.temp results above; revise below)
+# GOseq.temp <- Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid.voom5.FDR0.3 %>% ungroup() %>% dplyr::select(name,voom.module) %>%
+#   split(.$voom.module) %>% map(~GOseq.Brgo.v3.0.Atgoslim.BP.list.ORA2(genelist=.$name,custom.category.list=GSEA_cust_rootshoot_updown2.list,ontology="none")) # ,custom.category.list=GSEA_cust_rootshoot_updown2.list
+# GOseq.temp %>% enframe() %>% unnest(value) %>% write_csv(file.path("annotation","output","WGCNA.voom5.modules.customcat.GOseq.csv"))
+
+# check results on "root.voom5.module.signedhybrid_lightcyan1", which has "iron" in GO ORA which modules?
+
+GOseq.temp2 <- Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid %>% ungroup() %>% dplyr::select(name,root.voom5.module.signedhybrid,leaf.voom5.module.signedhybrid) %>%
+pivot_longer(cols=-1,names_to = "voom")  %>% drop_na(value) %>% unite(voom.module,c("voom","value")) %>% filter(voom.module=="root.voom5.module.signedhybrid_lightcyan1") %>% 
+  split(.$voom.module) %>% map(~GOseq.Brgo.v3.0.Atgoslim.BP.list.ORA2(genelist=.$name,custom.category.list=GSEA_cust_rootshoot_updown2.list,ontology="none")) # OK. Good. Fe categoreis enriched
+```
+
+<!-- # GOseq of all WGCNA modules (leaf.voom5, root.voom5 version) with custom categories  -->
+<!-- ```{r} -->
+<!-- Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid <- read_csv(file.path("RNA","output","WGCNA.signedhybrid.modules.voom5.csv.gz")) -->
+
+<!-- GOseq.temp <- Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid %>% ungroup() %>% dplyr::select(name,root.voom5.module.signedhybrid,leaf.voom5.module.signedhybrid) %>% -->
+<!-- pivot_longer(cols=-1,names_to = "voom") %>% drop_na(value) %>% unite(voom.module,c("voom","value")) %>% split(.$voom.module) %>% map(~GOseq.Brgo.v3.0.Atgoslim.BP.list.ORA2(genelist=.$name,custom.category.list=GSEA_cust_rootshoot_updown2.list,ontology="none")) # ,custom.category.list=GSEA_cust_rootshoot_updown2.list -->
+<!-- GOseq.temp %>% enframe() %>% unnest(value) %>% write_csv(file.path("..","output","WGCNA.voom5.all.modules.customcat.GOseq.csv")) -->
+
+<!-- ``` -->
+
+
+
+# making gmx file for GSEA with WGCNA modules
+```{r}
+#WGCNA.modules2 
+Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid <- read_csv(file.path("RNA","output","WGCNA.signedhybrid.modules.voom5.csv.gz")) # change object name
+
+Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid.list <- Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid %>% dplyr::select(name,contains("voom")) %>% 
+  pivot_longer(cols=-1,names_to="voom",values_to="module") %>%
+  split(.$voom) %>%   map(~dplyr::select(.,c(name,module))) # !!!
+
+#write_tsv(test, "../output/test.gmx") 
+
+making.gmx <- function(x,data.list=Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid.list) {
+  load("n.Rdata")
+  n <- n + 1
+  print("n is")
+  print(n)
+  save(n,file="n.Rdata")
+  print(paste("head(x) is ",head(x)))
+  test <- x %>% drop_na() %>% mutate(id=1:nrow(.)) %>% 
+  pivot_wider(names_from = module, values_from = name,values_fill = list(name = NA)) %>% 
+  dplyr::select(-id) %>% mutate_all(sort, na.last=TRUE)
+test <- test[apply(test,1,function(x) !all(is.na(x))),]
+#test %>% View()
+test <- rbind(rep("na", ncol(test)), test)
+print(str_c(names(data.list)[n],colnames(test),sep=".")) 
+colnames(test) <- str_c(names(data.list)[n],colnames(test),sep=".") 
+return(test)
+} # bug fixed (111020)
+# run
+n <- 0
+save(n,file="n.Rdata")
+Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid.list.gmx <- Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid.list %>% map(~making.gmx(.))
+rm("n.Rdata")
+
+#WGCNA.modules2.gmx <- WGCNA.modules2.list.gmx %>% bind_cols() # error due to different length of rows
+# write csv
+#WGCNA.modules2.list.gmx %>% map(.,write_csv(., path=file.path("..","output",str_c(names))))
+for(x in names(Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid.list.gmx)) {
+  write_tsv(Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid.list.gmx[[x]],file=file.path("annotation","output",str_c(x,".gmx",sep="")))
+}
+```
+
+
+# GSEA analysis with WGCNA modules
+## read reports
+## function
+```{r}
+read.gsea_report_files_WGCNA <- function(gsea_report_path,GSEA.FDR.cutoff,tp=c("resid","removeblock"),data="exp_gt_block") {
+# open xsl files and save as csvs
+# gsea_report
+gsea_report_files <- list.files(path=gsea_report_path,full.names=FALSE,include.dirs = FALSE,recursive=TRUE, pattern="(gsea_report_for)([[:print:]]+)(\\.xls)")
+# ifelse(setCutoff=="Total", x <- "Total",if(setCutoff<10) {x <-  str_c("In0",setCutoff)} else {x <- str_c("In",setCutoff)})
+
+# gsea_report_files <- gsea_report_files[str_detect(gsea_report_files,x)]
+# print(str_c(x,"orless"))
+
+gsea_report_files
+# gsea_report (full name)
+gsea_report_files2 <- list.files(path=gsea_report_path,full.names=TRUE,recursive=TRUE, pattern="(gsea_report_for)([[:print:]]+)(\\.xls)")
+#gsea_report_files2 <- gsea_report_files2[str_detect(gsea_report_files2,x)] 
+#gsea_report_files2
+# read xls file (file name is "xls", actually tsv. That is why read_xls did not work)
+GSEA_reports<-lapply(gsea_report_files2, function(x) read_tsv(file=file.path(x)))
+# name
+names(GSEA_reports) <- gsea_report_files
+  gsub(".xls","",gsub("([[:print:]]+)(/)([[:print:]]+)","\\3",gsea_report_files))
+# convert list into one data.frame
+GSEA_reports.DF <- GSEA_reports %>% enframe(name="report") %>% unnest(value)
+#GSEA_reports.DF %>% View()
+# filter only significnt `FDR q-val` (GSEA.FDR.cutoff)
+GSEA_reports.DF <- GSEA_reports.DF %>% filter(`FDR q-val`< GSEA.FDR.cutoff)
+# 
+GSEA_reports.DF <- GSEA_reports.DF %>% separate(report,into=c("report2","report3"),sep="/") %>% mutate(report2=str_replace(report2,"remove.block","removeblock")) %>% separate(report2,into=c("exp","type","type2","tissue","categories"),sep="\\.",fill="left",extra="drop") 
+#
+GSEA_reports.DF <- GSEA_reports.DF %>% filter(type2==data) # works?
+#GSEA_reports.DF$LorD <- gsub("(gsea_report_for_)(0|1)([[:print:]]+)","\\2",GSEA_reports.DF$report3)
+#GSEA_reports.DF <- GSEA_reports.DF %>% mutate(LorD=ifelse(LorD==0,"Live","Dead"))
+GSEA_reports.DF %>% View()
+ifelse(dim(GSEA_reports.DF)[1]==0,print("no significnat categories"),return(GSEA_reports.DF))
+}
+```
+
+# 
+```{r}
+type="resid";cutoff <- 1;
+gsea_report_path=file.path("~","Box","gsea_home","output","oct30")
+GSEA_reports.DF <- read.gsea_report_files_WGCNA(gsea_report_path,GSEA.FDR.cutoff=cutoff) # 
+
+# select root.voom5 and leaf.voom5 data for categories
+GSEA_reports.DF <- GSEA_reports.DF %>% filter(str_detect(categories,"voom5")) #%>% View()
+
+# rename "NAME" column
+GSEA_reports.DF <- 
+GSEA_reports.DF %>% mutate(NAME= str_remove(NAME,"MODULE.") %>%
+ str_replace("ROOT.VOOM1","voom_expression.e1and3.resid.exp_only.root") %>%
+  str_replace("ROOT.VOOM2","voom_expression.e1and3.resid.exp_only.root.plusR50") %>%
+  str_replace("ROOT.VOOM3","voom_expression.e1and3.uncorrected.root") %>%
+  str_replace("ROOT.VOOM4","voom_expression.e1and3.uncorrected.root.plusR500") %>%
+  str_replace("ROOT.VOOM5","voom_expression.e1and3.resid.exp_gt.root.plusR500") %>%
+  str_replace("LEAF.VOOM1","voom_expression.e1and3.resid.exp_only.leaf") %>%
+  str_replace("LEAF.VOOM2","voom_expression.e1and3.resid.exp_only.leaf.plusR50") %>%
+  str_replace("LEAF.VOOM3","voom_expression.e1and3.uncorrected.leaf") %>%   str_replace("LEAF.VOOM4","voom_expression.e1and3.uncorrected.leaf.plusR500") %>% 
+  str_replace("LEAF.VOOM5","voom_expression.e1and3.resid.exp_gt.leaf.plusR500")) # %>% View()
+
+```
+
+
+# leaf_avg_std, combine P (FDR < 0.3) and R and GSEA report results (`FDR q-value` < 0.3) and GO ORA
+```{r}
+modTrait.leaf_avg_std.P2.cor.summary.voom5 <- read_csv(file.path("..","output","modTrait.leaf_avg_std.P.cor.summary.voom5.csv"))
+modTrait.leaf_avg_std.R2.cor.summary.voom5 <- read_csv(file.path("..","output","modTrait.leaf_avg_std.R.cor.summary.voom5.csv"))
+# combine P and R for modTrait
+modTrait.leaf_avg_std.RP2.cor.summary.voom5 <- modTrait.leaf_avg_std.P2.cor.summary.voom5 %>% unite(voom.module,c("voom","module"),remove=FALSE) %>% inner_join(modTrait.leaf_avg_std.R2.cor.summary.voom5 %>% unite(voom.module,c("voom","module"),remove=TRUE),by="voom.module") %>% dplyr::select(!voom.module)
+# write csv
+#modTrait.leaf_avg.RP2.cor.summary %>% #write_csv(file.path("..","output","modTrait.leaf_avg.RP.cor.summary.voom5.csv"))
+# summary for slide 
+FDR0.01 <- modTrait.leaf_avg_std.RP2.cor.summary.voom5 %>% filter(FDR < 0.01) %>% group_by(voom) %>% summarize(FDR0.01=n())
+FDR0.3 <- modTrait.leaf_avg_std.RP2.cor.summary.voom5 %>% filter(FDR < 0.3) %>% group_by(voom) %>% summarize(FDR0.3=n())
+total <- modTrait.leaf_avg_std.RP2.cor.summary.voom5 %>% filter(FDR < 2) %>% group_by(voom) %>% summarize(total=n(),minpvalue=min(pvalue)) # all modules. both leaf and root
+total %>% left_join(FDR0.3,by="voom") %>% left_join(FDR0.01,by="voom") %>%  write_csv(file.path("..","output","modTrait.leaf_avg_std.RP.cor.signif.table.voom5.csv"
+))
+# 
+modTrait.leaf_avg_std.RP2.cor.summary.voom5 %>% mutate(module= str_to_upper(module)) %>% unite(voom.module, c(voom,module),sep=".") %>% left_join(GSEA_reports.DF,by=c("voom.module"="NAME"))  %>% write_csv(file.path("..","output","voom5.WGCNA.leaf_avg_std.GSEA.combined.exp_gt_block.csv")) # 
+#### too bad! No overlap between leaf_avg_std correlated (FDR < 0.25) and GSEA significant (FDR < 0.25) modules (102820)
+#### how about leaf_avg_std correlated (FDR < 0.3) and GSEA significant (FDR < 0.25) modules
+modTrait.leaf_avg_std.RP2.cor.summary.voom5 %>% mutate(module= str_to_upper(module)) %>% unite(voom.module, c(voom,module),sep=".") %>% left_join(GSEA_reports.DF,by=c("voom.module"="NAME")) %>% filter(FDR<0.3, `FDR q-val` < 0.3) %>% #View()
+write_csv(file.path("..","output","voom5.WGCNA.leaf_avg_std.GSEA.combined.exp_gt_block.FDR0.3.csv")) 
+
+# numbers of modules 
+## FDR < 0.3 (leaf_avg)
+modTrait.leaf_avg_std.RP2.cor.summary.voom5 %>% mutate(module= str_to_upper(module)) %>% unite(voom.module, c(voom,module),sep=".",remove=FALSE) %>% left_join(GSEA_reports.DF,by=c("voom.module"="NAME")) %>% filter(FDR<0.3) %>% group_by(voom,tissue) %>% summarize(both=n())
+
+## `FDR q-val` < 0.3
+modTrait.leaf_avg_std.RP2.cor.summary.voom5 %>% mutate(module= str_to_upper(module)) %>% unite(voom.module, c(voom,module),sep=".",remove=FALSE) %>% left_join(GSEA_reports.DF,by=c("voom.module"="NAME")) %>% filter(`FDR q-val` < 0.3) %>% group_by(voom,tissue) %>% summarize(both=n())
+
+# FDR < 0.3 and `FDR q-val` < 0.3
+modTrait.leaf_avg_std.RP2.cor.summary.voom5 %>% mutate(module= str_to_upper(module)) %>% unite(voom.module, c(voom,module),sep=".",remove=FALSE) %>% left_join(GSEA_reports.DF,by=c("voom.module"="NAME")) %>% filter(FDR<0.3, `FDR q-val` < 0.3) %>% group_by(voom,tissue) %>% summarize(both=n())
+
+############## under construction #########
+# add GO ORA
+## read GOseq ORA results
+WGCNA.leaf.uncorrected.modules.GOseq <- read_csv(file.path("..","output","WGCNA.leaf.uncorrected.modules.GOseq.csv"))
+# correct format in "name" to match "voom.module" in modTraitP2.cor.GSEA.summary (under construction)
+WGCNA.leaf.uncorrected.modules.GOseq <- WGCNA.leaf.uncorrected.modules.GOseq %>% mutate(name=str_replace(name,"exp_only","exponly")) %>% separate(name,c("voom","voom2","module"),sep="_") %>%  mutate(module=str_to_upper(module)) %>% unite(vooms,c("voom","voom2"), sep="_") %>% unite(name2,vooms,module,sep=".") %>% mutate(name2=str_replace(name2,"exponly","exp_only"))
+WGCNA.leaf.uncorrected.modules.GOseq %>% View()
+# combine
+modTraitRP2.leaf_avg.RP2.cor.GSEA.summary.FDR0.25 <- modTrait.leaf_avg.RP2.cor.GSEA.summary %>% filter(FDR < 0.25 & `FDR q-val`< 0.25) %>% #View()
+left_join(WGCNA.leaf.uncorrected.modules.GOseq,by=c("voom.module"="name2")) #%>% View()
+# write csv
+modTraitRP2.leaf_avg.RP2.cor.GSEA.summary.FDR0.25 %>% write_csv(file.path("..","output","WGCNA.leaf.uncorrected.soilGSEA.summary.FDR0.25.csv"))
+```
+
+# GSEA with resid data set (), which has overlap with leaf_length_ave & soil correlated modules (slide 166). How about voom5 modules?
+```{r}
+type="resid";cutoff <- 1;data=""
+gsea_report_path=file.path("~","Box","gsea_home","output","oct28")
+GSEA_reports.DF <- read.gsea_report_files_WGCNA(gsea_report_path,GSEA.FDR.cutoff=cutoff) # 
+
+# rename "NAME" column
+GSEA_reports.DF <- 
+GSEA_reports.DF %>% mutate(NAME= str_remove(NAME,"MODULE.") %>%
+ str_replace("ROOT.VOOM1","voom_expression.e1and3.resid.exp_only.root") %>%
+  str_replace("ROOT.VOOM2","voom_expression.e1and3.resid.exp_only.root.plusR50") %>%
+  str_replace("ROOT.VOOM3","voom_expression.e1and3.uncorrected.root") %>%
+  str_replace("ROOT.VOOM4","voom_expression.e1and3.uncorrected.root.plusR500") %>%
+  str_replace("ROOT.VOOM5","voom_expression.e1and3.resid.exp_gt.root.plusR500") %>%
+  str_replace("LEAF.VOOM1","voom_expression.e1and3.resid.exp_only.leaf") %>%
+  str_replace("LEAF.VOOM2","voom_expression.e1and3.resid.exp_only.leaf.plusR50") %>%
+  str_replace("LEAF.VOOM3","voom_expression.e1and3.uncorrected.leaf") %>%   str_replace("LEAF.VOOM4","voom_expression.e1and3.uncorrected.leaf.plusR500") %>% 
+  str_replace("LEAF.VOOM5","voom_expression.e1and3.resid.exp_gt.leaf.plusR500")) # %>% View()
+
+```
+
+# 
+
+
+
+
