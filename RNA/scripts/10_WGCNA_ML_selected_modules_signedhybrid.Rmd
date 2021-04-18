@@ -35,7 +35,7 @@ library(ggnewscale)
 
 ```
 
-# Julin's Machine Learning selected modules
+# Julin's Machine Learning selected modules (needs to updated upon WGCNAsignedhybrid)
 ```{r}
 # reading Julin's results of penalized regression (see slide)
 # ElasticNet0.5_LOO_prop_var <- read_csv(file.path("plant","output","ElasticNet0.5_LOO_prop_var.csv"))
@@ -54,7 +54,7 @@ ElasticNet0.5_multiCV_Pct_var <- ElasticNet0.5_multiCV_Pct_var %>% unite(tissue.
 read.gsea_report_files_WGCNA <- function(gsea_report_path,GSEA.FDR.cutoff,tp=c("resid","removeblock"),data="exp_gt_block") {
 # open xsl files and save as csvs
 # gsea_report
-gsea_report_files <- list.files(path=gsea_report_path,full.names=FALSE,include.dirs = FALSE,recursive=TRUE, pattern="(gsea_report_for)([[:print:]]+)(\\.xls)")
+gsea_report_files <- list.files(path=gsea_report_path,full.names=FALSE,include.dirs = FALSE,recursive=TRUE, pattern="(gsea_report_for)([[:print:]]+)(\\.tsv)")
 # ifelse(setCutoff=="Total", x <- "Total",if(setCutoff<10) {x <-  str_c("In0",setCutoff)} else {x <- str_c("In",setCutoff)})
 
 # gsea_report_files <- gsea_report_files[str_detect(gsea_report_files,x)]
@@ -62,7 +62,7 @@ gsea_report_files <- list.files(path=gsea_report_path,full.names=FALSE,include.d
 
 gsea_report_files
 # gsea_report (full name)
-gsea_report_files2 <- list.files(path=gsea_report_path,full.names=TRUE,recursive=TRUE, pattern="(gsea_report_for)([[:print:]]+)(\\.xls)")
+gsea_report_files2 <- list.files(path=gsea_report_path,full.names=TRUE,recursive=TRUE, pattern="(gsea_report_for)([[:print:]]+)(\\.tsv)")
 #gsea_report_files2 <- gsea_report_files2[str_detect(gsea_report_files2,x)] 
 #gsea_report_files2
 # read xls file (file name is "xls", actually tsv. That is why read_xls did not work)
@@ -89,11 +89,8 @@ ifelse(dim(GSEA_reports.DF)[1]==0,print("no significnat categories"),return(GSEA
 # data: leaf.voom5.module or root,voom5.module (WGCNA modules calculated either from voom_expression.e1and3.resid.exp_gt.root.plusR500 or voom_expression.e1and3.resid.exp_gt.leaf.plusR500). Expression data is "voom_expression.e1and3.resid.exp_gt_block.root.plusR500.txt" or "voom_expression.e1and3.resid.exp_gt_block.leaf.plusR500.txt
 ```{r}
 type="resid";cutoff <- 1;
-gsea_report_path=file.path("~","Box","gsea_home","output","oct30")
+gsea_report_path=file.path("~","Box","gsea_home","output","apr18_2021")
 GSEA_reports.DF <- read.gsea_report_files_WGCNA(gsea_report_path,GSEA.FDR.cutoff=cutoff) # 
-# select root.voom5 and leaf.voom5 data for categories
-GSEA_reports.DF <- GSEA_reports.DF %>% filter(str_detect(categories,"voom5")) #%>% View()
-
 # rename "NAME" column (for module names)
 GSEA_reports.DF <- GSEA_reports.DF %>% mutate(NAME= str_remove(NAME,"MODULE.")) #%>%
   #str_replace("ROOT.VOOM5","voom_expression.e1and3.resid.exp_gt.root.plusR500") %>%
@@ -104,18 +101,18 @@ GSEA_reports.DF <- GSEA_reports.DF %>% mutate(LorD=ifelse(LorD==0,"Live","Dead")
 GSEA_reports.DF %>% View()
 ```
 
-# selecting GSEA results for Machine Learning selected modules
+# selecting GSEA results for Machine Learning selected modules (WAIT until I get Julin's new ML result for signed hybrid WGCNA modules)
 ```{r}
 GSEA_reports.DF.MLselected <- 
-GSEA_reports.DF %>% mutate(NAME=NAME %>% str_remove_all(".VOOM5") %>% str_to_lower()) %>% inner_join(ElasticNet0.5_multiCV_Pct_var,by=c("NAME"="tissue.module")) #%>% View()
+GSEA_reports.DF %>% mutate(NAME=NAME %>% str_remove_all(".VOOM5.SIGNEDHYBRID") %>% str_to_lower()) %>% inner_join(ElasticNet0.5_multiCV_Pct_var,by=c("NAME"="tissue.module")) #%>% View()
 # write csv
-write_csv(GSEA_reports.DF.MLselected,file=file.path("RNA","output","GSEA_reports.DF.MLselected.csv"))
+write_csv(GSEA_reports.DF.MLselected,file=file.path("RNA","output","GSEA_reports.DFWGCNAsignedhybrid.MLselected.csv"))
 ```
 
-# calculate numbers of genes in each module
+# calculate numbers of genes in each module (updated for signedhybrid WGCNA modules)
 ```{r}
-GSEA_cust.root <- read_tsv(file.path("annotation","output","root.voom5.module.gmx")) %>% dplyr::slice(-1) # # remove row1 that has "na"
-GSEA_cust.leaf <- read_tsv(file.path("annotation","output","leaf.voom5.module.gmx")) %>% dplyr::slice(-1) # # remove row1 that has "na"
+GSEA_cust.root <- read_tsv(file.path("annotation","output","root.voom5.module.signedhybrid.gmx")) %>% dplyr::slice(-1) # # remove row1 that has "na"
+GSEA_cust.leaf <- read_tsv(file.path("annotation","output","leaf.voom5.module.signedhybrid.gmx")) %>% dplyr::slice(-1) # # remove row1 that has "na"
 genes.count.root <- GSEA_cust.root %>% 
   pivot_longer(cols=colnames(GSEA_cust.root)) %>% 
   #mutate(name=str_to_upper(name)) %>%
@@ -126,8 +123,7 @@ genes.count.leaf <- GSEA_cust.leaf %>%
   #mutate(name=str_to_upper(name)) %>%
   group_by(name) %>% drop_na() %>% summarise(n=n()) %>% 
   dplyr::rename(NAME=name)
-genes.count <- bind_rows(genes.count.root,genes.count.leaf) %>% mutate(NAME=str_remove(NAME,".voom5.module")) #%>% str_replace("ROOT","root") %>% str_replace("LEAF","leaf")) # 031221
-#GSEA_reports.DF <- GSEA_reports.DF %>% filter(`FDR q-val` < 0.3)
+genes.count <- bind_rows(genes.count.root,genes.count.leaf) %>% mutate(NAME=str_remove(NAME,".voom5.module")) 
 ```
 
 

@@ -1,5 +1,5 @@
 ---
-title: "10_WGCNA_GSEA_core_enrichment"
+title: "10_WGCNA_GSEA_core_enrichment_signedhybrid"
 author: "Kazu"
 date: "12/2/2020"
 output: html_document

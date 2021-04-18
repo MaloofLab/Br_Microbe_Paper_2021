@@ -564,48 +564,48 @@ GSEA_reports.DF %>% mutate(NAME= str_remove(NAME,"MODULE.") %>%
 
 
 # leaf_avg_std, combine P (FDR < 0.3) and R and GSEA report results (`FDR q-value` < 0.3) and GO ORA
-```{r}
-modTrait.leaf_avg_std.P2.cor.summary.voom5 <- read_csv(file.path("..","output","modTrait.leaf_avg_std.P.cor.summary.voom5.csv"))
-modTrait.leaf_avg_std.R2.cor.summary.voom5 <- read_csv(file.path("..","output","modTrait.leaf_avg_std.R.cor.summary.voom5.csv"))
-# combine P and R for modTrait
-modTrait.leaf_avg_std.RP2.cor.summary.voom5 <- modTrait.leaf_avg_std.P2.cor.summary.voom5 %>% unite(voom.module,c("voom","module"),remove=FALSE) %>% inner_join(modTrait.leaf_avg_std.R2.cor.summary.voom5 %>% unite(voom.module,c("voom","module"),remove=TRUE),by="voom.module") %>% dplyr::select(!voom.module)
-# write csv
-#modTrait.leaf_avg.RP2.cor.summary %>% #write_csv(file.path("..","output","modTrait.leaf_avg.RP.cor.summary.voom5.csv"))
-# summary for slide 
-FDR0.01 <- modTrait.leaf_avg_std.RP2.cor.summary.voom5 %>% filter(FDR < 0.01) %>% group_by(voom) %>% summarize(FDR0.01=n())
-FDR0.3 <- modTrait.leaf_avg_std.RP2.cor.summary.voom5 %>% filter(FDR < 0.3) %>% group_by(voom) %>% summarize(FDR0.3=n())
-total <- modTrait.leaf_avg_std.RP2.cor.summary.voom5 %>% filter(FDR < 2) %>% group_by(voom) %>% summarize(total=n(),minpvalue=min(pvalue)) # all modules. both leaf and root
-total %>% left_join(FDR0.3,by="voom") %>% left_join(FDR0.01,by="voom") %>%  write_csv(file.path("..","output","modTrait.leaf_avg_std.RP.cor.signif.table.voom5.csv"
-))
+```{r eval=FALSE}
+# modTrait.leaf_avg_std.P2.cor.summary.voom5 <- read_csv(file.path("..","output","modTrait.leaf_avg_std.P.cor.summary.voom5.csv"))
+# modTrait.leaf_avg_std.R2.cor.summary.voom5 <- read_csv(file.path("..","output","modTrait.leaf_avg_std.R.cor.summary.voom5.csv"))
+# # combine P and R for modTrait
+# modTrait.leaf_avg_std.RP2.cor.summary.voom5 <- modTrait.leaf_avg_std.P2.cor.summary.voom5 %>% unite(voom.module,c("voom","module"),remove=FALSE) %>% inner_join(modTrait.leaf_avg_std.R2.cor.summary.voom5 %>% unite(voom.module,c("voom","module"),remove=TRUE),by="voom.module") %>% dplyr::select(!voom.module)
+# # write csv
+# #modTrait.leaf_avg.RP2.cor.summary %>% #write_csv(file.path("..","output","modTrait.leaf_avg.RP.cor.summary.voom5.csv"))
+# # summary for slide 
+# FDR0.01 <- modTrait.leaf_avg_std.RP2.cor.summary.voom5 %>% filter(FDR < 0.01) %>% group_by(voom) %>% summarize(FDR0.01=n())
+# FDR0.3 <- modTrait.leaf_avg_std.RP2.cor.summary.voom5 %>% filter(FDR < 0.3) %>% group_by(voom) %>% summarize(FDR0.3=n())
+# total <- modTrait.leaf_avg_std.RP2.cor.summary.voom5 %>% filter(FDR < 2) %>% group_by(voom) %>% summarize(total=n(),minpvalue=min(pvalue)) # all modules. both leaf and root
+# total %>% left_join(FDR0.3,by="voom") %>% left_join(FDR0.01,by="voom") %>%  write_csv(file.path("..","output","modTrait.leaf_avg_std.RP.cor.signif.table.voom5.csv"
+# ))
+# # 
+# modTrait.leaf_avg_std.RP2.cor.summary.voom5 %>% mutate(module= str_to_upper(module)) %>% unite(voom.module, c(voom,module),sep=".") %>% left_join(GSEA_reports.DF,by=c("voom.module"="NAME"))  %>% write_csv(file.path("..","output","voom5.WGCNA.leaf_avg_std.GSEA.combined.exp_gt_block.csv")) # 
+# #### too bad! No overlap between leaf_avg_std correlated (FDR < 0.25) and GSEA significant (FDR < 0.25) modules (102820)
+# #### how about leaf_avg_std correlated (FDR < 0.3) and GSEA significant (FDR < 0.25) modules
+# modTrait.leaf_avg_std.RP2.cor.summary.voom5 %>% mutate(module= str_to_upper(module)) %>% unite(voom.module, c(voom,module),sep=".") %>% left_join(GSEA_reports.DF,by=c("voom.module"="NAME")) %>% filter(FDR<0.3, `FDR q-val` < 0.3) %>% #View()
+# write_csv(file.path("..","output","voom5.WGCNA.leaf_avg_std.GSEA.combined.exp_gt_block.FDR0.3.csv")) 
 # 
-modTrait.leaf_avg_std.RP2.cor.summary.voom5 %>% mutate(module= str_to_upper(module)) %>% unite(voom.module, c(voom,module),sep=".") %>% left_join(GSEA_reports.DF,by=c("voom.module"="NAME"))  %>% write_csv(file.path("..","output","voom5.WGCNA.leaf_avg_std.GSEA.combined.exp_gt_block.csv")) # 
-#### too bad! No overlap between leaf_avg_std correlated (FDR < 0.25) and GSEA significant (FDR < 0.25) modules (102820)
-#### how about leaf_avg_std correlated (FDR < 0.3) and GSEA significant (FDR < 0.25) modules
-modTrait.leaf_avg_std.RP2.cor.summary.voom5 %>% mutate(module= str_to_upper(module)) %>% unite(voom.module, c(voom,module),sep=".") %>% left_join(GSEA_reports.DF,by=c("voom.module"="NAME")) %>% filter(FDR<0.3, `FDR q-val` < 0.3) %>% #View()
-write_csv(file.path("..","output","voom5.WGCNA.leaf_avg_std.GSEA.combined.exp_gt_block.FDR0.3.csv")) 
-
-# numbers of modules 
-## FDR < 0.3 (leaf_avg)
-modTrait.leaf_avg_std.RP2.cor.summary.voom5 %>% mutate(module= str_to_upper(module)) %>% unite(voom.module, c(voom,module),sep=".",remove=FALSE) %>% left_join(GSEA_reports.DF,by=c("voom.module"="NAME")) %>% filter(FDR<0.3) %>% group_by(voom,tissue) %>% summarize(both=n())
-
-## `FDR q-val` < 0.3
-modTrait.leaf_avg_std.RP2.cor.summary.voom5 %>% mutate(module= str_to_upper(module)) %>% unite(voom.module, c(voom,module),sep=".",remove=FALSE) %>% left_join(GSEA_reports.DF,by=c("voom.module"="NAME")) %>% filter(`FDR q-val` < 0.3) %>% group_by(voom,tissue) %>% summarize(both=n())
-
-# FDR < 0.3 and `FDR q-val` < 0.3
-modTrait.leaf_avg_std.RP2.cor.summary.voom5 %>% mutate(module= str_to_upper(module)) %>% unite(voom.module, c(voom,module),sep=".",remove=FALSE) %>% left_join(GSEA_reports.DF,by=c("voom.module"="NAME")) %>% filter(FDR<0.3, `FDR q-val` < 0.3) %>% group_by(voom,tissue) %>% summarize(both=n())
+# # numbers of modules 
+# ## FDR < 0.3 (leaf_avg)
+# modTrait.leaf_avg_std.RP2.cor.summary.voom5 %>% mutate(module= str_to_upper(module)) %>% unite(voom.module, c(voom,module),sep=".",remove=FALSE) %>% left_join(GSEA_reports.DF,by=c("voom.module"="NAME")) %>% filter(FDR<0.3) %>% group_by(voom,tissue) %>% summarize(both=n())
+# 
+# ## `FDR q-val` < 0.3
+# modTrait.leaf_avg_std.RP2.cor.summary.voom5 %>% mutate(module= str_to_upper(module)) %>% unite(voom.module, c(voom,module),sep=".",remove=FALSE) %>% left_join(GSEA_reports.DF,by=c("voom.module"="NAME")) %>% filter(`FDR q-val` < 0.3) %>% group_by(voom,tissue) %>% summarize(both=n())
+# 
+# # FDR < 0.3 and `FDR q-val` < 0.3
+# modTrait.leaf_avg_std.RP2.cor.summary.voom5 %>% mutate(module= str_to_upper(module)) %>% unite(voom.module, c(voom,module),sep=".",remove=FALSE) %>% left_join(GSEA_reports.DF,by=c("voom.module"="NAME")) %>% filter(FDR<0.3, `FDR q-val` < 0.3) %>% group_by(voom,tissue) %>% summarize(both=n())
 
 ############## under construction #########
 # add GO ORA
-## read GOseq ORA results
-WGCNA.leaf.uncorrected.modules.GOseq <- read_csv(file.path("..","output","WGCNA.leaf.uncorrected.modules.GOseq.csv"))
-# correct format in "name" to match "voom.module" in modTraitP2.cor.GSEA.summary (under construction)
-WGCNA.leaf.uncorrected.modules.GOseq <- WGCNA.leaf.uncorrected.modules.GOseq %>% mutate(name=str_replace(name,"exp_only","exponly")) %>% separate(name,c("voom","voom2","module"),sep="_") %>%  mutate(module=str_to_upper(module)) %>% unite(vooms,c("voom","voom2"), sep="_") %>% unite(name2,vooms,module,sep=".") %>% mutate(name2=str_replace(name2,"exponly","exp_only"))
-WGCNA.leaf.uncorrected.modules.GOseq %>% View()
-# combine
-modTraitRP2.leaf_avg.RP2.cor.GSEA.summary.FDR0.25 <- modTrait.leaf_avg.RP2.cor.GSEA.summary %>% filter(FDR < 0.25 & `FDR q-val`< 0.25) %>% #View()
-left_join(WGCNA.leaf.uncorrected.modules.GOseq,by=c("voom.module"="name2")) #%>% View()
-# write csv
-modTraitRP2.leaf_avg.RP2.cor.GSEA.summary.FDR0.25 %>% write_csv(file.path("..","output","WGCNA.leaf.uncorrected.soilGSEA.summary.FDR0.25.csv"))
+# ## read GOseq ORA results
+# WGCNA.leaf.uncorrected.modules.GOseq <- read_csv(file.path("..","output","WGCNA.leaf.uncorrected.modules.GOseq.csv"))
+# # correct format in "name" to match "voom.module" in modTraitP2.cor.GSEA.summary (under construction)
+# WGCNA.leaf.uncorrected.modules.GOseq <- WGCNA.leaf.uncorrected.modules.GOseq %>% mutate(name=str_replace(name,"exp_only","exponly")) %>% separate(name,c("voom","voom2","module"),sep="_") %>%  mutate(module=str_to_upper(module)) %>% unite(vooms,c("voom","voom2"), sep="_") %>% unite(name2,vooms,module,sep=".") %>% mutate(name2=str_replace(name2,"exponly","exp_only"))
+# WGCNA.leaf.uncorrected.modules.GOseq %>% View()
+# # combine
+# modTraitRP2.leaf_avg.RP2.cor.GSEA.summary.FDR0.25 <- modTrait.leaf_avg.RP2.cor.GSEA.summary %>% filter(FDR < 0.25 & `FDR q-val`< 0.25) %>% #View()
+# left_join(WGCNA.leaf.uncorrected.modules.GOseq,by=c("voom.module"="name2")) #%>% View()
+# # write csv
+# modTraitRP2.leaf_avg.RP2.cor.GSEA.summary.FDR0.25 %>% write_csv(file.path("..","output","WGCNA.leaf.uncorrected.soilGSEA.summary.FDR0.25.csv"))
 ```
 
 # GSEA with resid data set (), which has overlap with leaf_length_ave & soil correlated modules (slide 166). How about voom5 modules?
