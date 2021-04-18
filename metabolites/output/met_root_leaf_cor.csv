@@ -1,0 +1,353 @@
+norm,met,cor_leaf_root
+amt,valine,0.7452241798810787
+amt,glucose-6-phosphate,0.725851908743595
+amt,guanine,0.7113699173838287
+amt,fructose-6-phosphate,0.694654475407282
+amt,leucine,0.6534994047774041
+amt,ribose,0.6135146450546713
+amt,hexose-6-phosphate,0.6045133001854597
+amt,isoleucine,0.5804986616145562
+amt,methionine,0.5393093705808136
+amt,adenine,0.5167164232252704
+amt,alanine,0.505299271370116
+amt,threonine,0.49249387763174546
+amt,linoleic acid,0.4680159375034351
+amt,homoserine,0.45591281809925344
+amt,pseudo uridine,0.44435137244290773
+amt,glutamine,0.43469236780245474
+amt,lignoceric acid,0.4307305570031906
+amt,aspartic acid,0.42637161814192265
+amt,beta-gentiobiose,0.41441729577581127
+amt,phenylalanine,0.4142058974483671
+amt,vanillic acid,0.41144417113273185
+amt,octadecanol,0.37609893840148545
+amt,methionine sulfoxide,0.35778662326514993
+amt,stearic acid,0.3517156032486617
+amt,tyrosine,0.3508102094097911
+amt,sucrose,0.3456502351014445
+amt,ornithine,0.34224506973851954
+amt,stigmasterol,0.3392714659637966
+amt,pentitol,0.337121327730943
+amt,oxoproline,0.33457674556357697
+amt,putrescine,0.33118684793432973
+amt,pyrrole-2-carboxylic acid,0.32267746723251867
+amt,glucose-1-phosphate,0.31354829124740047
+amt,myristic acid,0.31264556151362494
+amt,proline,0.3112791530471196
+amt,hydroxylamine,0.30830276921886496
+amt,maltotriose,0.30480903640332085
+amt,dehydroabietic acid,0.2990514287149838
+amt,alanine-alanine,0.29714710397308675
+amt,uracil,0.29454891535091393
+amt,chlorogenic acid,0.29406159753085787
+amt,thymine,0.29099678357454273
+amt,citric acid,0.2883828078859537
+amt,beta-sitosterol,0.28591123465757456
+amt,phenol,0.2852965027151292
+amt,palmitic acid,0.28329090300868714
+amt,asparagine,0.282857532468457
+amt,ethanolamine,0.28228656311627026
+amt,lyxose,0.27698009409377644
+amt,capric acid,0.2756836763428258
+amt,2-aminobutyric acid,0.2752393352466824
+amt,xylose,0.27475108881909954
+amt,3-hydroxy-3-methylglutaric acid,0.2699697111009829
+amt,cyanoalanine,0.26989437371024033
+amt,aconitic acid,0.2629182587033578
+amt,galactinol,0.26208777514553083
+amt,glycerol,0.2528264785729083
+amt,lysine,0.24193816006554025
+amt,octanol NIST,0.23757276081441306
+amt,methyl O-D-galactopyranoside,0.23729652770096435
+amt,glycerol-alpha-phosphate,0.23705660312562846
+amt,4-aminobutyric acid,0.23690479321487862
+amt,"propane-1,3-diol NIST",0.23302335119350592
+amt,serine,0.231438314627368
+amt,maltose,0.22672209463417825
+amt,alpha-ketoglutarate,0.22457248866266488
+amt,glutamic acid,0.22121755319821862
+amt,lactic acid,0.21895038995483915
+amt,myo-inositol,0.21530144042472849
+amt,uridine,0.20861719441929769
+amt,galactonic acid,0.20391828198987158
+amt,cyano-l-alanine,0.20276123521321363
+amt,gluconic acid,0.2007595052568621
+amt,allantoic acid,0.1996253525767581
+amt,maleic acid,0.19516769788835506
+amt,citramalic acid,0.1931796441378361
+amt,4-hydroxybenzoate,0.18544727200161834
+amt,4-hydroxybutyric acid,0.18500302382781314
+amt,3-hydroxypropionic acid,0.182277223184378
+amt,phosphate,0.18060308378701695
+amt,guanosine,0.1762694270827567
+amt,glycine,0.1723011701107446
+amt,n-acetyl-d-hexosamine,0.17144133251265364
+amt,isocitric acid,0.17124774469589907
+amt,melezitose,0.16849674668216338
+amt,"2,5-dihydroxypyrazine NIST",0.16762336195123465
+amt,tryptophan,0.16693122749308514
+amt,glycyl tyrosine,0.16414600040648325
+amt,1-monostearin,0.1629369775687444
+amt,ribitol,0.15741643859257212
+amt,succinic acid,0.15585872574166384
+amt,N-acetylornithine,0.15428895251243163
+amt,erythronic acid,0.14777378744708594
+amt,dehydroascorbic acid,0.13631674012026124
+amt,isoribose,0.13537237402510177
+amt,epsilon-caprolactam,0.1339168682183195
+amt,UDP-N-acetylglucosamine,0.13120009171233424
+amt,hydroxycarbamate NIST,0.1292258806115997
+amt,glyceric acid,0.12843910210459358
+amt,nicotinamide,0.1266181028587022
+amt,sinapinic acid,0.1196405001094496
+amt,levoglucosan,0.11679668143376552
+amt,cellobiose,0.11421045459126725
+amt,xylulose NIST,0.11194182668154105
+amt,urea,0.10994555198653923
+amt,methanolphosphate,0.10876926961202149
+amt,benzoic acid,0.10462280141776449
+amt,1-kestose,0.10438736759669838
+amt,2-ketoglucose dimethylacetal NIST,0.1029501617271961
+amt,isohexonic acid,0.09942853223760051
+amt,cis-sinapinic acid,0.09317075259774911
+amt,6-deoxyglucose,0.09248800357399042
+amt,fucose,0.08054459825998492
+amt,erythrose,0.0707956221069417
+amt,ferulic acid,0.06630598833550162
+amt,linolenic acid,0.06502179688428511
+amt,inulotriose,0.061651659847830116
+amt,gluconic acid lactone,0.0519820639712838
+amt,tocopherol alpha-,0.05131368725045989
+amt,erythronic acid lactone,0.05066163052416861
+amt,2'-deoxyguanosine,0.04413928323170282
+amt,homocystine,0.041549169279935
+amt,phenylethylamine,0.038213044954369474
+amt,hypoxanthine,0.03803743957851459
+amt,spermidine,0.034494858102187755
+amt,quinic acid,0.03331983382813854
+amt,glycerol-3-galactoside,0.0330718446026718
+amt,beta-alanine,0.0284361242310306
+amt,xylonic acid,0.0208617116514373
+amt,adenosine,0.019470851478585804
+amt,5'-deoxy-5'-methylthioadenosine,0.013403609923180671
+amt,glucoheptulose,0.009995130583368254
+amt,melibiose,0.005170913050598041
+amt,pelargonic acid,0.004056569069096091
+amt,glycolic acid,0.0020688595061375908
+amt,2-ketoisocaproic acid,-0.002851677317269823
+amt,phytol,-0.004852384987502705
+amt,phenylpyruvate,-0.007413136115847061
+amt,inositol-4-monophosphate,-0.0161913030939173
+amt,2-hydroxyglutaric acid,-0.018201094020606524
+amt,saccharic acid,-0.022630296968067638
+amt,maleimide,-0.028347921044347604
+amt,1-methylgalactose NIST,-0.0317399189438976
+amt,coniferin NIST,-0.03192990885437966
+amt,xanthine,-0.03670568133502232
+amt,aminomalonate,-0.038689867540939324
+amt,raffinose,-0.05533656944916064
+amt,lyxitol,-0.058524118150301334
+amt,alpha-aminoadipic acid,-0.060431972432854975
+amt,fumaric acid,-0.06183791288192641
+amt,erythritol,-0.06290741907801252
+amt,glucose,-0.0748967843559532
+amt,butyrolactam NIST,-0.08249356862922413
+amt,oleic acid,-0.084442232158881525
+amt,pyruvic acid,-0.08618074376452457
+amt,fructose,-0.08852830962092656
+amt,dihydroxyacetone,-0.09062328857573264
+amt,N-acetylmannosamine,-0.09275798438724794
+amt,xylonic acid isomer,-0.09870040702970645
+amt,shikimic acid,-0.1027584257667436
+amt,threonic acid,-0.11794158615926364
+amt,malic acid,-0.11851884064874084
+amt,homoglutamine,-0.1289021167214327
+amt,5-aminovaleric acid,-0.14502899054285195
+amt,"2,3-dihydroxybutanoic acid NIST",-0.15357998940400278
+amt,lactulose,-0.15863810313577917
+amt,isothreonic acid,-0.1658112124025759
+amt,heptadecanoic acid,-0.17178081880628565
+amt,3-aminoisobutyric acid,-0.19422302750335013
+amt,cis-caffeic acid,-0.23109350205839957
+amt,1-monopalmitin,-0.23810221093733225
+amt,tagatose,-0.2734417412649069
+amt,ribonic acid,-0.29754438823697427
+amt,mucic acid,-0.3764886137878842
+amt,malonic acid,-0.3775347920539465
+amt,"3,4-dihydroxycinnamic acid",-0.3995384166701826
+per_mg,glucose-6-phosphate,0.7787473932363002
+per_mg,guanine,0.7045442413618107
+per_mg,fructose-6-phosphate,0.7034254730554259
+per_mg,"2,5-dihydroxypyrazine NIST",0.6756604716030885
+per_mg,phenylalanine,0.66810747981946506
+per_mg,adenine,0.6632435703778613
+per_mg,tyrosine,0.6447597954717174
+per_mg,uracil,0.641845316869085
+per_mg,ribose,0.6415820508134845
+per_mg,valine,0.6373864513152377
+per_mg,leucine,0.6365017189655638
+per_mg,beta-gentiobiose,0.5909255701388703
+per_mg,putrescine,0.5878099419998538
+per_mg,galactinol,0.5855241214249278
+per_mg,isoleucine,0.5658015379987091
+per_mg,methionine sulfoxide,0.5610690020680001
+per_mg,pseudo uridine,0.5580086385343073
+per_mg,alanine,0.5358029840508396
+per_mg,methionine,0.4987151312933022
+per_mg,homoserine,0.49361046517755286
+per_mg,threonine,0.48314550180012095
+per_mg,asparagine,0.46890476697833794
+per_mg,hexose-6-phosphate,0.4680603218964624
+per_mg,gluconic acid,0.46106603410635066
+per_mg,oxoproline,0.4604969329305469
+per_mg,glycerol,0.4546948892666875
+per_mg,fumaric acid,0.446778164353364
+per_mg,lysine,0.42885372154830026
+per_mg,maleic acid,0.4232510110747595
+per_mg,pyrrole-2-carboxylic acid,0.4077818558658434
+per_mg,succinic acid,0.4045018477146632
+per_mg,uridine,0.3988897838136806
+per_mg,tryptophan,0.3811454119908318
+per_mg,maltotriose,0.38044810645572374
+per_mg,cyanoalanine,0.37127398500209086
+per_mg,hydroxylamine,0.3660047526681904
+per_mg,aspartic acid,0.36034311677262265
+per_mg,maleimide,0.357910391568266
+per_mg,xanthine,0.3530761806917647
+per_mg,ethanolamine,0.3528813689134205
+per_mg,3-hydroxypropionic acid,0.35010589974843037
+per_mg,cyano-l-alanine,0.3404450253389478
+per_mg,alpha-ketoglutarate,0.3372962153149606
+per_mg,quinic acid,0.33719555176494587
+per_mg,thymine,0.333777986610018
+per_mg,isohexonic acid,0.331375940073769
+per_mg,stigmasterol,0.33053340949568866
+per_mg,vanillic acid,0.3288681917748078
+per_mg,2-aminobutyric acid,0.31713352730187305
+per_mg,N-acetylornithine,0.31440401648839544
+per_mg,glycine,0.3108327408512419
+per_mg,alanine-alanine,0.29683022478509424
+per_mg,citramalic acid,0.29495166618312635
+per_mg,hypoxanthine,0.2943280686700246
+per_mg,glycyl tyrosine,0.2896526122830188
+per_mg,ribitol,0.2879377076543074
+per_mg,maltose,0.28553301317916724
+per_mg,glycerol-alpha-phosphate,0.2824445581394869
+per_mg,lyxitol,0.27979862740399436
+per_mg,4-hydroxybenzoate,0.27512161222732046
+per_mg,phenol,0.2746885135326945
+per_mg,glutamic acid,0.27240261874661964
+per_mg,4-hydroxybutyric acid,0.26635092830299484
+per_mg,glucose-1-phosphate,0.2650847553809504
+per_mg,beta-sitosterol,0.26446704058680237
+per_mg,proline,0.2560563445821986
+per_mg,gluconic acid lactone,0.25205359399613186
+per_mg,cis-sinapinic acid,0.24581516162655587
+per_mg,pyruvic acid,0.23891343389807393
+per_mg,stearic acid,0.2360734574768587
+per_mg,linoleic acid,0.22435364405923022
+per_mg,3-hydroxy-3-methylglutaric acid,0.22117039634566837
+per_mg,guanosine,0.22035230680252246
+per_mg,shikimic acid,0.2180809472693947
+per_mg,lignoceric acid,0.21804317489423192
+per_mg,fructose,0.21236295742386552
+per_mg,2-ketoisocaproic acid,0.21159184557417085
+per_mg,chlorogenic acid,0.21046366267584496
+per_mg,2-ketoglucose dimethylacetal NIST,0.20733931711556353
+per_mg,ornithine,0.20512057505624784
+per_mg,methyl O-D-galactopyranoside,0.19994650703305686
+per_mg,palmitic acid,0.1987022201163542
+per_mg,1-monostearin,0.1960178817616973
+per_mg,saccharic acid,0.19558085321100588
+per_mg,adenosine,0.1936911531227748
+per_mg,sucrose,0.19160072361551
+per_mg,glyceric acid,0.1905449755074687
+per_mg,dehydroabietic acid,0.1876675495509638
+per_mg,octadecanol,0.18760312040911536
+per_mg,erythronic acid,0.18729422421896474
+per_mg,isoribose,0.18654765149656555
+per_mg,aconitic acid,0.17721690305256071
+per_mg,galactonic acid,0.17596089985347357
+per_mg,6-deoxyglucose,0.172888803379909
+per_mg,lactic acid,0.17233417413243723
+per_mg,4-aminobutyric acid,0.16994427355693725
+per_mg,melibiose,0.16918035198013961
+per_mg,glutamine,0.1667363176109288
+per_mg,glycerol-3-galactoside,0.16617501555207426
+per_mg,melezitose,0.1635687635163936
+per_mg,octanol NIST,0.16289792169381967
+per_mg,cis-caffeic acid,0.15411237272196682
+per_mg,nicotinamide,0.14901529728961554
+per_mg,aminomalonate,0.14632857274161026
+per_mg,beta-alanine,0.14549492647217166
+per_mg,hydroxycarbamate NIST,0.1443293584398472
+per_mg,capric acid,0.14314573875185405
+per_mg,serine,0.14303352521312526
+per_mg,allantoic acid,0.13632274461446667
+per_mg,ferulic acid,0.13555860853711155
+per_mg,lyxose,0.1351731783084096
+per_mg,n-acetyl-d-hexosamine,0.13279725843334927
+per_mg,pentitol,0.12392825759440566
+per_mg,sinapinic acid,0.11428612292999159
+per_mg,levoglucosan,0.10840437639677629
+per_mg,inositol-4-monophosphate,0.10012042178713718
+per_mg,phosphate,0.09646852476566661
+per_mg,tocopherol alpha-,0.09631775554639596
+per_mg,myristic acid,0.09339879962320911
+per_mg,citric acid,0.08327475462760386
+per_mg,cellobiose,0.07794553740111348
+per_mg,myo-inositol,0.0769204589819951
+per_mg,"propane-1,3-diol NIST",0.07529604391119264
+per_mg,isocitric acid,0.06899389582769375
+per_mg,phenylpyruvate,0.06789353013955207
+per_mg,phytol,0.0634218224911641
+per_mg,2'-deoxyguanosine,0.06040167946114829
+per_mg,methanolphosphate,0.05587021619226236
+per_mg,epsilon-caprolactam,0.043441164912920556
+per_mg,glycolic acid,0.03711748690948927
+per_mg,1-kestose,0.03672524024402724
+per_mg,UDP-N-acetylglucosamine,0.032641739521450414
+per_mg,linolenic acid,0.01843953611299379
+per_mg,homocystine,0.009401600168942422
+per_mg,ribonic acid,0.007563110194449468
+per_mg,phenylethylamine,0.006931890967512938
+per_mg,alpha-aminoadipic acid,0.0031882228599865283
+per_mg,xylulose NIST,-0.006698487747528578
+per_mg,urea,-0.009198297488989874
+per_mg,spermidine,-0.01033427792419249
+per_mg,inulotriose,-0.011755536883000378
+per_mg,1-methylgalactose NIST,-0.012546728963211637
+per_mg,erythronic acid lactone,-0.013501466986032407
+per_mg,xylose,-0.020740282161972733
+per_mg,dehydroascorbic acid,-0.023569869787670714
+per_mg,3-aminoisobutyric acid,-0.02825074377713737
+per_mg,erythritol,-0.028507836976587233
+per_mg,erythrose,-0.02946950100384918
+per_mg,butyrolactam NIST,-0.03293455029161102
+per_mg,benzoic acid,-0.04073848313942199
+per_mg,isothreonic acid,-0.043003830784041
+per_mg,pelargonic acid,-0.05661508343821502
+per_mg,threonic acid,-0.06354081160640193
+per_mg,glucoheptulose,-0.06674920230357415
+per_mg,xylonic acid isomer,-0.07226095752949613
+per_mg,5-aminovaleric acid,-0.07458528280736298
+per_mg,malic acid,-0.07888400116249582
+per_mg,mucic acid,-0.09071840126525663
+per_mg,coniferin NIST,-0.09153515548221215
+per_mg,5'-deoxy-5'-methylthioadenosine,-0.09376678098876343
+per_mg,fucose,-0.10367298189968467
+per_mg,2-hydroxyglutaric acid,-0.10406408915592519
+per_mg,heptadecanoic acid,-0.10923591763652862
+per_mg,homoglutamine,-0.11101478493439995
+per_mg,raffinose,-0.1322280138507667
+per_mg,oleic acid,-0.13863235718260608
+per_mg,glucose,-0.14246225066899704
+per_mg,dihydroxyacetone,-0.15925611749484683
+per_mg,lactulose,-0.16920270102571403
+per_mg,tagatose,-0.18439229462918713
+per_mg,1-monopalmitin,-0.18843063947327698
+per_mg,xylonic acid,-0.20218360676820918
+per_mg,"2,3-dihydroxybutanoic acid NIST",-0.25111640732103996
+per_mg,malonic acid,-0.25378167902174154
+per_mg,N-acetylmannosamine,-0.2947129623307206
+per_mg,"3,4-dihydroxycinnamic acid",-0.3247686316191829

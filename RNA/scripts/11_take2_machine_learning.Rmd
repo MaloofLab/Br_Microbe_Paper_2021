@@ -281,3 +281,8 @@ relimpmultiCV
 
 coef.tb
 ```
+```{r}
+d %>% ggplot(aes(x=MEred_leaf, y=leaf_avg_std)) +
+  geom_point()
+```
+
