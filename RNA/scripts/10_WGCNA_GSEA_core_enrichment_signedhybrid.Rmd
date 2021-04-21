@@ -321,13 +321,13 @@ leaf <- read_csv("plant/output/leaf_lengths_combined.csv") %>%
 leaf %>% arrange(sampleID)
 ```
 
-load root modules (copied from 11_machine_learning.Rmd)
+load root modules (copied from 11_machine_learning.Rmd) (revised 042021)
 ```{r}
 root.voom5 <- readr::read_tsv(file.path("RNA","output","voom_expression.e1and3.resid.exp_gt.root.plusR500.txt.gz"))
-load(file.path("RNA","output","voom_expression.e1and3.resid.exp_gt.root.plusR500.txt.gz.WGCNA.softthresh10.RData"))
+load(file.path("RNA","output","voom_expression.e1and3.resid.exp_gt.root.plusR500.signedhybrid.txt.gz.WGCNA.softthresh10.signedhybrid.RData")) # revised (042021)
 # adding module column
 #root.voom5.mod <- root.voom5 %>% mutate(dat.voom.module=str_c("ME",dynamicColors,"_root"))
-root.voom5.mod <- root.voom5 %>% mutate(dat.voom.module=str_c("root.",dynamicColors))
+root.voom5.signedhybrid.mod <- root.voom5 %>% mutate(dat.voom.module=str_c("root.",dynamicColors))
 
 # MEs
 rootMEs <- MEs %>% as_tibble() %>%
@@ -341,14 +341,13 @@ rootMEs
 rm(MEs)
 ```
 
-load leaf modules (copied from 11_machine_learning.Rmd)
+load leaf modules (copied from 11_machine_learning.Rmd) (revised 042021)
 ```{r}
 leaf.voom5 <- readr::read_tsv(file.path("RNA","output","voom_expression.e1and3.resid.exp_gt.leaf.plusR500.txt.gz"))
-load(file.path("RNA","output","voom_expression.e1and3.resid.exp_gt.leaf.plusR500.txt.gz.WGCNA.softthresh10.RData"))
+load(file.path("RNA","output","voom_expression.e1and3.resid.exp_gt.leaf.plusR500.signedhybrid.txt.gz.WGCNA.softthresh10.signedhybrid.RData"))
 # adding module column (tissue.module all lowercase that is consistent with )
 #leaf.voom5.mod <- leaf.voom5 %>% mutate(dat.voom.module=str_c("ME",dynamicColors,"_leaf"))
-leaf.voom5.mod <- leaf.voom5 %>% mutate(dat.voom.module=str_c("leaf.",dynamicColors))
-
+leaf.voom5.signedhybrid.mod <- leaf.voom5 %>% mutate(dat.voom.module=str_c("leaf.",dynamicColors)) # modified (042021)
 # 
 leafMEs <- MEs %>% as_tibble() %>%
   rename_all(str_c, "_leaf") %>%
@@ -378,14 +377,15 @@ d
 ElasticNet0.5_multiCV_Pct_var.module <- ElasticNet0.5_multiCV_Pct_var %>% dplyr::select(tissue.module) %>% as_vector()
 # new ver. use anti_join()
 nonElasticNet0.5_multiCV_Pct_var.module <- tibble(all = colnames(d)[-1:-2]) %>% separate(all, c("module","tissue")) %>% mutate(module=str_remove(module,"ME")) %>% unite(tissue.module.all,tissue,module,sep=".") %>% anti_join(ElasticNet0.5_multiCV_Pct_var,by=c("tissue.module.all"="tissue.module")) %>% as_vector()
-# 
-mod <- ElasticNet0.5_multiCV_Pct_var.module[3]
+# target module (an example)
+#mod <- ElasticNet0.5_multiCV_Pct_var.module[3]
+mod <-"root.lightcyan1"
 # making expression pattern plot function (compare within/outside module)
 #
 d.root <- d %>% dplyr::select(sampleID,leaf_avg_std,ends_with("root"))
 d.leaf <- d %>% dplyr::select(sampleID,leaf_avg_std,ends_with("leaf"))
 # 
-expression.module4 <- function(target.module=mod,dat.voom=root.voom5.mod,tissue_MEs=d.root) { 
+expression.module4 <- function(target.module=mod,dat.voom=root.voom5.signedhybrid.mod,tissue_MEs=d.root) { 
   print(str_c("The target.module is ",target.module,"."))
 # add within target.module info
 dat.voom <- dat.voom %>% mutate(TF=ifelse(dat.voom.module==target.module,"within the module","not in the module"),.keep="unused") %>% mutate(TF.module=str_c(target.module,"\n",TF))

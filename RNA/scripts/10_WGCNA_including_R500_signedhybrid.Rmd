@@ -393,7 +393,7 @@ head(Bra.v3.0_cdna)
 # GOseq.temp %>% enframe() %>% unnest(value) %>% write_csv(file.path("..","output","voom5.FDR0.25.GOseq.csv"))
 ```
 
-# GOseq of all WGCNA modules (leaf.voom5, root.voom5 version) with GO terms 
+# GOseq of all WGCNA modules (leaf.voom5.signedbhydrid, root.voom5.signedhybrid version) with GO terms 
 ```{r}
 #Br.v3.0anno.At.BLAST.highscore.modules2 <- read_csv(file.path("..","output","WGCNA.modules2.voom5.csv.gz")) # needs to update
 Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid <- read_csv(file.path("RNA","output","WGCNA.signedhybrid.modules.voom5.csv.gz"))
@@ -430,7 +430,7 @@ load(file.path("annotation","output","GSEA_cust_rootshoot_updown2.list.Rdata"))
 # all modules
 GOseq.temp <- Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid %>% ungroup() %>% dplyr::select(name,root.voom5.module.signedhybrid,leaf.voom5.module.signedhybrid) %>%
 pivot_longer(cols=-1,names_to = "voom")  %>% drop_na(value) %>% unite(voom.module,c("voom","value")) %>%  split(.$voom.module) %>% map(~GOseq.Brgo.v3.0.Atgoslim.BP.list.ORA2(genelist=.$name,custom.category.list=GSEA_cust_rootshoot_updown2.list,ontology="none")) # ,custom.category.list=GSEA_cust_rootshoot_updown2.list
-GOseq.temp %>% enframe() %>% unnest(value) %>% write_csv(file.path("annotation","output","WGCNA.voom5.signedhybrid.all.modules.customcat.GOseq.csv"))
+GOseq.temp %>% enframe() %>% unnest(value) %>% write_csv(file.path("RNA","output","WGCNA.voom5.signedhybrid.all.modules.customcat.GOseq.csv"))
 
 # FDR0.3 (use GOseq.temp results above; revise below)
 # GOseq.temp <- Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid.voom5.FDR0.3 %>% ungroup() %>% dplyr::select(name,voom.module) %>%
