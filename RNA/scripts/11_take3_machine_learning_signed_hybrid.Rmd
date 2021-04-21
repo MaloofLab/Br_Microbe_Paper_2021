@@ -273,7 +273,7 @@ coef.tb <- coef.tb %>% arrange(desc(Prop_Var_Explained)) %>%
   
   select(Module_Name, Module_Organ, Pct_Var_Explained, Effect) 
 
-coef.tb %>% write_csv("../output/ElasticNet0.5_multiCV_Pct_var.csv")
+coef.tb %>% write_csv("../output/ElasticNet0.5_multiCV_Pct_var.signed.hybrid.csv")
 
 coef.tb %>% write_csv("../../_Paper_Tables/ElasticNetWGCNA_Modules.signed.hybrid.csv")
 
@@ -288,7 +288,7 @@ d %>% ggplot(aes(x=MEivory_root, y=leaf_avg_std)) +
 
 ```{r}
 d %>% dplyr::select(all_of(vars)) %>%
-  pivot_longer(cols = -leaf_avg_std, names_to = "module", values_to "eigenGene") %>%
+  pivot_longer(cols = !leaf_avg_std, names_to = "module", values_to ="eigenGene") %>%
   ggplot(aes(x=eigenGene, y=leaf_avg_std)) +
   geom_point() +
   facet_wrap(~module, ncol = 3)
