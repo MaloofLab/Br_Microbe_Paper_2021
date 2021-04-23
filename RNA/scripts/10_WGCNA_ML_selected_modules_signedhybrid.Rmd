@@ -11,7 +11,7 @@ editor_options:
 * GSEA: soil treatment effects. RNAseq data is voom transformed by considering exp, gt, block effects (voom.root6 or voom.leaf6 data)
 * WGCNA ORA: custom categories
 * Adding GSEA.FDR.cutoff part in GSEA_reports.DF.plot.dendrogram.v9.WGCNAmodule.notitle.ML() (041321)
-
+* New ML selected WGCNA modules (signed hybrid) (042321)
 
 # To Do
 * Use "ElasticNet0.5_multiCV_Pct_var" instead of "ElasticNet0.5_LOO_prop_var" (031021)
