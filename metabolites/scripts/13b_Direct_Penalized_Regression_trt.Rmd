@@ -1,0 +1,571 @@
+---
+title: "Direct Penalized Regression--Metabolites add treatment"
+author: "Julin Maloof"
+date: "3/09/2021"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Goal: Dan suggested skipping the PCA step and just looking for metabolites associated with leaf length via penalized regression.
+
+This version includes treatment as a possible predictor.
+
+```{r}
+library(glmnet)
+library(relaimpo)
+library(tidyverse)
+library(broom)
+```
+
+get leaflength data
+```{r}
+leaflength <- read_csv("../../plant/output/leaf_lengths_metabolite.csv") %>%
+  mutate(pot=str_pad(pot, width=3, pad="0"),
+         sampleID=str_c("wyo", genotype, pot, sep="_")) %>%
+  select(sampleID, genotype, trt, leaf_avg_std)
+leaflength %>% arrange(sampleID)
+```
+
+get and wrangle metabolite data
+```{r}
+met_raw <-read_csv("../input/metabolites_set1.csv")
+met <- met_raw %>% 
+  mutate(pot=str_pad(pot, width = 3, pad = "0")) %>%
+  mutate(sampleID=str_c("wyo", genotype, pot, sep="_")) %>%
+  select(sampleID, genotype, tissue, sample_mass = `sample_mass mg`, !submission_number:concatenate) %>%
+  pivot_longer(!sampleID:sample_mass, names_to = "metabolite", values_to = "met_amount") %>%
+  
+  #remove unnamed metabolites
+  filter(str_detect(metabolite, "[A-Z]|[a-z]")) %>%
+  
+  #adjust by sample mass
+  mutate(met_per_mg=met_amount/sample_mass) %>%
+  
+  #scale and center
+  group_by(metabolite, genotype, tissue) %>%
+  mutate(met_per_mg=scale(met_per_mg),
+         met_amt=scale(met_amount)
+  ) %>% 
+  pivot_wider(id_cols = sampleID, 
+              names_from = c(tissue, metabolite), 
+              values_from = starts_with("met_"),
+              names_sep = "_")
+
+met 
+```
+
+add in treatment
+```{r}
+met <- leaflength %>% select(sampleID, trt) %>%
+  left_join(met, by="sampleID")
+met
+```
+
+
+
+split this into two data frames, one normalized by tissue amount and one not.
+```{r}
+met_per_mg <- met %>% select(sampleID, trt, starts_with("met_per_mg")) %>%
+  as.data.frame() %>% column_to_rownames("sampleID")
+met_amt <- met %>% select(sampleID, trt,  starts_with("met_amt")) %>%
+  as.data.frame() %>% column_to_rownames("sampleID")
+```
+
+get leaf data order to match
+
+```{r}
+leaflength <- leaflength[match(met$sampleID, leaflength$sampleID),]
+leaflength
+```
+
+
+## find metabolites sig for microbe
+
+Live vs blank dead
+
+normalized
+```{r}
+met_per_mg_lm <- met_per_mg %>%
+  rownames_to_column("sampleID") %>%
+  left_join(leaflength) %>%
+  mutate(trt=ifelse(str_detect(trt, "live"), "live", "blank_dead")) %>%
+  pivot_longer(cols=starts_with("met"), names_to = "metabolite") %>%
+  group_by(metabolite) %>%
+  nest() %>%
+  mutate(lm_trt=map(data, ~ lm(value ~ trt, data=.)),
+         lm_leaf=map(data, ~ lm(leaf_avg_std ~ value, data=.)))
+
+```
+
+
+```{r}
+met_per_mg_lm_results<- met_per_mg_lm %>% mutate(broomtidy.trt = map(lm_trt, broom::tidy),
+                         broomtidy.leaf = map(lm_leaf, broom::tidy)) %>%
+  unnest(broomtidy.trt, broomtidy.leaf) %>%
+  select(metabolite, term.trt=term, p.value.trt=p.value,
+         term.leaf=term1, p.value.leaf=p.value1) %>%
+  mutate(FDR.trt=p.adjust(p.value.trt, method = "fdr"),
+         FDR.leaf=p.adjust(p.value.leaf, method = "fdr")) %>%
+  filter(! str_detect(term.trt, "Intercept"),
+         ! str_detect(term.leaf, "Intercept"))
+
+met_per_mg_lm_results %>% ungroup() %>%
+  summarize(sig.trt=sum(FDR.trt<0.1), sig.leaf=sum(FDR.leaf<0.1), sig.both=sum(FDR.trt<0.1&FDR.leaf<0.1), count=n())
+```
+
+raw
+```{r}
+met_amt_lm <- met_amt %>%
+  rownames_to_column("sampleID") %>%
+  left_join(leaflength) %>%
+  mutate(trt=ifelse(str_detect(trt, "live"), "live", "blank_dead")) %>%
+  pivot_longer(cols=starts_with("met"), names_to = "metabolite") %>%
+  group_by(metabolite) %>%
+  nest() %>%
+  mutate(lm_trt=map(data, ~ lm(value ~ trt, data=.)),
+         lm_leaf=map(data, ~ lm(leaf_avg_std ~ value, data=.)))
+
+```
+
+
+```{r}
+met_amt_lm_results<- met_amt_lm %>% mutate(broomtidy.trt = map(lm_trt, broom::tidy),
+                         broomtidy.leaf = map(lm_leaf, broom::tidy)) %>%
+  unnest(broomtidy.trt, broomtidy.leaf) %>%
+  select(metabolite, term.trt=term, p.value.trt=p.value,
+         term.leaf=term1, p.value.leaf=p.value1) %>%
+  mutate(FDR.trt=p.adjust(p.value.trt, method = "fdr"),
+         FDR.leaf=p.adjust(p.value.leaf, method = "fdr")) %>%
+  filter(! str_detect(term.trt, "Intercept"),
+         ! str_detect(term.leaf, "Intercept"))
+
+met_amt_lm_results %>% ungroup() %>%
+  summarize(sig.trt=sum(FDR.trt<0.1), sig.leaf=sum(FDR.leaf<0.1), sig.both=sum(FDR.trt<0.1&FDR.leaf<0.1), count=n())
+```
+
+
+##  penalized regression for association with leaf
+
+# normalized
+
+## multi CV
+
+Fit 101 CVs for each of 11 alphas
+```{r}
+
+met_per_mg <- met_per_mg %>%
+  mutate(trt=ifelse(str_detect(trt, "live"), "live", "blank_dead"),
+         trt=as.numeric(as.factor(trt)))
+
+set.seed(1245)
+
+folds <- tibble(run=1:101) %>% 
+  mutate(folds=map(run, ~ sample(rep(1:6,6))))
+
+system.time (met_per_mg_multiCV <- expand_grid(run=1:100, alpha=round(seq(0,1,.1),1)) %>%
+               left_join(folds, by="run") %>%
+               mutate(fit=map2(folds, alpha, ~ cv.glmnet(x=as.matrix(met_per_mg),
+                                                         y=leaflength$leaf_avg_std, 
+                                                         foldid = .x, alpha=.y
+                                                         )))
+             #, lambda=exp(seq(-5,0,length.out = 50)) )))
+) #200 seconds
+
+head(met_per_mg_multiCV)
+```
+
+for each fit, pull out the mean cv error, lambda, min lambda, and 1se lambda 
+```{r}
+met_per_mg_multiCV <- met_per_mg_multiCV %>%
+  mutate(cvm=map(fit, magrittr::extract("cvm")),
+         lambda=map(fit, magrittr::extract("lambda")),
+         lambda.min=map_dbl(fit, magrittr::extract("lambda.min" )),
+         lambda.1se=map_dbl(fit, magrittr::extract("lambda.1se")),
+         nzero=map(fit, magrittr::extract("nzero"))
+  )
+
+head(met_per_mg_multiCV)
+```
+
+
+now calculate the mean and sem of cvm and min,1se labmdas.  These need to be done separately because of the way the grouping works
+```{r}
+met_per_mg_summary_cvm <- met_per_mg_multiCV %>% dplyr::select(-fit, -folds) %>% 
+  unnest(c(cvm, lambda)) %>%
+  group_by(alpha, lambda) %>%
+  summarize(meancvm=mean(cvm), sem=sd(cvm)/sqrt(n()), high=meancvm+sem, low=meancvm-sem)
+
+met_per_mg_summary_cvm
+```
+
+```{r}
+met_per_mg_summary_lambda <- met_per_mg_multiCV %>% dplyr::select(-fit, -folds, -cvm) %>% 
+  group_by(alpha) %>%
+  summarize(
+    lambda.min.sd=sd(lambda.min), 
+    lambda.min.mean=mean(lambda.min),
+    #lambda.min.med=median(lambda.min), 
+    lambda.min.high=lambda.min.mean+lambda.min.sd,
+    #lambda.min.low=lambda.min.mean-lambda.min.sem,
+    #lambda.1se.sem=sd(lambda.1se)/sqrt(n()), 
+    lambda.1se.mean=mean(lambda.1se),
+    #lambda.1se.med=median(lambda.1se), 
+    #lambda.1se.high=lambda.1se+lambda.1se.sem,
+    #lambda.1se.low=lambda.1se-lambda.1se.sem,
+    nzero=nzero[1],
+    lambda=lambda[1]
+  )
+
+met_per_mg_summary_lambda
+```
+
+
+plot it
+```{r}
+met_per_mg_summary_cvm %>%
+  #filter(alpha!=0) %>% # worse than everything else and throwing the plots off
+  ggplot(aes(x=log(lambda), y= meancvm,  ymin=low, ymax=high)) +
+  geom_ribbon(alpha=.25) +
+  geom_line(aes(color=as.character(alpha))) +
+  facet_wrap(~ as.character(alpha)) +
+   coord_cartesian(xlim=(c(-5,0))) +
+  geom_vline(aes(xintercept=log(lambda.min.mean)), alpha=.5, data=met_per_mg_summary_lambda) +
+  geom_vline(aes(xintercept=log(lambda.min.high)), alpha=.5, data=met_per_mg_summary_lambda, color="blue") 
+
+```
+
+Make a plot of MSE at minimum lambda for each alpha
+
+```{r}
+met_per_mg_summary_cvm %>% 
+  group_by(alpha) %>%
+  filter(rank(meancvm, ties.method = "first")==1) %>%
+  ggplot(aes(x=alpha,y=meancvm,ymin=low,ymax=high)) +
+  geom_ribbon(color=NA, fill="gray80") +
+  geom_line() +
+  geom_point()
+```
+
+Plot the number of nzero coefficients
+
+```{r}
+met_per_mg_summary_lambda %>%
+  unnest(c(lambda, nzero)) %>%
+  group_by(alpha) %>%
+  filter(abs(lambda.min.mean-lambda)==min(abs(lambda.min.mean-lambda))  ) %>%
+  ungroup() %>%
+
+ggplot(aes(x=as.character(alpha), y=nzero)) +
+  geom_point() +
+  ggtitle("Number of non-zero coefficents at minimum lambda") +
+  ylim(0,50)
+```
+OK let's do repeated test train starting from these CV lambdas
+
+```{r}
+multi_tt <- function(lambda, alpha, n=10000, sample_size=36, train_size=30, x, y=leaflength$leaf_avg_std) {
+  print(lambda)
+  print(alpha)
+tt <-
+  tibble(run=1:n) %>%
+  mutate(train=map(run, ~ sample(1:sample_size, train_size))) %>%
+  mutate(fit=map(train, ~ glmnet(x=x[.,], y=y[.], lambda = lambda, alpha = alpha ))) %>%
+  
+  mutate(pred=map2(fit, train, ~ predict(.x, newx = x[-.y,]))) %>%
+  mutate(cor=map2_dbl(pred, train, ~ cor(.x, y[-.y])  )) %>%
+  mutate(MSE=map2_dbl(pred, train, ~ mean((y[-.y] - .x)^2))) %>%
+  summarize(
+    num_na=sum(is.na(cor)), 
+    num_lt_0=sum(cor<=0, na.rm=TRUE),
+    avg_cor=mean(cor, na.rm=TRUE),
+    avg_MSE=mean(MSE))
+tt
+}
+
+per_mg_fit_test_train <- met_per_mg_summary_lambda %>% 
+  select(alpha, lambda.min.mean)
+
+per_mg_fit_test_train <- met_per_mg_multiCV %>%
+  filter(run==1) %>%
+  select(alpha, fit) %>%
+  right_join(per_mg_fit_test_train)
+
+per_mg_fit_test_train <- per_mg_fit_test_train %>%
+  mutate(pred_full=map2(fit, lambda.min.mean, ~ predict(.x, s=.y, newx=as.matrix(met_per_mg))),
+         full_R=map_dbl(pred_full, ~ cor(.x, leaflength$leaf_avg_std)),
+         full_MSE=map_dbl(pred_full, ~ mean((leaflength$leaf_avg_std-.x)^2))) %>%
+  
+  mutate(tt=map2(lambda.min.mean, alpha, ~ multi_tt(lambda=.x, alpha=.y, x=as.matrix(met_per_mg))))
+
+
+
+(per_mg_fit_test_train <- per_mg_fit_test_train %>% unnest(tt))
+```
+
+```{r}
+per_mg_fit_test_train %>%
+  ggplot(aes(x=alpha)) +
+  geom_line(aes(y=avg_cor), color="red") +
+  geom_point(aes(y=avg_cor), color="red") +
+  geom_line(aes(y=avg_MSE), color="blue") +
+  geom_point(aes(y=avg_MSE), color="blue")
+```
+
+## look at fit:
+
+```{r}
+alpha_per_mg <- .1
+
+best_per_mg <- per_mg_fit_test_train %>% filter(alpha == alpha_per_mg) 
+best_per_mg_fit <- best_per_mg$fit[[1]]
+best_per_mg_lambda <- best_per_mg$lambda.min.mean
+
+per_mg_coef.tb <- coef(best_per_mg_fit, s=best_per_mg_lambda) %>% 
+  as.matrix() %>% as.data.frame() %>% 
+  rownames_to_column(var="metabolite") %>%
+  rename(beta=`1`)
+  
+per_mg_coef.tb %>% filter(beta!=0) %>% arrange(desc(abs(beta)))
+
+```
+
+pred and obs
+```{r}
+plot(leaflength$leaf_avg_std, best_per_mg$pred_full[[1]])
+cor.test(leaflength$leaf_avg_std, best_per_mg$pred_full[[1]]) #.75
+best_per_mg$full_MSE
+```
+
+# merge with lm results for trt association
+
+```{r}
+# per_mg_coef.tb_and_lm <- per_mg_coef.tb %>%
+#   filter(beta !=0, str_detect(metabolite, "Intercept", negate = TRUE)) %>%
+#   left_join(met_per_mg_lm_results) %>%
+#   arrange(desc(abs(beta))) %>%
+#   select(-term.trt, -term.leaf)
+# 
+# write_csv(per_mg_coef.tb_and_lm, "../output/met_per_mg_elastic_leaf_lm_trt.csv")
+# 
+# per_mg_coef.tb_and_lm
+```
+
+
+# non-normazlized
+
+## multi CV
+
+Fit 101 CVs for each of 11 alphas
+```{r}
+set.seed(1245)
+
+met_amt <- met_amt %>%
+  mutate(trt=ifelse(str_detect(trt, "live"), "live", "blank_dead"),
+         trt=as.numeric(as.factor(trt)))
+
+folds <- tibble(run=1:101) %>% 
+  mutate(folds=map(run, ~ sample(rep(1:6,6))))
+
+system.time (met_amt_multiCV <- expand_grid(run=1:100, alpha=round(seq(0,1,.1),1)) %>%
+               left_join(folds, by="run") %>%
+               mutate(fit=map2(folds, alpha, ~ cv.glmnet(x=as.matrix(met_amt), y=leaflength$leaf_avg_std, foldid = .x, alpha=.y
+                                                         )))
+             #, lambda=exp(seq(-5,0,length.out = 50)) )))
+) #200 seconds
+
+head(met_amt_multiCV)
+```
+
+for each fit, pull out the mean cv error, lambda, min lambda, and 1se lambda 
+```{r}
+met_amt_multiCV <- met_amt_multiCV %>%
+  mutate(cvm=map(fit, magrittr::extract("cvm")),
+         lambda=map(fit, magrittr::extract("lambda")),
+         lambda.min=map_dbl(fit, magrittr::extract("lambda.min" )),
+         lambda.1se=map_dbl(fit, magrittr::extract("lambda.1se")),
+         nzero=map(fit, magrittr::extract("nzero"))
+  )
+
+head(met_amt_multiCV)
+```
+
+
+now calculate the mean and sem of cvm and min,1se labmdas.  These need to be done separately because of the way the grouping works
+```{r}
+met_amt_summary_cvm <- met_amt_multiCV %>% dplyr::select(-fit, -folds) %>% 
+  unnest(c(cvm, lambda)) %>%
+  group_by(alpha, lambda) %>%
+  summarize(meancvm=mean(cvm), sem=sd(cvm)/sqrt(n()), high=meancvm+sem, low=meancvm-sem)
+
+met_amt_summary_cvm
+```
+
+```{r}
+met_amt_summary_lambda <- met_amt_multiCV %>% dplyr::select(-fit, -folds, -cvm) %>% 
+  group_by(alpha) %>%
+  summarize(
+    lambda.min.sd=sd(lambda.min), 
+    lambda.min.mean=mean(lambda.min),
+    #lambda.min.med=median(lambda.min), 
+    lambda.min.high=lambda.min.mean+lambda.min.sd,
+    #lambda.min.low=lambda.min.mean-lambda.min.sem,
+    #lambda.1se.sem=sd(lambda.1se)/sqrt(n()), 
+    lambda.1se.mean=mean(lambda.1se),
+    #lambda.1se.med=median(lambda.1se), 
+    #lambda.1se.high=lambda.1se+lambda.1se.sem,
+    #lambda.1se.low=lambda.1se-lambda.1se.sem,
+    nzero=nzero[1],
+    lambda=lambda[1]
+  )
+
+met_amt_summary_lambda
+```
+
+
+plot it
+```{r}
+met_amt_summary_cvm %>%
+  #filter(alpha!=0) %>% # worse than everything else and throwing the plots off
+  ggplot(aes(x=log(lambda), y= meancvm,  ymin=low, ymax=high)) +
+  geom_ribbon(alpha=.25) +
+  geom_line(aes(color=as.character(alpha))) +
+  facet_wrap(~ as.character(alpha)) +
+   coord_cartesian(xlim=(c(-5,0))) +
+  geom_vline(aes(xintercept=log(lambda.min.mean)), alpha=.5, data=met_amt_summary_lambda) +
+  geom_vline(aes(xintercept=log(lambda.min.high)), alpha=.5, data=met_amt_summary_lambda, color="blue") 
+
+```
+
+
+Make a plot of MSE at minimum lambda for each alpha
+
+```{r}
+met_amt_summary_cvm %>% 
+  group_by(alpha) %>%
+  filter(rank(meancvm, ties.method = "first")==1) %>%
+  ggplot(aes(x=alpha,y=meancvm,ymin=low,ymax=high)) +
+  geom_ribbon(color=NA, fill="gray80") +
+  geom_line() +
+  geom_point()
+```
+
+Plot the number of nzero coefficients
+
+```{r}
+met_amt_summary_lambda %>%
+  unnest(c(lambda, nzero)) %>%
+  group_by(alpha) %>%
+  filter(abs(lambda.min.mean-lambda)==min(abs(lambda.min.mean-lambda))  ) %>%
+  ungroup() %>%
+
+ggplot(aes(x=as.character(alpha), y=nzero)) +
+  geom_point() +
+  ggtitle("Number of non-zero coefficents at minimum lambda") +
+  ylim(0,50)
+```
+OK let's do repeated test train starting from these CV lambdas
+
+```{r}
+multi_tt <- function(lambda, alpha, n=10000, sample_size=36, train_size=30, x, y=leaflength$leaf_avg_std) {
+  print(lambda)
+  print(alpha)
+tt <-
+  tibble(run=1:n) %>%
+  mutate(train=map(run, ~ sample(1:sample_size, train_size))) %>%
+  mutate(fit=map(train, ~ glmnet(x=x[.,], y=y[.], lambda = lambda, alpha = alpha ))) %>%
+  
+  mutate(pred=map2(fit, train, ~ predict(.x, newx = x[-.y,]))) %>%
+  mutate(cor=map2_dbl(pred, train, ~ cor(.x, y[-.y])  )) %>%
+  mutate(MSE=map2_dbl(pred, train, ~ mean((y[-.y] - .x)^2))) %>%
+  summarize(
+    num_na=sum(is.na(cor)), 
+    num_lt_0=sum(cor<=0, na.rm=TRUE),
+    avg_cor=mean(cor, na.rm=TRUE),
+    avg_MSE=mean(MSE))
+tt
+}
+
+amt_fit_test_train <- met_amt_summary_lambda %>% 
+  select(alpha, lambda.min.mean)
+
+amt_fit_test_train <- met_amt_multiCV %>%
+  filter(run==1) %>%
+  select(alpha, fit) %>%
+  right_join(amt_fit_test_train)
+
+amt_fit_test_train <- amt_fit_test_train %>%
+  mutate(pred_full=map2(fit, lambda.min.mean, ~ predict(.x, s=.y, newx=as.matrix(met_amt))),
+         full_R=map_dbl(pred_full, ~ cor(.x, leaflength$leaf_avg_std)),
+         full_MSE=map_dbl(pred_full, ~ mean((leaflength$leaf_avg_std-.x)^2))) %>%
+  
+  mutate(tt=map2(lambda.min.mean, alpha, ~ multi_tt(lambda=.x, alpha=.y, x=as.matrix(met_amt))))
+
+
+
+(amt_fit_test_train <- amt_fit_test_train %>% unnest(tt))
+```
+
+```{r}
+amt_fit_test_train %>%
+  ggplot(aes(x=alpha)) +
+  geom_line(aes(y=avg_cor), color="red") +
+  geom_point(aes(y=avg_cor), color="red") +
+  geom_line(aes(y=avg_MSE), color="blue") +
+  geom_point(aes(y=avg_MSE), color="blue")
+```
+Not a ton of difference here. Ignoring 0.0, then 0.1 or 1 ar the best...kind of strange!
+## look at fit:
+
+```{r}
+alpha_amt <- .1
+
+best_amt <- amt_fit_test_train %>% filter(alpha == alpha_amt) 
+best_amt_fit <- best_amt$fit[[1]]
+best_amt_lambda <- best_amt$lambda.min.mean
+
+amt_coef.tb <- coef(best_amt_fit, s=best_amt_lambda) %>% 
+  as.matrix() %>% as.data.frame() %>% 
+  rownames_to_column(var="metabolite") %>%
+  rename(beta=`1`)
+  
+amt_coef.tb %>% filter(beta!=0) %>% arrange(desc(abs(beta)))
+
+```
+
+pred and obs
+```{r}
+plot(leaflength$leaf_avg_std, best_amt$pred_full[[1]])
+cor.test(leaflength$leaf_avg_std, best_amt$pred_full[[1]]) #.85
+best_amt$full_MSE
+```
+
+Compare this with an lm model on treatment only
+
+```{r}
+lmtrt <- leaflength %>%
+  mutate(trt=ifelse(str_detect(trt, "live"), "live", "blank_dead"),
+         trt=as.numeric(as.factor(trt))) %>%
+        lm(leaf_avg_std ~ trt, data = .)
+summary(lmtrt)
+
+leaflength %>% ggplot(aes(x=trt, y=leaf_avg_std)) +
+  geom_boxplot()
+```
+
+
+# merge with lm results for trt association
+
+```{r}
+amt_coef.tb_and_lm <- amt_coef.tb %>%
+  filter(beta !=0, str_detect(metabolite, "Intercept", negate = TRUE)) %>%
+  left_join(met_amt_lm_results) %>%
+  arrange(desc(abs(beta))) %>%
+  select(-term.trt, -term.leaf)
+
+#write_csv(amt_coef.tb_and_lm, "../output/met_amt_elastic_leaf_lm_trt.csv")
+
+amt_coef.tb_and_lm
+```

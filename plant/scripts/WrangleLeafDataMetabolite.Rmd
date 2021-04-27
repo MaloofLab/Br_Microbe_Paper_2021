@@ -40,9 +40,19 @@ leafexp1 <- leafexp1 %>%
   mutate(leaf_avg_std = scale(leaf_avg))
 ```
 
+
 ```{r}
 leafexp1 %>% 
 write_csv("../output/leaf_lengths_metabolite.csv")
 ```
 
+
+```{r}
+leafexp1 <- leafexp1 %>% ungroup() %>% 
+  mutate(trt2 =ifelse(trt=="live","live","dead_blank"))
+```
+
+```{r}
+summary(lm(leaf_avg ~ genotype + trt2, data = leafexp1))
+```
 
