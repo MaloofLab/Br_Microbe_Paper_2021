@@ -26,6 +26,17 @@ leafexp1 <- read_excel("../input/exp1_leaf_ln_data.xlsx", sheet = 2) %>%
          time_point=="wk2")
 leafexp1
 ```
+quick lm
+```{r}
+leafdforlm <- leafexp1 %>% select(trt=`5E_soil_trts`, genotype, leaf_avg=avg_lf_03.24_no_germ) %>%
+  mutate(trt=ifelse(trt=="live","live","dead_blank"))
+
+lm1 <- lm(leaf_avg ~ genotype + trt, data = leafdforlm)
+
+summary(lm1)
+
+```
+
 
 just keep the data we need
 ```{r}
