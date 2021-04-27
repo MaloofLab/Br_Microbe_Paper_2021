@@ -17,6 +17,7 @@ editor_options:
 * Use "ElasticNet0.5_multiCV_Pct_var" instead of "ElasticNet0.5_LOO_prop_var" (031021)
 * consistant format for tissue.module with lowercase (031221)
 * modify for ".signedhybrid" WGCNA modules
+* Use "output/ElasticNet0.5_multiCV_Pct_var.signed.hybrid.csv" instead of "ElasticNet0.5_multiCV_Pct_var"
 
 ```{r setup}
 rm(list=ls())
@@ -40,9 +41,11 @@ library(ggnewscale)
 # reading Julin's results of penalized regression (see slide)
 # ElasticNet0.5_LOO_prop_var <- read_csv(file.path("plant","output","ElasticNet0.5_LOO_prop_var.csv"))
 # ElasticNet0.5_LOO_prop_var <- ElasticNet0.5_LOO_prop_var %>% mutate(J.module=str_remove(ME,"ME")) %>% separate(J.module,into=c("module","tissue")) %>% mutate(module=str_to_upper(module)) %>% unite(tissue.module,c("tissue","module"),sep=".") 
-ElasticNet0.5_multiCV_Pct_var <- read_csv(file.path("plant","output","ElasticNet0.5_multiCV_Pct_var.csv")) # Updated version from 11_take2_Machine_Learning
+# ElasticNet0.5_multiCV_Pct_var <- read_csv(file.path("plant","output","ElasticNet0.5_multiCV_Pct_var.csv")) # Updated version from 11_take2_Machine_Learning
+ElasticNet0.5_multiCV_Pct_var_signedhybrid <- read_csv(file.path("RNA","output","ElasticNet0.5_multiCV_Pct_var.signed.hybrid.csv")) # Updated version for WGCNA singed hybrid modules (042321)
+
 #
-ElasticNet0.5_multiCV_Pct_var <- ElasticNet0.5_multiCV_Pct_var %>% unite(tissue.module,c("Module_Organ","Module_Name"),sep=".")  # all lower case
+ElasticNet0.5_multiCV_Pct_var_signedhybrid <- ElasticNet0.5_multiCV_Pct_var_signedhybrid %>% unite(tissue.module,c("Module_Organ","Module_Name"),sep=".")  # all lower case
 ```
 
 
@@ -104,7 +107,7 @@ GSEA_reports.DF %>% View()
 # selecting GSEA results for Machine Learning selected modules (WAIT until I get Julin's new ML result for signed hybrid WGCNA modules)
 ```{r}
 GSEA_reports.DF.MLselected <- 
-GSEA_reports.DF %>% mutate(NAME=NAME %>% str_remove_all(".VOOM5.SIGNEDHYBRID") %>% str_to_lower()) %>% inner_join(ElasticNet0.5_multiCV_Pct_var,by=c("NAME"="tissue.module")) #%>% View()
+GSEA_reports.DF %>% mutate(NAME=NAME %>% str_remove_all(".VOOM5.SIGNEDHYBRID") %>% str_to_lower()) %>% inner_join(ElasticNet0.5_multiCV_Pct_var_signedhybrid,by=c("NAME"="tissue.module")) #%>% View()
 # write csv
 write_csv(GSEA_reports.DF.MLselected,file=file.path("RNA","output","GSEA_reports.DFWGCNAsignedhybrid.MLselected.csv"))
 ```
@@ -123,7 +126,7 @@ genes.count.leaf <- GSEA_cust.leaf %>%
   #mutate(name=str_to_upper(name)) %>%
   group_by(name) %>% drop_na() %>% summarise(n=n()) %>% 
   dplyr::rename(NAME=name)
-genes.count <- bind_rows(genes.count.root,genes.count.leaf) %>% mutate(NAME=str_remove(NAME,".voom5.module")) 
+genes.count <- bind_rows(genes.count.root,genes.count.leaf) %>% mutate(NAME=str_remove(NAME,".voom5.module.signedhybrid")) 
 ```
 
 
@@ -136,7 +139,7 @@ cutoff <- 0.3
 GSEA_reports.DF.plot.dendrogram.v10.WGCNAmodule.signedhybrid.notitle.ML <- function(
   data = GSEA_reports.DF,
   GSEA.FDR.cutoff = cutoff,
-  leaf_avg_std.ML.data = ElasticNet0.5_multiCV_Pct_var,
+  leaf_avg_std.ML.data = ElasticNet0.5_multiCV_Pct_var_signedhybrid,
   top.margin=830,
   bottom.margin=40,
   dendrogram=c("TRUE", "FALSE"),
@@ -147,12 +150,15 @@ GSEA_reports.DF.plot.dendrogram.v10.WGCNAmodule.signedhybrid.notitle.ML <- funct
 GSEA_reports.DF.formatted <- data  %>%  dplyr::select(tissue,LorD,NAME,`FDR q-val`) %>%
   mutate(`FDR q-val`=as.numeric(str_replace(`FDR q-val`,"^0$","0.01"))) %>% 
   filter(`FDR q-val` < GSEA.FDR.cutoff) %>% #View()
-  mutate(`-log10FDR`=-log10(`FDR q-val`)) %>% dplyr::select(-`FDR q-val`) %>% unite(tissue_LorD,tissue, LorD,remove=TRUE) %>%  pivot_wider(names_from=tissue_LorD,values_from=`-log10FDR`)  %>% mutate(NAME=str_remove(NAME,"voom_expression.e1and3.resid.exp_gt.")) %>% 
+  mutate(`-log10FDR`=-log10(`FDR q-val`)) %>% dplyr::select(-`FDR q-val`) %>% unite(tissue_LorD,tissue, LorD,remove=TRUE) %>%  pivot_wider(names_from=tissue_LorD,values_from=`-log10FDR`)  %>%
+  mutate(NAME=str_remove(NAME,"voom_expression.e1and3.resid.exp_gt.")) %>% 
   mutate(NAME=str_remove(NAME,"plusR500.")) %>% 
   mutate(NAME=str_remove(NAME,".VOOM5")) %>% 
-  mutate(NAME=str_replace(NAME,"_",".")) %>% 
+  mutate(NAME=str_replace(NAME,"_","."))  %>%
   mutate(NAME=str_to_lower(NAME)) %>%
+  mutate(NAME=str_remove(NAME,".signedhybrid")) %>% 
   group_by(NAME) %>% arrange(NAME) 
+
 GSEA_reports.DF.formatted %>% View()
 #### think about how to treat with "NA" #########
 # GSEA_reports.DF.formatted[is.na(GSEA_reports.DF.formatted)] <- 0
@@ -207,6 +213,8 @@ if(modules=="fullmodule") {
   print(missing.categories2)
     # adding missing categories to heatmap 
   GSEA_reports.DF.formatted2 <- GSEA_reports.DF.formatted %>% as_tibble() %>%   pivot_longer(cols=-1,names_to="tissue_LorD_set",values_to="-log10 FDR q-val") %>% bind_rows(tibble(NAME=rep(missing.categories2$NAME,4),tissue_LorD_set=rep(vars[-1],each=dim(missing.categories2)[1]),`-log10 FDR q-val`=0)) #%>% View() # missing categories in GSEA reports
+# 
+  GSEA_reports.DF.formatted2 %>% View()
 ## relevel
   GSEA_reports.DF.formatted2 <- GSEA_reports.DF.formatted2 %>% 
  mutate(NAME=factor(NAME,levels=c(as.vector(dendro.y.NAME$NAME),as.vector(missing.categories2$NAME)))) 
@@ -243,9 +251,9 @@ if(modules=="fullmodule") {
  arrange(desc(NAME)) %>% left_join(leaf_avg_std.ML.data,by=c("NAME"="tissue.module")) # %>%    mutate(sign=ifelse(PropVar_0.5_LOO >0,"positive","negative")) # adding leaf_avg_std.ML.data
 
 } else if(modules=="selected") {
-  genes.count2 <- genes.count  %>% # filter(NAME %in% dendro.y.NAME$NAME) %>%
-  separate(NAME,into=c("tissue2","module"),sep="\\.",remove=FALSE) %>% #View()
- arrange(desc(NAME)) %>% inner_join(leaf_avg_std.ML.data,by=c("NAME"="tissue.module")) %>% mutate(NAME=factor(NAME,levels=levels(GSEA_reports.DF.formatted2$NAME))) # %>% mutate(sign=ifelse(PropVar_0.5_LOO >0,"positive","negative"))# adding leaf_avg_std.ML.data
+  genes.count2 <- genes.count  %>%  separate(NAME,into=c("tissue2","module"),sep="\\.",remove=FALSE) %>% #View()
+ arrange(desc(NAME)) %>% inner_join(leaf_avg_std.ML.data,by=c("NAME"="tissue.module")) %>% mutate(NAME=factor(NAME,levels=levels(GSEA_reports.DF.formatted2$NAME)))  %>%
+#mutate(sign=ifelse(PropVar_0.5_LOO >0,"positive","negative"))# adding leaf_avg_std.ML.data
   print("genes.count2 after modules is selected.")
   print(genes.count2)
   save(genes.count2,file=file.path("RNA","output","genes.count2.MLselected.Rdata"))
@@ -259,9 +267,13 @@ print("dim(genes.count2)")
 print(dim(genes.count2))
 #genes.count2 <- genes.count2 %>% mutate(y=seq(dim(genes.count2)[1],1)) # bottom is y=1, 
 # draw gene number inside heatmap. This is wrong. Use levels(genes.count2$NAME)
-y.genes.count2 <- tibble(NAME=levels(genes.count2$NAME),y=seq(1,dim(genes.count2)[1]))
+# error
+#y.genes.count2 <- tibble(NAME=levels(genes.count2$NAME),y=seq(1,dim(genes.count2)[1]))
+y.genes.count2 <- tibble(NAME=levels(genes.count2$NAME),y=seq(1,length(levels(genes.count2$NAME))))
 # add y
-genes.count2 <- y.genes.count2 %>% left_join(genes.count2,by="NAME")
+genes.count2 <- y.genes.count2 %>% inner_join(genes.count2,by="NAME")
+print("After adding y")
+print(genes.count2)
     GSEA_reports.DF.plot.alt <- GSEA_reports.DF.plot + 
       # for tissue for modules (omit?)
       #geom_point(aes(x=-0.35,y=y,color=tissue2),stroke=3, size=.8,inherit.aes = FALSE, data=genes.count2) +
@@ -270,7 +282,7 @@ genes.count2 <- y.genes.count2 %>% left_join(genes.count2,by="NAME")
       #labs(shape="") + #scale_shape_identity(name="") + 
       # for gene number (="n")
   geom_point(aes(x=0,y=y,size=n),color = "red",  inherit.aes = FALSE, data=genes.count2) +
-      # for PropVar_0.5_LOO (120820), changed for leaf_avg_std.ML.data = ElasticNet0.5_multiCV_Pct_var (031221)
+      # for PropVar_0.5_LOO (120820), changed for leaf_avg_std.ML.data = ElasticNet0.5_multiCV_Pct_var (031221), ElasticNet0.5_multiCV_Pct_var_signedhybrid (042321)
       new_scale_fill() + # error
       geom_point(aes(x=0.35,y=y,fill=Pct_Var_Explained,shape=Effect), size=3,inherit.aes = FALSE, data=genes.count2)  +
       scale_fill_gradient(limit=c(0,10)) +
@@ -297,6 +309,11 @@ GSEA_reports.plot <- plot_grid(GSEA_reports.DF.plot.alt, dendro.plot,rel_widths=
 GSEA_reports.plot
 return(GSEA_reports.plot)
 }
+```
+
+```{r}
+GSEA_reports.DF.plot.dendrogram.v10.WGCNAmodule.signedhybrid.notitle.ML(modules = "fullmodule",dendrogram = "FALSE")
+GSEA_reports.DF.plot.dendrogram.v10.WGCNAmodule.signedhybrid.notitle.ML(modules = "selected",dendrogram = "FALSE")
 ```
 
 
@@ -468,9 +485,9 @@ WGCNA.voom5.signedhybrid.all.modules.leaf_avg_std.correlated.customcat.GOseq.2 %
 WGCNA.voom5.signedhybrid.all.modules.leaf_avg_std.correlated.customcat.GOseq.2[WGCNA.voom5.signedhybrid.all.modules.leaf_avg_std.correlated.customcat.GOseq.2$over_represented_padjust < 10^-10,"over_represented_padjust"] <- 10^-10
 # select modules
 WGCNA.voom5.signedhybrid.all.modules.leaf_avg_std.correlated.customcat.GOseq.2 %>% View()
-WGCNA.voom5.signedhybrid.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected <- WGCNA.voom5.signedhybrid.all.modules.leaf_avg_std.correlated.customcat.GOseq.2 %>% mutate(NAME=str_remove(NAME,".voom5.module")) %>%   inner_join(ElasticNet0.5_multiCV_Pct_var, by=c("NAME"="tissue.module")) %>% arrange(Pct_Var_Explained) %>% drop_na(Pct_Var_Explained) #%>% View() # sorting modules
+WGCNA.voom5.signedhybrid.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected <- WGCNA.voom5.signedhybrid.all.modules.leaf_avg_std.correlated.customcat.GOseq.2 %>% mutate(NAME=str_remove(NAME,".voom5.module.signedhybrid")) %>%   inner_join(ElasticNet0.5_multiCV_Pct_var_signedhybrid, by=c("NAME"="tissue.module")) %>% arrange(Pct_Var_Explained) %>% drop_na(Pct_Var_Explained) #%>% View() # sorting modules
 # which categories are exclused from WGCNA.voom5.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected
-missing.categories <- ElasticNet0.5_multiCV_Pct_var %>% dplyr::select(tissue.module) %>% filter(!tissue.module %in% WGCNA.voom5.signedhybrid.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected$NAME) %>% dplyr::rename(NAME=tissue.module)
+missing.categories <- ElasticNet0.5_multiCV_Pct_var_signedhybrid %>% dplyr::select(tissue.module) %>% filter(!tissue.module %in% WGCNA.voom5.signedhybrid.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected$NAME) %>% dplyr::rename(NAME=tissue.module)
 # format data to add missing categories to heatmap 
 WGCNA.voom5.signedhybrid.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected2 <- WGCNA.voom5.signedhybrid.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected %>% dplyr::select(NAME,category3.au.up_down,over_represented_padjust,tissue3)  
 # names of category3.au.up_down
@@ -479,11 +496,15 @@ num.category3.au.up_down <- names(table(WGCNA.voom5.signedhybrid.all.modules.lea
 WGCNA.voom5.signedhybrid.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected2 <- 
 WGCNA.voom5.signedhybrid.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected2 %>% bind_rows(tibble(NAME=rep(missing.categories$NAME,length(num.category3.au.up_down)),category3.au.up_down=rep(num.category3.au.up_down,each=dim(missing.categories)[1]),over_represented_padjust=1,tissue3="ROOT")) #%>% View() # missing categories in GSEA reports. tissue3="root" is fake
 # check this is what I want
-WGCNA.voom5.signedhybrid.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected2 %>% group_by(NAME,category3.au.up_down) %>% summarize(n()) %>% View() # none, why?
+WGCNA.voom5.signedhybrid.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected2 %>% group_by(NAME,category3.au.up_down,tissue3) %>% summarize(n()) %>% View() #
 
 # relevel using dendrogram in GSEA plot (better to use GSEA plot data itself due to missing modules??? 041321)
 #load(file.path("RNA","output","dendro.y.NAME.Rdata"))
 load(file.path("RNA","output","genes.count2.MLselected.Rdata"))
+#
+WGCNA.voom5.signedhybrid.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected2$NAME[WGCNA.voom5.signedhybrid.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected2$NAME %in% genes.count2$NAME]
+
+
 
 WGCNA.voom5.signedhybrid.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected2 <-  WGCNA.voom5.signedhybrid.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected2 %>%
 #  mutate(NAME=factor(NAME,levels=dendro.y.NAME$NAME)) 
@@ -503,7 +524,7 @@ WGCNA.voom5.signedhybrid.all.modules.customcat.GOseq.plot.selected2 <- WGCNA.voo
                                       plot.title=element_text(size=14),
                                       axis.line=element_blank()) + 
       labs(x="",y="",fill="-log10\n FDR",title=" ")
-    WGCNA.voom5.all.modules.customcat.GOseq.plot.selected2
+WGCNA.voom5.signedhybrid.all.modules.customcat.GOseq.plot.selected2
 ggsave(path=file.path("RNA","output"),filename="WGCNA.voom5.signedhybrid.leaf_avg_std.correlated.modules.customcat.GOseq.4.selected.plot.png",height=8,width=11) 
 
 ```
@@ -512,7 +533,7 @@ ggsave(path=file.path("RNA","output"),filename="WGCNA.voom5.signedhybrid.leaf_av
 ```{r}
 # format GSEA plot
 cutoff <- 0.3
-plot.GSEA <- GSEA_reports.DF.plot.dendrogram.v9.WGCNAmodule.notitle.ML(data = GSEA_reports.DF.MLselected,
+plot.GSEA <- GSEA_reports.DF.plot.dendrogram.v10.WGCNAmodule.signedhybrid.notitle.ML(data = GSEA_reports.DF.MLselected,
                                             GSEA.FDR.cutoff = cutoff,
                                             top.margin=290,
                                             bottom.margin=30,
@@ -522,9 +543,9 @@ plot.GSEA <- GSEA_reports.DF.plot.dendrogram.v9.WGCNAmodule.notitle.ML(data = GS
                                             modules="fullmodule") 
 #plot.GSEA  +  guides(fill = guide_legend(nrow=2)) # this is not what I want
 plot.GSEA <- plot.GSEA + theme(legend.position="left",legend.key.height=unit(10,"pt"),legend.text=element_text(size=10,angle=0),plot.margin = margin(74, 0, 50, 0, "pt")) 
-ggsave(plot.GSEA,filename="GSEA.RNAseq.plot.ML.full2.FDR0.3.png",path=file.path("RNA","output"),width=8,height=15)
+ggsave(plot.GSEA,filename="GSEA.RNAseq.plot.ML.full.signedhybrid.FDR0.3.png",path=file.path("RNA","output"),width=8,height=20)
 # only ML selected modules in plot
-plot.GSEA <- GSEA_reports.DF.plot.dendrogram.v9.WGCNAmodule.notitle.ML(data = GSEA_reports.DF.MLselected,
+plot.GSEA <- GSEA_reports.DF.plot.dendrogram.v10.WGCNAmodule.signedhybrid.notitle.ML(data = GSEA_reports.DF.MLselected,
                                             GSEA.FDR.cutoff = cutoff,
                                             top.margin=290,
                                             bottom.margin=30,
@@ -534,7 +555,7 @@ plot.GSEA <- GSEA_reports.DF.plot.dendrogram.v9.WGCNAmodule.notitle.ML(data = GS
                                             modules="selected") 
 #plot.GSEA  +  guides(fill = guide_legend(nrow=2)) # this is not what I want
 plot.GSEA <- plot.GSEA + theme(legend.position="left",legend.key.height=unit(10,"pt"),legend.text=element_text(size=10,angle=0),plot.margin = margin(75, 0, 35, 0, "pt")) 
-ggsave(plot.GSEA,filename="GSEA.RNAseq.plot.ML.selected.FDR0.3.png",path=file.path("RNA","output"),width=6,height=8) # needs to fix
+ggsave(plot.GSEA,filename="GSEA.RNAseq.plot.ML.signedhybrid.selected.FDR0.3.png",path=file.path("RNA","output"),width=6,height=20) # needs to fix
 
 # format WGCNA ORA plots
 WGCNA.voom5.signedhybrid.all.modules.customcat.GOseq.plot.selected2 <- WGCNA.voom5.signedhybrid.all.modules.customcat.GOseq.plot.selected2 + theme(plot.margin = margin(0, 0, 0, 0, "pt"),legend.position = "right",legend.key.height=unit(30,"pt"),axis.text.y=element_blank(),axis.text.x=element_text(size=10,hjust=1)) + # Top, right, bottom, left.)
