@@ -39,15 +39,14 @@ Br.v3.0.At.BLAST %>% filter(name=="BraA01g040570.3C")
 Br.v3.0anno.At.BLAST.highscore <- Br.v3.0.At.BLAST %>% group_by(name) %>% arrange(desc(score)) %>% dplyr::slice(1)
 ```
 
-# Julin's Machine Learning selected modules
+# Julin's Machine Learning selected modules (signed hybrid)
 ```{r eval=FALSE}
-# reading Julin's results of penalized regression (see slide) (old version)
-# ElasticNet0.5_LOO_prop_var <- read_csv(file.path("plant","output","ElasticNet0.5_LOO_prop_var.csv")) 
-ElasticNet0.5_multiCV_Pct_var <- read_csv(file.path("plant","output","ElasticNet0.5_multiCV_Pct_var.csv")) # Updated version from 11_take2_Machine_Learning
-# 
-ElasticNet0.5_multiCV_Pct_var <- ElasticNet0.5_multiCV_Pct_var %>%
-  #mutate(Module_Name=str_to_upper(Module_Name)) %>%  # tissue is lowercase, module is uppercase
-  unite(tissue.module,c("Module_Organ","Module_Name"),sep=".") # all lower case
+# reading Julin's results of penalized regression (see slide) 
+# 042721
+ElasticNet0.5_multiCV_Pct_var_signedhybrid <- read_csv(file.path("RNA","output","ElasticNet0.5_multiCV_Pct_var.signed.hybrid.csv")) # Updated version for WGCNA singed hybrid modules (042321)
+#
+ElasticNet0.5_multiCV_Pct_var_signedhybrid <- ElasticNet0.5_multiCV_Pct_var_signedhybrid %>% unite(tissue.module,c("Module_Organ","Module_Name"),sep=".")  # all lower case
+
 ```
 
 # reading GSEA results (all WGCNA modules)
@@ -92,26 +91,26 @@ ifelse(dim(GSEA_reports.DF)[1]==0,print("no significnat categories"),return(GSEA
 
 # Finding soil treatment responsive genes in WGCNA module (significant one) for GSEA_reports.DF.MLselected
 ```{r}
-GSEA_reports.DF.MLselected <- read_csv(file.path("RNA","output","GSEA_reports.DF.MLselected.csv")) 
+GSEA_reports.DF.MLselected <- read_csv(file.path("RNA","output","GSEA_reports.DFWGCNAsignedhybrid.MLselected.csv"))  # updated
 
 GSEA_reports.DF.MLselected %>% View()
-xls.file <- GSEA_reports.DF.MLselected %>% dplyr::select(report3) %>% as_vector()
+tsv.file <- GSEA_reports.DF.MLselected %>% dplyr::select(report3) %>% as_vector()
 
 # function
 read.coregenes <- function(default.path=gsea_report_path,
-                           xls.file.in.GSEA_reports=report3,
+                           tsv.file.in.GSEA_reports=report3,
                            category.name = NAME
                            )
 
 {
-  gsea_report_files <- list.files(path=default.path,full.names=FALSE,include.dirs = FALSE,recursive=TRUE, pattern="(gsea_report_for)([[:print:]]+)(\\.xls)")
+  gsea_report_files <- list.files(path=default.path,full.names=FALSE,include.dirs = FALSE,recursive=TRUE, pattern="(gsea_report_for)([[:print:]]+)(\\.tsv)")
 
-temp.dir <- gsea_report_files[str_detect(gsea_report_files,pattern=xls.file.in.GSEA_reports)] %>% str_split(pattern="/") %>% unlist() %>% .[1]
+temp.dir <- gsea_report_files[str_detect(gsea_report_files,pattern=tsv.file.in.GSEA_reports)] %>% str_split(pattern="/") %>% unlist() %>% .[1]
 print(str_c("temp.dir is ",temp.dir))
 # xls.file.name to read core gene list file
-xls.file.name <- str_c(category.name,".xls") #%>% str_replace("UP","FC_UP") %>% str_replace("DOWN","FC_DOWN")
+tsv.file.name <- str_c(category.name,".tsv") #%>% str_replace("UP","FC_UP") %>% str_replace("DOWN","FC_DOWN")
 # 
-core.data <- read_tsv(file.path(default.path,temp.dir,xls.file.name)) %>% mutate(dirname=temp.dir) # actually the xls file is tsv files (found by Julin...) . X10 is blank, so read only nine columns (how to ?)
+core.data <- read_tsv(file.path(default.path,temp.dir,tsv.file.name)) %>% mutate(dirname=temp.dir) # actually the xls file is tsv files (found by Julin...) . X10 is blank, so read only nine columns (how to ?)
 return(core.data)
 }  
 ```
@@ -119,13 +118,13 @@ return(core.data)
 ## Is this script correct? Modules/tissue are not all used found in GSEA heatmap plot (Fig 3) (041321)
 ##
 ```{r}
-gsea_report_path=file.path("~","Box","gsea_home","output","oct30")
+gsea_report_path=file.path("~","Box","gsea_home","output","apr18_2021")
 # loop (though this is not smart R way)
 coregenes <-list()
 temp <- GSEA_reports.DF.MLselected %>% filter(`FDR q-val`< 0.3) # filtered significant modules in GSEA
 temp %>% View()
 for(i in 1:nrow(temp)) {
-  coregenes[[i]] <- read.coregenes(xls.file.in.GSEA_reports=as_vector(temp[i,"report3"]),
+  coregenes[[i]] <- read.coregenes(tsv.file.in.GSEA_reports=as_vector(temp[i,"report3"]),
                            category.name = as_vector(temp[i,grep("MSigDB",names(temp),value=TRUE)]))
 } 
 #names(coregenes) <- str_c(temp$tissue,"_tissue.",temp$NAME) # error fixed (temp$voom.module did not work) # this info misses LorD (041321)
@@ -137,13 +136,13 @@ names(coregenes) <- str_c(temp$tissue,"_tissue.",temp$NAME,".",temp$LorD)
 # select genes with "yes" in enrichment
 coregenes.yes <- list()
 for(i in 1:nrow(temp)) {
-  coregenes.yes[[i]] <- coregenes[[i]] %>% filter(`CORE ENRICHMENT`=="Yes") %>% dplyr::select(PROBE) %>% mutate(presence=as.numeric(1))
+  coregenes.yes[[i]] <- coregenes[[i]] %>% filter(`CORE ENRICHMENT`=="Yes") %>% dplyr::select(SYMBOL) %>% mutate(presence=as.numeric(1))
 }
 names(coregenes.yes) <- names(coregenes)
 # combine (different length of column)
-temp2 <- Br.v3.0anno.At.BLAST.highscore %>% dplyr::select(name,AGI,At_symbol, At_full_name,At_short_description) %>% left_join(coregenes.yes[[1]], by=c("name"="PROBE"))
+temp2 <- Br.v3.0anno.At.BLAST.highscore %>% dplyr::select(name,AGI,At_symbol, At_full_name,At_short_description) %>% left_join(coregenes.yes[[1]], by=c("name"="SYMBOL"))
 for(i in 2:length(names(coregenes.yes))) {
-temp2 <- temp2 %>% left_join(coregenes.yes[[i]], by=c("name"="PROBE"))
+temp2 <- temp2 %>% left_join(coregenes.yes[[i]], by=c("name"="SYMBOL"))
 }
 temp2 %>% View()
 #
@@ -155,9 +154,9 @@ coregenes.yes.DF[,-5:-1][is.na(coregenes.yes.DF[,-5:-1])] <- 0
 # check
 coregenes.yes.DF %>% View()
 # write csv
-write_csv(coregenes.yes.DF,file=file.path("RNA/output/GSEA_leaf_length_soil_core_enrichment_genes2.csv"))
+write_csv(coregenes.yes.DF,file=file.path("RNA/output/GSEA_leaf_length_soil_core_enrichment_genes_signedhybrid.csv"))
 # 
-coregenes.yes.DF <- read_csv(file.path("RNA/output/GSEA_leaf_length_soil_core_enrichment_genes2.csv"))
+coregenes.yes.DF <- read_csv(file.path("RNA/output/GSEA_leaf_length_soil_core_enrichment_genes_signedhybrid.csv"))
 # find common core genes
 #coregenes.yes.DF %>% mutate(num=sum(colnames(coregenes.yes.DF)[6:12])) %>% dplyr::select(num) # does not work
 str(coregenes.yes.DF)
@@ -165,14 +164,12 @@ str(coregenes.yes.DF)
 #coregenes.yes.DF %>% mutate(num=leaf_tissue.root.yellowgreen + root_tissue.leaf.lightsteelblue1) %>% View() # works
 #coregenes.yes.DF %>% mutate(num=sum(leaf_tissue.root.yellowgreen,root_tissue.leaf.lightsteelblue1)) %>% View() # works
 # use rowwise() and c_across()
-coregenes.yes.DF <- coregenes.yes.DF %>% rowwise() %>% mutate(total=sum(c_across(leaf_tissue.root.yellowgreen.Dead:root_tissue.root.yellowgreen.Dead)))# %>% View()
+coregenes.yes.DF <- coregenes.yes.DF %>% rowwise() %>% mutate(total=sum(c_across(leaf_tissue.root.darkred.Live:root_tissue.root.ivory.Dead)))# %>% View()
 ```
 
 # how many genes are "Yes" in each module
 ```{r}
-coregenes.yes.DF %>% summarise(across(leaf_tissue.root.yellowgreen.Dead:root_tissue.root.yellowgreen.Dead,sum)) # why does not work?
-coregenes.yes.DF %>% summarise(across(leaf_tissue.root.yellowgreen.Dead:root_tissue.root.yellowgreen.Dead,mean)) # why does not work?
-coregenes.yes.DF %>% dplyr::select(leaf_tissue.root.yellowgreen.Dead:root_tissue.root.yellowgreen.Dead) %>% colSums()# work
+coregenes.yes.DF %>% dplyr::select(leaf_tissue.root.darkred.Live:root_tissue.root.ivory.Dead) %>% colSums()# work
 ```
 
 # expression pattern
@@ -183,10 +180,10 @@ root.voom5 <- readr::read_tsv(file.path("RNA","output","voom_expression.e1and3.r
 leaf.voom5 <- readr::read_tsv(file.path("RNA","output","voom_expression.e1and3.resid.exp_gt.leaf.plusR500.txt.gz"))
 ```
 
-## WGCNA module
+## WGCNA module (signed hybrid)
 ```{r}
-Br.v3.0anno.At.BLAST.highscore.modules2 <- read_csv(file.path("RNA","output","WGCNA.modules2.voom5.csv.gz"))
-head(Br.v3.0anno.At.BLAST.highscore.modules2)
+#Br.v3.0anno.At.BLAST.highscore.modules2 <- read_csv(file.path("RNA","output","WGCNA.modules2.voom5.csv.gz"))
+#head(Br.v3.0anno.At.BLAST.highscore.modules2)
 ```
 
 ## sample info
@@ -233,80 +230,39 @@ plotgene(cpm=leaf.voom5,samples=leaf.voom5.sample,target=leaf.voom5$genes[1]
 ) # no error. 
 ```
 
-# leaf_tissue.root.yellowgreen.Dead (40 genes)
+# root_tissue.leaf.maroon.Dead (71 genes)
 ```{r}
-GSEA.leaf_tissue.root.yellowgreen.Dead.coregenes.yes <- coregenes.yes.DF %>% filter(leaf_tissue.root.yellowgreen.Dead==1) %>% dplyr::select(name) %>% as_vector()
-p <- plotgene(target=GSEA.leaf_tissue.root.yellowgreen.Dead.coregenes.yes)
-ggsave(p,filename="GSEA.leaf_tissue.root.yellowgreen.Dead.coregenes.yes.plot.png",path=file.path("RNA","output"),height=30,width=8,limitsize=FALSE)
-```
-
-# root_tissue.leaf.lightsteelblue1.Live (54 genes)
-```{r}
-GSEA.root_tissue.leaf.lightsteelblue1.Live.coregenes.yes <- coregenes.yes.DF %>% filter(root_tissue.leaf.lightsteelblue1.Live==1) %>% dplyr::select(name) %>% as_vector()
-p <- plotgene(target=GSEA.root_tissue.leaf.lightsteelblue1.Live.coregenes.yes)
-ggsave(p,filename="GSEA.root_tissue.leaf.lightsteelblue1.Live.coregenes.yes.plot.png",path=file.path("RNA","output"),height=50,width=8,limitsize=FALSE)
-```
-# root_tissue.leaf.midnightblue.Live (140 ngenes)
-```{r}
-GSEA.root_tissue.leaf.midnightblue.Live.coregenes.yes <- coregenes.yes.DF %>% filter(root_tissue.leaf.midnightblue.Live==1) %>% dplyr::select(name) %>% as_vector()
-p <- plotgene(target=GSEA.root_tissue.leaf.midnightblue.Live.coregenes.yes,numcol=8)
-ggsave(p,filename="GSEA.root_tissue.leaf.midnightblue.Live.coregenes.yes.plot.png",path=file.path("RNA","output"),height=50,width=16,limitsize=FALSE)
-```
-
-# root_tissue.leaf.thistle2.Dead (31 genes)
-```{r}
-GSEA.root_tissue.leaf.thistle2.Dead.coregenes.yes <- coregenes.yes.DF %>% filter(root_tissue.leaf.thistle2.Dead==1) %>% dplyr::select(name) %>% as_vector()
-p <- plotgene(target=GSEA.root_tissue.leaf.thistle2.Dead.coregenes.yes)
-ggsave(p,filename="GSEA.root_tissue.leaf.thistle2.Dead.coregenes.yes.plot.png",path=file.path("RNA","output"),height=50,width=8,limitsize=FALSE)
+GSEA.root_tissue.leaf.maroon.Dead.coregenes.yes <- coregenes.yes.DF %>% filter(root_tissue.leaf.maroon.Dead==1) %>% dplyr::select(name) %>% as_vector()
+p <- plotgene(target=GSEA.root_tissue.leaf.maroon.Dead.coregenes.yes)
+ggsave(p,filename="GSEA.root_tissue.leaf.maroon.Dead.coregenes.yes.plot.png",path=file.path("RNA","output"),height=40,width=8,limitsize=FALSE)
 ```
 
 
-# root_tissue.leaf.red.Dead (223 genes)
-```{r}
-GSEA.root_tissue.leaf.red.Dead.coregenes.yes <- coregenes.yes.DF %>% filter(root_tissue.leaf.red.Dead==1) %>% dplyr::select(name) %>% as_vector()
-p <- plotgene(target=GSEA.root_tissue.leaf.red.Dead.coregenes.yes,numcol=8)
-ggsave(p,filename="GSEA.root_tissue.leaf.red.Dead.coregenes.yes.plot.png",path=file.path("RNA","output"),height=100,width=16,limitsize=FALSE)
-```
-
-# root_tissue.root.plum1.Dead (74 genes)
-```{r}
-GSEA.root_tissue.root.plum1.Dead.coregenes.yes <- coregenes.yes.DF %>% filter(root_tissue.root.plum1.Dead==1) %>% dplyr::select(name) %>% as_vector()
-p <- plotgene(target=GSEA.root_tissue.root.plum1.Dead.coregenes.yes)
-ggsave(p,filename="GSEA.root_tissue.root.plum1.Dead.coregenes.yes.plot.png",path=file.path("RNA","output"),height=50,width=8,limitsize=FALSE)
-
-```
-
-
-# root_tissue.root.yellowgreen.Dead (76 genes)
-```{r}
-GSEA.root_tissue.root.yellowgreen.Dead.coregenes.yes <- coregenes.yes.DF %>% filter(root_tissue.root.yellowgreen.Dead==1) %>% dplyr::select(name) %>% as_vector()
-p <- plotgene(target=GSEA.root_tissue.root.yellowgreen.Dead.coregenes.yes)
-ggsave(p,filename="GSEA.root_tissue.root.yellowgreen.Dead.coregenes.yes.plot.png",path=file.path("RNA","output"),height=50,width=8,limitsize=FALSE)
-```
-
-# expression pattern of genes in leaf.red with specifc GO enriched in the module
+# expression pattern of genes in leaf.red with specifc GO enriched in the module (revised for signed hybrid)
 ```{r}
 # find target genes from module name and enriched GO term
 # module ~ GO term
-WGCNA.voom5.all.modules.GOseq <- read_csv(file.path("RNA","output","WGCNA.voom5.all.modules.GOseq.csv"))
+WGCNA.voom5.signedhybrid.all.modules.GOseq <- read_csv(file.path("RNA","output","WGCNA.voom5.signedhybrid.all.modules.GOseq.csv"))
 # gene ~ GO term
 load(file.path("annotation","output","Brgo.v3.0anno.Atgoslim.BP.list.Rdata"))
 # gene ~ WGCNA module 
-Br.v3.0anno.At.BLAST.highscore.modules2
+Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid <- read_csv(file.path("RNA","output","WGCNA.signedhybrid.modules.voom5.csv.gz"))
+
+#Br.v3.0anno.At.BLAST.highscore.modules2
 # find genes in leaf.red module with enriched GO terms
 Brgo.v3.0anno.Atgoslim.BP.list.DF <- Brgo.v3.0anno.Atgoslim.BP.list %>% enframe() %>% unnest(value)
 # 
-genes.category.module <- Brgo.v3.0anno.Atgoslim.BP.list.DF %>% left_join(Br.v3.0anno.At.BLAST.highscore.modules2[,c("name","root.voom5.module","leaf.voom5.module")],by="name")
+genes.category.module <- Brgo.v3.0anno.Atgoslim.BP.list.DF %>% left_join(Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid[,c("name","root.voom5.module","leaf.voom5.module")],by="name")
 #
-target.GO <- WGCNA.voom5.all.modules.GOseq %>% dplyr::select(name,category,term) %>% filter(name=="leaf.red")
+target.GO <- WGCNA.voom5.signedhybrid.all.modules.GOseq %>% dplyr::select(name,category,term) %>% filter(name=="leaf.red")
 target.GO
 #
-target.genes <- genes.category.module %>% filter(leaf.voom5.module=="red") %>% filter(value==target.GO$category[1]) %>% distinct(name)
+target.genes <- genes.category.module %>% filter(leaf.voom5.module.signedhybrid=="maroon") %>% filter(value==target.GO$category[1]) %>% distinct(name)
 target.genes
 # expression pattern ~ soil treatment 
 p.target <- plotgene(target=target.genes$name,numcol=8)
 p.target
-ggsave(p.target,filename="leaf.red.coregenes.yes.plot.png",path=file.path("RNA","output"),height=100,width=8,limitsize=FALSE) # soil treatment
+ggsave(p.target,filename="leaf.maroon.coregenes.yes.plot.png",path=file.path("RNA","output"),height=100,width=8,limitsize=FALSE) # soil treatment
 ```
 
 # all modules with only target module 
@@ -372,14 +328,15 @@ d
 
 # plot
 * see Julin's request (https://trello.com/c/Y4GWD7KJ/35-wgcna-and-mr-analysis)
+* update for signed hybrid WGCNA modules (042721)
 ```{r}
 # new ver (tissue.module lowercase)
-ElasticNet0.5_multiCV_Pct_var.module <- ElasticNet0.5_multiCV_Pct_var %>% dplyr::select(tissue.module) %>% as_vector()
+ElasticNet0.5_multiCV_Pct_var_signedhybrid.module <- ElasticNet0.5_multiCV_Pct_var_signedhybrid %>% dplyr::select(tissue.module) %>% as_vector()
 # new ver. use anti_join()
-nonElasticNet0.5_multiCV_Pct_var.module <- tibble(all = colnames(d)[-1:-2]) %>% separate(all, c("module","tissue")) %>% mutate(module=str_remove(module,"ME")) %>% unite(tissue.module.all,tissue,module,sep=".") %>% anti_join(ElasticNet0.5_multiCV_Pct_var,by=c("tissue.module.all"="tissue.module")) %>% as_vector()
+nonElasticNet0.5_multiCV_Pct_var_signedhybrid.module <- tibble(all = colnames(d)[-1:-2]) %>% separate(all, c("module","tissue")) %>% mutate(module=str_remove(module,"ME")) %>% unite(tissue.module.all,tissue,module,sep=".") %>% anti_join(ElasticNet0.5_multiCV_Pct_var_signedhybrid,by=c("tissue.module.all"="tissue.module")) %>% as_vector()
 # target module (an example)
 #mod <- ElasticNet0.5_multiCV_Pct_var.module[3]
-mod <-"root.lightcyan1"
+mod <-"root.ivory"
 # making expression pattern plot function (compare within/outside module)
 #
 d.root <- d %>% dplyr::select(sampleID,leaf_avg_std,ends_with("root"))
@@ -415,20 +372,20 @@ p.TFall <- plot_grid(p.TF10.withinmod,p.TF10.notinmod)
 return(p.TFall)
 }
 # test 
-mod=ElasticNet0.5_multiCV_Pct_var.module[1]
-expression.module4()
+mod=ElasticNet0.5_multiCV_Pct_var_signedhybrid[1]
+expression.module4(target.module=mod)
 # 
-plot.root.list4 <- tibble(tissue_MEs=colnames(d)[-2:-1]) %>% mutate(tissue_MEs = str_remove(tissue_MEs,"^ME")) %>% separate(tissue_MEs,c("module","tissue")) %>% unite(tissue.module,tissue,module,sep=".") %>% filter(str_detect(tissue.module,"^root")) %>% split(.$tissue.module) %>% map(~expression.module4(target.module=as.name(.$tissue.module),dat.voom=root.voom5.mod,tissue_MEs=d.root)) # takes minutes
+plot.root.list4 <- tibble(tissue_MEs=colnames(d)[-2:-1]) %>% mutate(tissue_MEs = str_remove(tissue_MEs,"^ME")) %>% separate(tissue_MEs,c("module","tissue")) %>% unite(tissue.module,tissue,module,sep=".") %>% filter(str_detect(tissue.module,"^root")) %>% split(.$tissue.module) %>% map(~expression.module4(target.module=as.name(.$tissue.module),dat.voom=root.voom5.signedhybrid.mod,tissue_MEs=d.root)) # takes minutes
 
-plot.leaf.list4 <- tibble(tissue_MEs=colnames(d)[-2:-1]) %>% mutate(tissue_MEs = str_remove(tissue_MEs,"^ME")) %>% separate(tissue_MEs,c("module","tissue")) %>% unite(tissue.module,tissue,module,sep=".") %>% filter(str_detect(tissue.module,"^leaf")) %>% split(.$tissue.module) %>% map(~expression.module4(target.module=as.name(.$tissue.module),dat.voom=leaf.voom5.mod,tissue_MEs=d.leaf)) # takes minutes
+plot.leaf.list4 <- tibble(tissue_MEs=colnames(d)[-2:-1]) %>% mutate(tissue_MEs = str_remove(tissue_MEs,"^ME")) %>% separate(tissue_MEs,c("module","tissue")) %>% unite(tissue.module,tissue,module,sep=".") %>% filter(str_detect(tissue.module,"^leaf")) %>% split(.$tissue.module) %>% map(~expression.module4(target.module=as.name(.$tissue.module),dat.voom=leaf.voom5.signedhybrid.mod,tissue_MEs=d.leaf)) # takes minutes
 # ElasticNet0.5_multiCV_Pct_var plots
-plot.root.list4[[ElasticNet0.5_multiCV_Pct_var.module[1]]]
-plot.root.list4[[ElasticNet0.5_multiCV_Pct_var.module[2]]]
-plot.root.list4[[ElasticNet0.5_multiCV_Pct_var.module[3]]]
+plot.root.list4[[ElasticNet0.5_multiCV_Pct_var_signedhybrid.module[1]]]
+plot.root.list4[[ElasticNet0.5_multiCV_Pct_var_signedhybrid.module[2]]]
+plot.root.list4[[ElasticNet0.5_multiCV_Pct_var_signedhybrid.module[3]]]
 # nonElasticNet0.5_multiCV_Pct_var plots
-plot.root.list4[[nonElasticNet0.5_multiCV_Pct_var.module[1]]]
-plot.root.list4[[nonElasticNet0.5_multiCV_Pct_var.module[2]]]
-plot.root.list4[[nonElasticNet0.5_multiCV_Pct_var.module[3]]]
+plot.root.list4[[nonElasticNet0.5_multiCV_Pct_var_signedhybrid.module[1]]]
+plot.root.list4[[nonElasticNet0.5_multiCV_Pct_var_sinedhybrid.module[2]]]
+plot.root.list4[[nonElasticNet0.5_multiCV_Pct_var_signedhybrid.module[3]]]
 ```
 
 # how to write figs for plots?
@@ -438,8 +395,8 @@ p.root.all <- plot_grid(plot.root.list4[[1]],plot.root.list4[[2]],plot.root.list
                    plot.root.list4[[9]],plot.root.list4[[10]],plot.root.list4[[11]],plot.root.list4[[12]],
                    plot.root.list4[[13]],plot.root.list4[[14]],plot.root.list4[[15]],plot.root.list4[[16]],
                    plot.root.list4[[17]],plot.root.list4[[18]],plot.root.list4[[19]],plot.root.list4[[20]],
-                   plot.root.list4[[21]],plot.root.list4[[22]])
-ggsave(p.root.all,path=file.path("RNA","output"),filename="p.root.all2.png",height=40,width=20,dpi=72)
+                   plot.root.list4[[21]],plot.root.list4[[22]],plot.root.list4[[23]],plot.root.list4[[24]],plot.root.list4[[25]])
+ggsave(p.root.all,path=file.path("RNA","output"),filename="p.root.all.signedhybrid.png",height=40,width=20,dpi=72)
 p.leaf.all <- plot_grid(plot.leaf.list4[[1]],plot.leaf.list4[[2]],plot.leaf.list4[[3]],plot.leaf.list4[[4]],
                    plot.leaf.list4[[5]],plot.leaf.list4[[6]],plot.leaf.list4[[7]],plot.leaf.list4[[8]],
                    plot.leaf.list4[[9]],plot.leaf.list4[[10]],plot.leaf.list4[[11]],plot.leaf.list4[[12]],
@@ -447,78 +404,26 @@ p.leaf.all <- plot_grid(plot.leaf.list4[[1]],plot.leaf.list4[[2]],plot.leaf.list
                    plot.leaf.list4[[17]],plot.leaf.list4[[18]],plot.leaf.list4[[19]],plot.leaf.list4[[20]],
                    plot.leaf.list4[[21]],plot.leaf.list4[[22]],plot.leaf.list4[[23]],plot.leaf.list4[[24]],
                    plot.leaf.list4[[25]],plot.leaf.list4[[26]],plot.leaf.list4[[27]],plot.leaf.list4[[28]],
-                   plot.leaf.list4[[29]],plot.leaf.list4[[30]],plot.leaf.list4[[31]],plot.leaf.list4[[32]],
-                  plot.leaf.list4[[33]],plot.leaf.list4[[34]])
-ggsave(p.leaf.all,path=file.path("RNA","output"),filename="p.leaf.all2.png",height=40,width=20,dpi=72)
+                   plot.leaf.list4[[29]],plot.leaf.list4[[30]],plot.leaf.list4[[31]])
+ggsave(p.leaf.all,path=file.path("RNA","output"),filename="p.leaf.all.signedhybrid.png",height=40,width=20,dpi=72)
 
 # only leaf length associated modules
-p.root.leaf_length.associated <- plot_grid(plot.root.list4[[ElasticNet0.5_multiCV_Pct_var.module[1]]],
-                                           plot.root.list4[[ElasticNet0.5_multiCV_Pct_var.module[2]]],
-                                           plot.root.list4[[ElasticNet0.5_multiCV_Pct_var.module[3]]],
-                                           plot.root.list4[[ElasticNet0.5_multiCV_Pct_var.module[5]]])
-ggsave(p.root.leaf_length.associated,path=file.path("RNA","output"),filename="p.root.leaf_length.associated2.png",height=11,width=8,dpi=72)
+p.root.leaf_length.associated <- plot_grid(plot.root.list4[[ElasticNet0.5_multiCV_Pct_var_signedhybrid.module[1]]],
+          plot.root.list4[[ElasticNet0.5_multiCV_Pct_var_signedhybrid.module[2]]],
+          plot.root.list4[[ElasticNet0.5_multiCV_Pct_var_signedhybrid.module[3]]],                                plot.root.list4[[ElasticNet0.5_multiCV_Pct_var_signedhybrid.module[8]]])
+ggsave(p.root.leaf_length.associated,path=file.path("RNA","output"),filename="p.root.leaf_length.associated.signedhybrid.png",height=11,width=8,dpi=72)
 
-p.leaf.leaf_length.associated <- plot_grid(plot.leaf.list4[[ElasticNet0.5_multiCV_Pct_var.module[4]]],
-                                           plot.leaf.list4[[ElasticNet0.5_multiCV_Pct_var.module[6]]],
-                                           plot.leaf.list4[[ElasticNet0.5_multiCV_Pct_var.module[7]]],
-                                           plot.leaf.list4[[ElasticNet0.5_multiCV_Pct_var.module[8]]],
-                                           plot.leaf.list4[[ElasticNet0.5_multiCV_Pct_var.module[9]]])
-ggsave(p.leaf.leaf_length.associated,path=file.path("RNA","output"),filename="p.leaf.leaf_length.associated2.png",height=11,width=12,dpi=72)
+p.leaf.leaf_length.associated <- plot_grid(plot.leaf.list4[[ElasticNet0.5_multiCV_Pct_var_signedhybrid.module[4]]],
+          plot.leaf.list4[[ElasticNet0.5_multiCV_Pct_var_signedhybrid.module[5]]],                               plot.leaf.list4[[ElasticNet0.5_multiCV_Pct_var_signedhybrid.module[6]]],
+          plot.leaf.list4[[ElasticNet0.5_multiCV_Pct_var_signedhybrid.module[7]]],                               plot.leaf.list4[[ElasticNet0.5_multiCV_Pct_var_signedhybrid.module[9]]],
+          plot.leaf.list4[[ElasticNet0.5_multiCV_Pct_var_signedhybrid.module[10]]])
+ggsave(p.leaf.leaf_length.associated,path=file.path("RNA","output"),filename="p.leaf.leaf_length.associated.signedhybrid.png",height=11,width=12,dpi=72)
 
 ```
 
 
-# plot expression pattern along samnpleID sorted by leaf length (do not use)
-```{r eval=FALSE}
-mod <- "leaf.red"
-target.GO
-target.genes <- genes.category.module %>% filter(leaf.voom5.module=="red") %>% filter(value==target.GO$category[1]) %>% distinct(name)
-# function
-expression.module5 <- function(target.module=mod,target=target.genes$name,dat.voom=leaf.voom5.mod,leaf_length=leaf) { 
-  print(str_c("The target.module is ",target.module,"."))
-# longer format
-dat.voom.long <- dat.voom %>% filter(genes %in% target) %>% dplyr::select(-dat.voom.module) %>%   pivot_longer(-genes,names_to="sampleID",values_to="value") %>% mutate(sampleID=str_remove(sampleID,"_root")) %>% mutate(sampleID=str_remove(sampleID,"_leaf"))
-# 
-dat.voom.long.sampleID <- dat.voom.long$sampleID %>% unique()
-# using sampleID that have leaf length data and sort sampleID with leaf length
-leaf.sorted <- leaf_length %>% arrange(leaf_avg_std) %>% filter(sampleID %in% dat.voom.long.sampleID) 
-print("leaf.sorted is")
-print(leaf.sorted[,c("sampleID","leaf_avg_std")])
-sample.levels <- leaf.sorted %>% dplyr::select(sampleID) %>% as_vector()
-# add expression data 
-dat.voom.long2 <- dat.voom.long %>%  filter(sampleID %in% sample.levels) %>%
-  mutate(sampleID=factor(sampleID,levels=sample.levels))
-# plot 
-print(dat.voom.long2)
-# 
-dat.voom.long2 %>% dplyr::count(sampleID)
-# but aes_() will be soft deprecated, so that need to use quasiquotation (!!, !!!, :=)  (https://www.tidyverse.org/blog/2018/07/ggplot2-tidy-evaluation/)
-# https://adv-r.hadley.nz/quasiquotation.html
-# plot expression value plus ME within the module
-p <- dat.voom.long2 %>% ggplot(aes(x=sampleID,y=value,group=genes)) + geom_line(alpha=0.1) + theme(axis.text.x=element_text(angle=90),legend.position="none")  +  labs(ylab="normalized expression")
-return(p)
-}
-```
-
-# Expression pattern in leaf: leaf.red module genes with enriched GO term (do not use. Use expression.module6())
-```{r eval=FALSE}
-mod <- "leaf.red"
-target.GO
-# GO 1
-target.genes <- genes.category.module %>% filter(leaf.voom5.module=="red") %>% filter(value==target.GO$category[1]) %>% distinct(name)
-p.leaf.red.GO1 <- expression.module5(target.module=mod,target=target.genes$name,dat.voom=leaf.voom5.mod,leaf_length=leaf)
-p.leaf.red.GO1
-
-# GO 2
-target.genes <- genes.category.module %>% filter(leaf.voom5.module=="red") %>% filter(value==target.GO$category[2]) %>% distinct(name)
-p.leaf.red.GO2 <- expression.module5(target.module=mod,target=target.genes$name,dat.voom=leaf.voom5.mod,leaf_length=leaf)
-
-# GO 3
-target.genes <- genes.category.module %>% filter(leaf.voom5.module=="red") %>% filter(value==target.GO$category[3]) %>% distinct(name)
-p.leaf.red.GO3 <- expression.module5(target.module=mod,target=target.genes$name,dat.voom=leaf.voom5.mod,leaf_length=leaf)
-```
-
-# leaf length vs expression level
+# Expression pattern in leaf: leaf.red module genes with enriched GO term (use expression.module6())
+# leaf length vs expression level 
 ```{r}
 expression.module6 <- function(tissue=c("leaf","root"),target.module=mod,target=target.genes$name,dat.voom=leaf.voom5.mod,leaf_length=leaf,target.GOterm="") { 
   print(str_c("The target.module is ",target.module,"."))
@@ -532,116 +437,31 @@ return(p)
 }
 ```
 
-# Expression pattern in leaf: "leaf.red" module genes with enriched GO term
-```{r}
-mod <- "leaf.red"
-target.GO <- WGCNA.voom5.all.modules.GOseq %>% dplyr::select(name,category,term) %>% filter(name==mod) %>% unite(category.term,c(category, term),sep=" ",remove=FALSE)
-# GO 1
-target.genes <- genes.category.module %>% filter(leaf.voom5.module==str_remove(mod,"leaf.")) %>% filter(value==target.GO$category[1]) %>% distinct(name)
-p.leaf.leaf.red.GO1 <- expression.module6(tissue="leaf",
-                                        target.module=mod,
-                                        target=target.genes$name,
-                                        dat.voom=leaf.voom5.mod,
-                                        leaf_length=leaf,
-                                        target.GOterm=target.GO$category.term[1])
-p.leaf.leaf.red.GO1
-ggsave(p.leaf.leaf.red.GO1,filename="p.leaf.leaf.red.GO1.leaf_length.associated.png",path=file.path("RNA","output"))
-# GO 2
-target.genes <- genes.category.module %>% filter(leaf.voom5.module==str_remove(mod,"leaf.")) %>% filter(value==target.GO$category[2]) %>% distinct(name)
-p.leaf.leaf.red.GO2 <- expression.module6(tissue="leaf",
-                                        target.module=mod,
-                                        target=target.genes$name,
-                                        dat.voom=leaf.voom5.mod,
-                                        leaf_length=leaf,
-                                        target.GOterm=target.GO$category.term[2])
-p.leaf.leaf.red.GO2
-ggsave(p.leaf.leaf.red.GO2,filename="p.leaf.leaf.red.GO2.leaf_length.associated.png",path=file.path("RNA","output"))
+<!-- # Expression pattern in leaf: "leaf.red" module genes with enriched GO term -->
 
-# GO 3
-target.genes <- genes.category.module %>% filter(leaf.voom5.module==str_remove(mod,"leaf.")) %>% filter(value==target.GO$category[3]) %>% distinct(name)
-p.leaf.leaf.red.GO3 <- expression.module6(tissue="leaf",
-                                        target.module=mod,
-                                        target=target.genes$name,
-                                        dat.voom=leaf.voom5.mod,
-                                        leaf_length=leaf,
-                                        target.GOterm=target.GO$category.term[3])
-p.leaf.leaf.red.GO3
-ggsave(p.leaf.leaf.red.GO3,filename="p.leaf.leaf.red.GO3.leaf_length.associated.png",path=file.path("RNA","output"))
-```
-
+# revised version "root_tissue.leaf.maroon.Dead"
 ```{r}
-mod <- "root.plum1"
-target.GO <- WGCNA.voom5.all.modules.GOseq %>% dplyr::select(name,category,term) %>% filter(name==mod) %>% unite(category.term,c(category, term),sep=" ",remove=FALSE)
+# 042721
+ElasticNet0.5_multiCV_Pct_var_signedhybrid <- read_csv(file.path("RNA","output","ElasticNet0.5_multiCV_Pct_var.signed.hybrid.csv")) # Updated version for WGCNA singed hybrid modules (042321)
+#
+ElasticNet0.5_multiCV_Pct_var_signedhybrid <- ElasticNet0.5_multiCV_Pct_var_signedhybrid %>% unite(tissue.module,c("Module_Organ","Module_Name"),sep=".")  # all lower case
+# 
+mod <- "leaf.maroon"
+target.GO <- WGCNA.voom5.signedhybrid.all.modules.GOseq %>% dplyr::select(name,category,term) %>% mutate(name=str_replace(name,".voom5.module.signedhybrid_",".")) %>% filter(name==mod) %>% unite(category.term,c(category, term),sep=" ",remove=FALSE)
 target.GO
 # for root tissue expression pattern
-genes.category.module <- Brgo.v3.0anno.Atgoslim.BP.list.DF %>% left_join(Br.v3.0anno.At.BLAST.highscore.modules2[,c("name","root.voom5.module","leaf.voom5.module")],by="name")
+genes.category.module <- Brgo.v3.0anno.Atgoslim.BP.list.DF %>% left_join(Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid[,c("name","root.voom5.module.signedhybrid","leaf.voom5.module.signedhybrid")],by="name")
 # GO 1
-target.genes <- genes.category.module %>% filter(root.voom5.module==str_remove(mod,"root.")) %>% filter(value==target.GO$category[1]) %>% distinct(name)
-p.root.root.plum1.GO1 <- expression.module6(tissue="root",
-                                        target.module=mod,
-                                        target=target.genes$name,
-                                        dat.voom=root.voom5.mod,
-                                        leaf_length=leaf,
-                                        target.GOterm=target.GO$category.term[1])
-p.root.root.plum1.GO1
-ggsave(p.root.root.plum1.GO1,filename="p.root.root.plum1.GO1.leaf_length.associated.png",path=file.path("RNA","output"))
-# GO 2
-target.genes <- genes.category.module %>% filter(root.voom5.module==str_remove(mod,"root.")) %>% filter(value==target.GO$category[2]) %>% distinct(name)
-p.root.root.plum1.GO2 <- expression.module6(tissue="root",
-                                        target.module=mod,
-                                        target=target.genes$name,
-                                        dat.voom=root.voom5.mod,
-                                        leaf_length=leaf,
-                                        target.GOterm=target.GO$category.term[2])
-p.root.root.plum1.GO2
-ggsave(p.root.root.plum1.GO2,filename="p.root.root.plum1.GO2.leaf_length.associated.png",path=file.path("RNA","output"))
-# GO 3
-target.genes <- genes.category.module %>% filter(root.voom5.module==str_remove(mod,"root.")) %>% filter(value==target.GO$category[3]) %>% distinct(name)
-p.root.root.plum1.GO3 <- expression.module6(tissue="root",
-                                        target.module=mod,
-                                        target=target.genes$name,
-                                        dat.voom=root.voom5.mod,
-                                        leaf_length=leaf,
-                                        target.GOterm=target.GO$category.term[3])
-p.root.root.plum1.GO3
-ggsave(p.root.root.plum1.GO3,filename="p.root.root.plum1.GO3.leaf_length.associated.png",path=file.path("RNA","output"))
-```
+target.genes <- genes.category.module %>% filter(leaf.voom5.module.signedhybrid==str_remove(mod,"leaf.")) %>% filter(value==target.GO$category[1]) %>% distinct(name)
 
-# root.paleturquoise (Increase)
-```{r}
-mod <- "root.paleturquoise"
-target.GO <- WGCNA.voom5.all.modules.GOseq %>% dplyr::select(name,category,term) %>% filter(name==mod) %>% unite(category.term,c(category, term),sep=" ",remove=FALSE)
-target.GO
-# for root tissue expression pattern
-genes.category.module <- Brgo.v3.0anno.Atgoslim.BP.list.DF %>% left_join(Br.v3.0anno.At.BLAST.highscore.modules2[,c("name","root.voom5.module","leaf.voom5.module")],by="name")
-# GO 1
-target.genes <- genes.category.module %>% filter(root.voom5.module==str_remove(mod,"root.")) %>% filter(value==target.GO$category[1]) %>% distinct(name)
-p.root.root.paleturquoise.GO1 <- expression.module6(tissue="root",
-                                        target.module=mod,
-                                        target=target.genes$name,
-                                        dat.voom=root.voom5.mod,
-                                        leaf_length=leaf,
-                                        target.GOterm=target.GO$category.term[1])
-p.root.root.paleturquoise.GO1
-ggsave(p.root.root.paleturquoise.GO1,filename="p.root.root.paleturquoise.GO1.leaf_length.associated.png",path=file.path("RNA","output"))
-```
 
-# root.lightyellow (Increase)
-```{r}
-mod <- "root.lightyellow"
-target.GO <- WGCNA.voom5.all.modules.GOseq %>% dplyr::select(name,category,term) %>% filter(name==mod) %>% unite(category.term,c(category, term),sep=" ",remove=FALSE)
-target.GO
-# for root tissue expression pattern
-genes.category.module <- Brgo.v3.0anno.Atgoslim.BP.list.DF %>% left_join(Br.v3.0anno.At.BLAST.highscore.modules2[,c("name","root.voom5.module","leaf.voom5.module")],by="name")
-# GO 1
-target.genes <- genes.category.module %>% filter(root.voom5.module==str_remove(mod,"root.")) %>% filter(value==target.GO$category[1]) %>% distinct(name)
-p.root.root.lightyellow.GO1 <- expression.module6(tissue="root",
+p.root.leaf.maroon.GO1 <- expression.module6(tissue="root",
                                         target.module=mod,
                                         target=target.genes$name,
-                                        dat.voom=root.voom5.mod,
+                                        dat.voom=root.voom5.signedhybrid.mod,
                                         leaf_length=leaf,
                                         target.GOterm=target.GO$category.term[1])
-p.root.root.lightyellow.GO1
-ggsave(p.root.root.lightyellow.GO1,filename="p.root.root.lightyellow.GO1.leaf_length.associated.png",path=file.path("RNA","output"))
+p.root.leaf.maroon.GO1
+ggsave(p.root.leaf.maroon.GO1,filename="p.root.leaf.maroon.GO1.leaf_length.associated.png",path=file.path("RNA","output"))
 ```
 
