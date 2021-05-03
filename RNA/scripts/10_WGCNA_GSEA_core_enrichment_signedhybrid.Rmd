@@ -252,9 +252,9 @@ Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid <- read_csv(file.path("RNA",
 # find genes in leaf.red module with enriched GO terms
 Brgo.v3.0anno.Atgoslim.BP.list.DF <- Brgo.v3.0anno.Atgoslim.BP.list %>% enframe() %>% unnest(value)
 # 
-genes.category.module <- Brgo.v3.0anno.Atgoslim.BP.list.DF %>% left_join(Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid[,c("name","root.voom5.module","leaf.voom5.module")],by="name")
-#
-target.GO <- WGCNA.voom5.signedhybrid.all.modules.GOseq %>% dplyr::select(name,category,term) %>% filter(name=="leaf.red")
+genes.category.module <- Brgo.v3.0anno.Atgoslim.BP.list.DF %>% left_join(Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid[,c("name","root.voom5.module.signedhybrid","leaf.voom5.module.signedhybrid")],by="name")
+# 
+target.GO <- WGCNA.voom5.signedhybrid.all.modules.GOseq %>% dplyr::select(name,category,term) %>% mutate(name=str_replace(name,".voom5.module.signedhybrid_",".")) %>%  filter(name=="leaf.maroon")
 target.GO
 #
 target.genes <- genes.category.module %>% filter(leaf.voom5.module.signedhybrid=="maroon") %>% filter(value==target.GO$category[1]) %>% distinct(name)
@@ -322,7 +322,7 @@ d <- leaf %>% dplyr::select(sampleID, leaf_avg_std) %>%
   inner_join(leafMEs, by="sampleID") %>% 
   inner_join(rootMEs, by="sampleID") %>% 
   # dplyr::select(-sampleID) %>% # Kazu need sampleID later
-  as_data_frame()
+  as_tibble()
 d
 ```
 
@@ -372,7 +372,7 @@ p.TFall <- plot_grid(p.TF10.withinmod,p.TF10.notinmod)
 return(p.TFall)
 }
 # test 
-mod=ElasticNet0.5_multiCV_Pct_var_signedhybrid[1]
+mod=ElasticNet0.5_multiCV_Pct_var_signedhybrid$tissue.module[1]
 expression.module4(target.module=mod)
 # 
 plot.root.list4 <- tibble(tissue_MEs=colnames(d)[-2:-1]) %>% mutate(tissue_MEs = str_remove(tissue_MEs,"^ME")) %>% separate(tissue_MEs,c("module","tissue")) %>% unite(tissue.module,tissue,module,sep=".") %>% filter(str_detect(tissue.module,"^root")) %>% split(.$tissue.module) %>% map(~expression.module4(target.module=as.name(.$tissue.module),dat.voom=root.voom5.signedhybrid.mod,tissue_MEs=d.root)) # takes minutes
@@ -452,9 +452,8 @@ target.GO
 # for root tissue expression pattern
 genes.category.module <- Brgo.v3.0anno.Atgoslim.BP.list.DF %>% left_join(Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid[,c("name","root.voom5.module.signedhybrid","leaf.voom5.module.signedhybrid")],by="name")
 # GO 1
-target.genes <- genes.category.module %>% filter(leaf.voom5.module.signedhybrid==str_remove(mod,"leaf.")) %>% filter(value==target.GO$category[1]) %>% distinct(name)
-
-
+target.genes <- genes.category.module %>% dplyr::select(name,,term) %>% filter(leaf.voom5.module.signedhybrid==str_remove(mod,"leaf.")) %>% filter(value==target.GO$category[1]) %>% distinct(name)
+#
 p.root.leaf.maroon.GO1 <- expression.module6(tissue="root",
                                         target.module=mod,
                                         target=target.genes$name,

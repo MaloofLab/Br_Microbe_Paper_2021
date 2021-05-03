@@ -19,6 +19,7 @@ editor_options:
 * modify for ".signedhybrid" WGCNA modules
 * Use "output/ElasticNet0.5_multiCV_Pct_var.signed.hybrid.csv" instead of "ElasticNet0.5_multiCV_Pct_var"
 * ML selected GO ORA (042721)
+* WGCNA signedhybrid modules ~ custom category enrichemnt (table does not match to heatmap). Fix it. (050221)
 
 ```{r setup}
 rm(list=ls())
@@ -40,12 +41,7 @@ library(ggnewscale)
 # Julin's Machine Learning selected modules (needs to updated upon WGCNAsignedhybrid)
 ```{r}
 # reading Julin's results of penalized regression (see slide)
-# ElasticNet0.5_LOO_prop_var <- read_csv(file.path("plant","output","ElasticNet0.5_LOO_prop_var.csv"))
-# ElasticNet0.5_LOO_prop_var <- ElasticNet0.5_LOO_prop_var %>% mutate(J.module=str_remove(ME,"ME")) %>% separate(J.module,into=c("module","tissue")) %>% mutate(module=str_to_upper(module)) %>% unite(tissue.module,c("tissue","module"),sep=".") 
-# ElasticNet0.5_multiCV_Pct_var <- read_csv(file.path("plant","output","ElasticNet0.5_multiCV_Pct_var.csv")) # Updated version from 11_take2_Machine_Learning
 ElasticNet0.5_multiCV_Pct_var_signedhybrid <- read_csv(file.path("RNA","output","ElasticNet0.5_multiCV_Pct_var.signed.hybrid.csv")) # Updated version for WGCNA singed hybrid modules (042321)
-
-#
 ElasticNet0.5_multiCV_Pct_var_signedhybrid <- ElasticNet0.5_multiCV_Pct_var_signedhybrid %>% unite(tissue.module,c("Module_Organ","Module_Name"),sep=".")  # all lower case
 ```
 
@@ -259,6 +255,7 @@ if(modules=="fullmodule") {
   print(genes.count2)
   save(genes.count2,file=file.path("RNA","output","genes.count2.MLselected.Rdata"))
 }
+rm(genes.count2)
 load(file.path("RNA","output","genes.count2.MLselected.Rdata"))
 # check genes.count2
 print("genes.count2 after modules if/else")
@@ -312,110 +309,41 @@ return(GSEA_reports.plot)
 }
 ```
 
+# test
 ```{r}
 GSEA_reports.DF.plot.dendrogram.v10.WGCNAmodule.signedhybrid.notitle.ML(modules = "fullmodule",dendrogram = "FALSE")
 GSEA_reports.DF.plot.dendrogram.v10.WGCNAmodule.signedhybrid.notitle.ML(data=GSEA_reports.DF.MLselected,modules = "selected",dendrogram = "FALSE")
 ```
 
 
-# WGCNA modules vs custom categories
-<!-- # load GO.ORA function (copy from "04b_Br.mbio.e3.subset.v3.) -->
-<!-- # GOseq function for Brassica rapa (v3.0) -->
-<!-- ```{r eval=FALSE,error=TRUE} -->
-<!-- # GOseq -->
-<!-- library(ShortRead);library(goseq);library(GO.db);library("annotate") -->
-<!-- # for ggplot heatmap -->
-<!-- ## uncompress gz file -->
-<!-- system(paste("gunzip -c ",file.path("annotation","input","Brapa_genome_v3.0_cds.gz")," > ",file.path("annotation","input","Brapa_genome_v3.0_cds.fa"))) -->
-<!-- ## read cDNA fasta file  -->
-<!-- Bra.v3.0_cdna<-readDNAStringSet(file.path("annotation","input","Brapa_genome_v3.0_cds.fa")) # copied from /Volumes/data_work/Data8/NGS_related/Brassica_rapa_Upendra/G3 -->
-<!-- Bra.v3.0_cdna -->
-<!-- ## remove fasta file -->
-<!-- system(paste("rm ",file.path("annotation","input","Brapa_genome_v3.0_cds.fa"),sep="")) -->
+```{r}
+# format GSEA plot
+cutoff <- 0.3
+plot.GSEA <- GSEA_reports.DF.plot.dendrogram.v10.WGCNAmodule.signedhybrid.notitle.ML(data = GSEA_reports.DF.MLselected,
+                                            GSEA.FDR.cutoff = cutoff,
+                                            top.margin=290,
+                                            bottom.margin=30,
+                                            dendrogram="FALSE",
+                                            legend.height=30,
+                                            legend.width=10,
+                                            modules="fullmodule") 
+#plot.GSEA  +  guides(fill = guide_legend(nrow=2)) # this is not what I want
+plot.GSEA <- plot.GSEA + theme(legend.position="left",legend.key.height=unit(10,"pt"),legend.text=element_text(size=10,angle=0),plot.margin = margin(44, 0, 34, 0, "pt")) 
+ggsave(plot.GSEA,filename="GSEA.RNAseq.plot.ML.full.signedhybrid.FDR0.3.png",path=file.path("RNA","output"),width=8,height=20)
+# only ML selected modules in plot
+plot.GSEA <- GSEA_reports.DF.plot.dendrogram.v10.WGCNAmodule.signedhybrid.notitle.ML(data = GSEA_reports.DF.MLselected,
+                                            GSEA.FDR.cutoff = cutoff,
+                                            top.margin=100,
+                                            bottom.margin=30,
+                                            dendrogram="FALSE",
+                                            legend.height=30,
+                                            legend.width=10,
+                                            modules="selected") 
+#plot.GSEA  +  guides(fill = guide_legend(nrow=2)) # this is not what I want
+plot.GSEA <- plot.GSEA + theme(legend.position="left",legend.key.height=unit(10,"pt"),legend.text=element_text(size=10,angle=0),plot.margin = margin(54, 0, 34, 0, "pt"))  
+ggsave(plot.GSEA,filename="GSEA.RNAseq.plot.ML.signedhybrid.selected.FDR0.3.png",path=file.path("RNA","output"),width=6,height=10) # needs to fix
+```
 
-<!-- # -->
-<!-- Br.v3.0anno.At.BLAST.highscore.modules2 <- read_csv(file.path("RNA","output","WGCNA.modules2.voom5.csv.gz")) -->
-
-<!-- # GOseq function -->
-<!-- GOseq.Brgo.v3.0.Atgoslim.BP.list.ORA2<-function(genelist,padjust=0.05,ontology="BP",custom.category.list=Brgo.v3.0anno.Atgoslim.BP.list,Br_cdna=Bra.v3.0_cdna) { # return GO enrichment table, padjus, padjust=0.05.  -->
-<!--   print(genelist) -->
-<!--   bias<-nchar(Br_cdna) -->
-<!--   names(bias)<-names(Br_cdna) -->
-<!--   # convert list of genelist into vector -->
-<!--   genelist <- genelist %>% unlist() -->
-<!--   TF<-(names(bias) %in% genelist)*1 -->
-<!--   names(TF)<-names(bias) -->
-<!--   #print(TF) -->
-<!--   pwf<-nullp(TF,bias.data=bias,plot.fit=FALSE) -->
-<!--   #print(pwf$DEgenes) -->
-<!--   GO.pval <- goseq(pwf,gene2cat=custom.category.list,use_genes_without_cat=TRUE) # format became different in new goseq version (021111). Does not work (042716) -->
-<!--   #GO.pval <- goseq(pwf,gene2cat=Brgo.DF3,use_genes_without_cat=TRUE) # format became different in new goseq version (021111) -->
-
-<!--   #head(GO.pval)  -->
-<!--   if(ontology=="BP") { -->
-<!--     GO.pval2<-subset(GO.pval,ontology=="BP") -->
-<!--   } else if(ontology=="CC") { -->
-<!--     GO.pval2<-subset(GO.pval,ontology=="CC") -->
-<!--   } else if(ontology=="MF") { -->
-<!--     GO.pval2<-subset(GO.pval,ontology=="MF") -->
-<!--   } else { -->
-<!--     GO.pval2<-GO.pval -->
-<!--   } -->
-
-<!--   GO.pval2$over_represented_padjust<-p.adjust(GO.pval2$over_represented_pvalue,method="BH") -->
-<!--   if(GO.pval2$over_represented_padjust[1]>padjust) return("no enriched GO") -->
-<!--   else { -->
-<!--     enriched.GO<-GO.pval2[GO.pval2$over_represented_padjust<padjust,]  -->
-<!--     print("enriched.GO is") -->
-<!--     print(enriched.GO) -->
-
-<!--     ## write Term and Definition  -->
-<!--     if(ontology=="BP"|ontology=="CC"|ontology=="MF") { -->
-<!--     for(i in 1:dim(enriched.GO)[1]) { -->
-<!--       if(is.null(Term(GOTERM[enriched.GO[i,"category"]]))) {next} else { -->
-<!--       #enriched.GO$Term[i]<-Term(GOTERM[[enriched.GO[i,"category"]]]) -->
-<!--       enriched.GO$Definition[i]<-Definition(GOTERM[[enriched.GO[i,"category"]]]) -->
-<!--       } -->
-<!--     } -->
-<!--     } -->
-<!--     enriched.GO.tb <- as_tibble(enriched.GO) -->
-<!--     print("As tibble enriched.GO is") -->
-<!--     print(enriched.GO.tb) -->
-<!--     return(enriched.GO.tb) -->
-<!--   } -->
-<!-- } -->
-<!-- # -->
-<!-- head(Bra.v3.0_cdna) -->
-<!-- # length(bias) # 44239 > 45019 where the bias come from? -->
-<!-- #  bias.data vector must have the same length as DEgenes vector! -->
-<!-- ``` -->
-
-
-<!-- # GOseq with custom categories (Sep 30, 2020; Oct 28, 2020) -->
-<!-- ```{r eval=FALSE} -->
-<!-- # annotation -->
-<!-- Br.v3.0anno.At.BLAST.highscore.modules2 <- read_csv(file.path("RNA","output","WGCNA.modules2.voom5.csv.gz")) -->
-<!-- # custom categories list -->
-<!-- load(file.path("annotation","output","GSEA_cust_rootshoot_updown2.list.Rdata")) -->
-<!-- #modTrait.leaf_avg_std.P2.summary.FDR0.25 %>% View() -->
-<!-- # all modules  -->
-<!-- GOseq.temp <- Br.v3.0anno.At.BLAST.highscore.modules2 %>% ungroup() %>% dplyr::select(name,root.voom5.module.signedhybrid,leaf.voom5.module.signedhybrid) %>% -->
-<!-- pivot_longer(cols=-1,names_to = "voom")  %>% drop_na(value) %>% unite(voom.module,c("voom","value")) %>%  split(.$voom.module) %>% map(~GOseq.Brgo.v3.0.Atgoslim.BP.list.ORA2(genelist=.$name,custom.category.list=GSEA_cust_rootshoot_updown2.list,ontology="none")) # ,custom.category.list=GSEA_cust_rootshoot_updown2.list -->
-<!-- GOseq.temp %>% enframe() %>% unnest(value) %>% write_csv(file.path("RNA","output","WGCNA.voom5.all.modules.customcat.GOseq.csv")) -->
-
-<!-- # check results on "voom_expression.e1and3.resid.exp_only.root_plum1", which has "iron" in GOseq? which modules?. (which module is enriched in iron IN .signedhybrid version) -->
-<!-- GOseq.temp2 <- Br.v3.0anno.At.BLAST.highscore.modules2 %>% ungroup() %>% dplyr::select(name,root.voom5.module.signedhybrid,leaf.voom5.module.signedhybrid) %>% -->
-<!-- pivot_longer(cols=-1,names_to = "voom")  %>% drop_na(value) %>% unite(voom.module,c("voom","value")) %>% filter(voom.module=="*******") %>%  -->
-<!--   split(.$voom.module) %>% map(~GOseq.Brgo.v3.0.Atgoslim.BP.list.ORA2(genelist=.$name,custom.category.list=GSEA_cust_rootshoot_updown2.list,ontology="none")) # OK. Good. Fe categoreis enriched -->
-<!-- ``` -->
-
-<!-- # GOseq of all WGCNA modules (leaf.voom5, root.voom5 version) with custom categories  -->
-<!-- ```{r} -->
-<!-- GOseq.temp <- Br.v3.0anno.At.BLAST.highscore.modules2 %>% ungroup() %>% dplyr::select(name,root.voom5.module.signedhybrid,leaf.voom5.module.signedhybrid) %>% -->
-<!-- pivot_longer(cols=-1,names_to = "voom") %>% drop_na(value) %>% unite(voom.module,c("voom","value")) %>% split(.$voom.module) %>% map(~GOseq.Brgo.v3.0.Atgoslim.BP.list.ORA2(genelist=.$name,custom.category.list=GSEA_cust_rootshoot_updown2.list,ontology="none")) # ,custom.category.list=GSEA_cust_rootshoot_updown2.list -->
-<!-- GOseq.temp %>% enframe() %>% unnest(value) %>% write_csv(file.path("RNA","output","WGCNA.voom5.all.modules.customcat.GOseq.csv")) -->
-
-<!-- ``` -->
 
 # Signature of WGCNA modules by looking enrichement of custom categories
 ```{r}
@@ -507,7 +435,7 @@ WGCNA.voom5.signedhybrid.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.s
 
 WGCNA.voom5.signedhybrid.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected2 <-  WGCNA.voom5.signedhybrid.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected2 %>%
 #  mutate(NAME=factor(NAME,levels=dendro.y.NAME$NAME)) 
-mutate(NAME=factor(NAME,levels=genes.count2$NAME)) 
+mutate(NAME=factor(NAME,levels=levels(genes.count2$NAME)))
 str(WGCNA.voom5.signedhybrid.all.modules.leaf_avg_std.correlated.customcat.GOseq.2.selected2)
 
 # plot 
@@ -525,37 +453,12 @@ WGCNA.voom5.signedhybrid.all.modules.customcat.GOseq.plot.selected2 <- WGCNA.voo
       labs(x="",y="",fill="-log10\n FDR",title=" ")
 WGCNA.voom5.signedhybrid.all.modules.customcat.GOseq.plot.selected2
 ggsave(path=file.path("RNA","output"),filename="WGCNA.voom5.signedhybrid.leaf_avg_std.correlated.modules.customcat.GOseq.4.selected.plot.png",height=8,width=11) 
-
+#### the order of y axis modules are not matched to GSEA heatmap!!!! (050221)
 ```
 
 # combine GSEA plot and WGCNA module ORA plot 
-```{r}
-# format GSEA plot
-cutoff <- 0.3
-plot.GSEA <- GSEA_reports.DF.plot.dendrogram.v10.WGCNAmodule.signedhybrid.notitle.ML(data = GSEA_reports.DF.MLselected,
-                                            GSEA.FDR.cutoff = cutoff,
-                                            top.margin=290,
-                                            bottom.margin=30,
-                                            dendrogram="FALSE",
-                                            legend.height=30,
-                                            legend.width=10,
-                                            modules="fullmodule") 
-#plot.GSEA  +  guides(fill = guide_legend(nrow=2)) # this is not what I want
-plot.GSEA <- plot.GSEA + theme(legend.position="left",legend.key.height=unit(10,"pt"),legend.text=element_text(size=10,angle=0),plot.margin = margin(44, 0, 34, 0, "pt")) 
-ggsave(plot.GSEA,filename="GSEA.RNAseq.plot.ML.full.signedhybrid.FDR0.3.png",path=file.path("RNA","output"),width=8,height=20)
-# only ML selected modules in plot
-plot.GSEA <- GSEA_reports.DF.plot.dendrogram.v10.WGCNAmodule.signedhybrid.notitle.ML(data = GSEA_reports.DF.MLselected,
-                                            GSEA.FDR.cutoff = cutoff,
-                                            top.margin=100,
-                                            bottom.margin=30,
-                                            dendrogram="FALSE",
-                                            legend.height=30,
-                                            legend.width=10,
-                                            modules="selected") 
-#plot.GSEA  +  guides(fill = guide_legend(nrow=2)) # this is not what I want
-plot.GSEA <- plot.GSEA + theme(legend.position="left",legend.key.height=unit(10,"pt"),legend.text=element_text(size=10,angle=0),plot.margin = margin(54, 0, 34, 0, "pt"))  
-ggsave(plot.GSEA,filename="GSEA.RNAseq.plot.ML.signedhybrid.selected.FDR0.3.png",path=file.path("RNA","output"),width=6,height=10) # needs to fix
 
+```{r}
 # format WGCNA ORA plots
 WGCNA.voom5.signedhybrid.all.modules.customcat.GOseq.plot.selected2 <- WGCNA.voom5.signedhybrid.all.modules.customcat.GOseq.plot.selected2 + theme(plot.margin = margin(0, 0, 0, 0, "pt"),legend.position = "right",legend.key.height=unit(30,"pt"),axis.text.y=element_blank(),axis.text.x=element_text(size=10,hjust=1)) + # Top, right, bottom, left.)
   labs(title="") 
