@@ -10,16 +10,18 @@ editor_options:
 * For Julin's machine learning selected WGCNA modules correlated to standardized leaf growth ("leaf_avg_std").
 * GSEA: soil treatment effects. RNAseq data is voom transformed by considering exp, gt, block effects (voom.root6 or voom.leaf6 data)
 * WGCNA ORA: custom categories
-* Adding GSEA.FDR.cutoff part in GSEA_reports.DF.plot.dendrogram.v9.WGCNAmodule.notitle.ML() (041321)
-* New ML selected WGCNA modules (signed hybrid) (042321)
-
-# To Do
 * Use "ElasticNet0.5_multiCV_Pct_var" instead of "ElasticNet0.5_LOO_prop_var" (031021)
 * consistant format for tissue.module with lowercase (031221)
-* modify for ".signedhybrid" WGCNA modules
-* Use "output/ElasticNet0.5_multiCV_Pct_var.signed.hybrid.csv" instead of "ElasticNet0.5_multiCV_Pct_var"
-* ML selected GO ORA (042721)
-* WGCNA signedhybrid modules ~ custom category enrichemnt (table does not match to heatmap). Fix it. (050221)
+* Adding GSEA.FDR.cutoff part in GSEA_reports.DF.plot.dendrogram.v9.WGCNAmodule.notitle.ML() (041321)
+* New ML selected WGCNA modules (signed hybrid) (042321)
+* modifed for ".signedhybrid" WGCNA modules
+*  "output/ElasticNet0.5_multiCV_Pct_var.signed.hybrid.csv" instead of "ElasticNet0.5_multiCV_Pct_var"
+* ML selected GO ORA (042721) - > used.
+* WGCNA signedhybrid modules ~ custom category enrichemnt (table does not match to heatmap). Fixed it. (050221)
+
+# To Do
+* root.ivory is enriched with both Fe-down and Fe-up, which are strange. Make 0/1 table for each module + categories. 
+
 
 ```{r setup}
 rm(list=ls())
@@ -485,7 +487,214 @@ WGCNA.voom5.signedhybrid.all.modules.GOseq.MLselected[order(factor(WGCNA.voom5.s
 
 WGCNA.voom5.signedhybrid.all.modules.GOseq.MLselected.top1 <- WGCNA.voom5.signedhybrid.all.modules.GOseq.MLselected %>% group_by(name) %>% slice(1) #%>% View()
 WGCNA.voom5.signedhybrid.all.modules.GOseq.MLselected.top1[order(factor(WGCNA.voom5.signedhybrid.all.modules.GOseq.MLselected.top1$name,levels=levels(genes.count2$NAME)),decreasing = TRUE),] %>% write_csv(file.path("RNA","output","WGCNA.voom5.signedhybrid.MLselected.modules.GOseq.top1.csv"))
+```
 
+# root.ivory is enriched with both Fe-down and Fe-up, which are strange. Make 0/1 table for each module + categories (050221)
+# making function (copied from [my blog](https://knozue.github.io/post/2018/10/07/over-representation-analysis-5-useful-tools/))
+
+```{r}
+genes.in.enriched.category<-function(enrich.result,gene.list,category.table=Atgoslim.TAIR.BP.list) { # return data frame with all input data with ... which format is good? VennDiagram input format?  
+  enrich.category <- enrich.result[enrich.result$over_represented_pvalue<0.05,"category"] %>% as_vector()
+  temp <- category.table[gene.list] # short category.table for enriched.result # gene.list has to be character (not factor)  
+  #names(temp[!is.na(names(temp))])
+  temp <- temp[!is.na(names(temp))] # remove non matched AGI
+  test <- data.frame(name=names(temp))
+  for(i in enrich.category) {
+    x <- rep(0,length(names(temp)))
+    x[grep(i,temp)] <- 1
+    test <- cbind(test,x)
+    names(test)[dim(test)[2]] <- i
+  }
+  return(test) 
+}
+```
+
+# test
+```{r}
+# custom categories list
+load(file.path("annotation","output","GSEA_cust_rootshoot_updown2.list.Rdata")) # GSEA_cust_rootshoot_updown2.list
+WGCNA.voom5.signedhybrid.all.modules.leaf_avg_std.correlated.customcat.GOseq.nest <- WGCNA.voom5.signedhybrid.all.modules.leaf_avg_std.correlated.customcat.GOseq %>% group_by(NAME) %>% nest()
+# test (target.module[1], i.e., "root.ivory")
+test.GO <- WGCNA.voom5.signedhybrid.all.modules.leaf_avg_std.correlated.customcat.GOseq.nest %>% filter(NAME=="root.voom5.module.signedhybrid.ivory") %>% unnest(data) 
+
+# gene list
+Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid <- read_csv(file.path("RNA","output","WGCNA.signedhybrid.modules.voom5.csv.gz"))
+# leaf length related (in root module)
+target.module <- ElasticNet0.5_multiCV_Pct_var_signedhybrid %>% separate(tissue.module,c("tissue","module")) %>% filter(str_detect(tissue,"root"))
+# 
+test.gene.list <- Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid %>% semi_join(target.module[1,"module"],by=c("root.voom5.module.signedhybrid"="module")) %>% dplyr::select(name) %>% as_vector() #View()
+
+# function
+test <- genes.in.enriched.category(enrich.result=test.GO,gene.list=test.gene.list,                          category.table=GSEA_cust_rootshoot_updown2.list)
+```
+
+```{r}
+test %>% dplyr::select(name,matches("minusFe_Kailasam2019_root")) %>% View() # there are no overlaped genes between "minusFe_Kailasam2019_root_FC_up" and "minusFe_Kailasam2019_root_FC_down"
+```
+
+# how about expression pattern of "minusFe_Kailasam2019_root_FC_up" and "minusFe_Kailasam2019_root_FC_down" genes in that module?
+# Expression pattern in leaf: leaf.red module genes with enriched GO term (use expression.module6())
+# leaf length vs expression level 
+```{r}
+expression.module6 <- function(tissue=c("leaf","root"),target.module=mod,target=target.genes$name,dat.voom=leaf.voom5.mod,leaf_length=leaf,target.GOterm="") { 
+  print(str_c("The target.module is ",target.module,"."))
+# longer format
+dat.voom.long <- dat.voom %>% filter(genes %in% target) %>% dplyr::select(-dat.voom.module) %>%   pivot_longer(-genes,names_to="sampleID",values_to="value") %>% mutate(sampleID=str_remove(sampleID,"_root")) %>% mutate(sampleID=str_remove(sampleID,"_leaf")) %>% inner_join(leaf_length[,c("sampleID","leaf_avg_std")],by="sampleID")
+#
+dat.voom.long %>% View()
+# plot expression value 
+p <- dat.voom.long %>% ggplot(aes(x=leaf_avg_std,y=value,group=genes)) + geom_line(alpha=0.1) + theme(axis.text.x=element_text(angle=90),legend.position="none")  +  labs(title=str_c(target.module,target.GOterm,sep=" "),y=str_c("expression in ",tissue))
+return(p)
+}
+```
+
+# custom category in "root.ivory" module 
+* Questions: 
+* Results: 
+```{r}
+leaf <- read_csv("plant/output/leaf_lengths_combined.csv") %>%
+  mutate(sampleID=str_remove(sampleID, "_(leaf|root)"),
+         sampleID=str_remove(sampleID, "^[a-h][1-8]_")) %>%
+  filter(!duplicated(sampleID))
+
+leaf %>% arrange(sampleID)
+```
+
+load root modules (copied from 11_machine_learning.Rmd) (revised 042021)
+```{r}
+root.voom5 <- readr::read_tsv(file.path("RNA","output","voom_expression.e1and3.resid.exp_gt.root.plusR500.txt.gz"))
+load(file.path("RNA","output","voom_expression.e1and3.resid.exp_gt.root.plusR500.signedhybrid.txt.gz.WGCNA.softthresh10.signedhybrid.RData")) # revised (042021)
+# adding module column
+#root.voom5.mod <- root.voom5 %>% mutate(dat.voom.module=str_c("ME",dynamicColors,"_root"))
+root.voom5.signedhybrid.mod <- root.voom5 %>% mutate(dat.voom.module=str_c("root.",dynamicColors))
+
+# MEs
+rootMEs <- MEs %>% as_tibble() %>%
+  rename_all(str_c, "_root") %>%
+  mutate(sampleID=colnames(root.voom5)[-1],
+         sampleID=str_remove(sampleID, "_root"),
+         sampleID=str_remove(sampleID, "_S[0-9]{1,3}$"),
+         sampleID=str_remove(sampleID, "^[a-h][1-8]_")) %>%
+  dplyr::select(sampleID, everything())
+rootMEs
+rm(MEs)
+```
+
+load leaf modules (copied from 11_machine_learning.Rmd) (revised 042021)
+```{r}
+leaf.voom5 <- readr::read_tsv(file.path("RNA","output","voom_expression.e1and3.resid.exp_gt.leaf.plusR500.txt.gz"))
+load(file.path("RNA","output","voom_expression.e1and3.resid.exp_gt.leaf.plusR500.signedhybrid.txt.gz.WGCNA.softthresh10.signedhybrid.RData"))
+# adding module column (tissue.module all lowercase that is consistent with )
+#leaf.voom5.mod <- leaf.voom5 %>% mutate(dat.voom.module=str_c("ME",dynamicColors,"_leaf"))
+leaf.voom5.signedhybrid.mod <- leaf.voom5 %>% mutate(dat.voom.module=str_c("leaf.",dynamicColors)) # modified (042021)
+# 
+leafMEs <- MEs %>% as_tibble() %>%
+  rename_all(str_c, "_leaf") %>%
+  mutate(sampleID=colnames(leaf.voom5)[-1],
+         sampleID=str_remove(sampleID, "_leaf"),
+         sampleID=str_remove(sampleID, "_S[0-9]{1,3}$"),
+         sampleID=str_remove(sampleID, "^[a-h][1-8]_")) %>%
+  dplyr::select(sampleID, everything())
+leafMEs
+rm(MEs)
+```
+
+```{r}
+# 042721
+ElasticNet0.5_multiCV_Pct_var_signedhybrid <- read_csv(file.path("RNA","output","ElasticNet0.5_multiCV_Pct_var.signed.hybrid.csv")) # Updated version for WGCNA singed hybrid modules (042321)
+#
+ElasticNet0.5_multiCV_Pct_var_signedhybrid <- ElasticNet0.5_multiCV_Pct_var_signedhybrid %>% unite(tissue.module,c("Module_Organ","Module_Name"),sep=".")  # all lower case
+# 
+mod <- "root.ivory"
+# target.GO <- WGCNA.voom5.signedhybrid.all.modules.GOseq %>% dplyr::select(name,category,term) %>% mutate(name=str_replace(name,".voom5.module.signedhybrid_",".")) %>% filter(name==mod) %>% unite(category.term,c(category, term),sep=" ",remove=FALSE)
+# target.GO
+# test (target.module[1], i.e., "root.ivory")
+target.GO <- WGCNA.voom5.signedhybrid.all.modules.leaf_avg_std.correlated.customcat.GOseq.nest %>% filter(NAME=="root.voom5.module.signedhybrid.ivory") %>% unnest(data) 
+
+# GSEA_cust_rootshoot_updown2.list into DF
+GSEA_cust_rootshoot_updown2.list.DF <- GSEA_cust_rootshoot_updown2.list %>% enframe() %>% unnest(value)
+# combine custom categoreis, WGCNA module, and gene name for root tissue expression pattern
+genes.customcategory.module <- GSEA_cust_rootshoot_updown2.list.DF %>% left_join(Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid[,c("name","root.voom5.module.signedhybrid","leaf.voom5.module.signedhybrid")],by="name")
+# custom 6
+target.genes <- genes.customcategory.module  %>% filter(root.voom5.module.signedhybrid==str_remove(mod,"root.")) %>% filter(value==target.GO$category[6]) %>% distinct(name)
+p.root.root.ivory.customcategory6 <- expression.module6(tissue="root",
+                                        target.module=mod,
+                                        target=target.genes$name,
+                                        dat.voom=root.voom5.signedhybrid.mod,
+                                        leaf_length=leaf,
+                                        target.GOterm=target.GO$category[6])
+p.root.root.ivory.customcategory6
+ggsave(p.root.root.ivory.customcategory6,filename="p.root.root.ivory.customcategory6.leaf_length.associated.png",path=file.path("RNA","output"),width=8,height=6)
+#
+# custom 15
+target.genes <- genes.customcategory.module  %>% filter(root.voom5.module.signedhybrid==str_remove(mod,"root.")) %>% filter(value==target.GO$category[15]) %>% distinct(name)
+
+p.root.root.ivory.customcategory15 <- expression.module6(tissue="root",
+                                        target.module=mod,
+                                        target=target.genes$name,
+                                        dat.voom=root.voom5.signedhybrid.mod,
+                                        leaf_length=leaf,
+                                        target.GOterm=target.GO$category[15])
+p.root.root.ivory.customcategory15
+ggsave(p.root.root.ivory.customcategory15,filename="p.root.root.ivory.customcategory15.leaf_length.associated.png",path=file.path("RNA","output"),width=8,height=6)
+
+# 18
+target.genes <- genes.customcategory.module  %>% filter(root.voom5.module.signedhybrid==str_remove(mod,"root.")) %>% filter(value==target.GO$category[18]) %>% distinct(name)
+p.root.root.ivory.customcategory18 <- expression.module6(tissue="root",
+                                        target.module=mod,
+                                        target=target.genes$name,
+                                        dat.voom=root.voom5.signedhybrid.mod,
+                                        leaf_length=leaf,
+                                        target.GOterm=target.GO$category[18])
+p.root.root.ivory.customcategory18
+ggsave(p.root.root.ivory.customcategory18,filename="p.root.root.ivory.customcategory18.leaf_length.associated.png",path=file.path("RNA","output"),width=8,height=6)
+
+# 9
+target.genes <- genes.customcategory.module  %>% filter(root.voom5.module.signedhybrid==str_remove(mod,"root.")) %>% filter(value==target.GO$category[9]) %>% distinct(name)
+p.root.root.ivory.customcategory9 <- expression.module6(tissue="root",
+                                        target.module=mod,
+                                        target=target.genes$name,
+                                        dat.voom=root.voom5.signedhybrid.mod,
+                                        leaf_length=leaf,
+                                        target.GOterm=target.GO$category[9])
+p.root.root.ivory.customcategory9
+ggsave(p.root.root.ivory.customcategory9,filename="p.root.root.ivory.customcategory9.leaf_length.associated.png",path=file.path("RNA","output"),width=8,height=6)
 
 ```
+
+# focus on dead soil enriched genes ("root.ivory")
+```{r}
+coregenes.yes.DF <- read_csv(file.path("RNA/output/GSEA_leaf_length_soil_core_enrichment_genes_signedhybrid.csv"))
+coregenes.yes.DF.root.ivory.Dead <- coregenes.yes.DF %>% filter(root_tissue.root.ivory.Dead==1) %>% dplyr::select(name)
+#
+genes.customcategory.module.coregenes.yes <- genes.customcategory.module %>% left_join(coregenes.yes.DF,by="name") #%>% View()
+#
+root.ivory.Dead.yes.genes <- genes.customcategory.module.coregenes.yes %>% filter(root_tissue.root.ivory.Dead==1)
+# 6
+target.genes2 <- genes.customcategory.module.coregenes.yes  %>% filter(root.voom5.module.signedhybrid==str_remove(mod,"root.")) %>% filter(value==target.GO$category[6]) %>% distinct(name)
+p.root.root.ivory.customcategory6.root.DEAD.yes <- expression.module6(tissue="root",
+                                        target.module=mod,
+                                        target=target.genes$name,
+                                        dat.voom=root.voom5.signedhybrid.mod,
+                                        leaf_length=leaf,
+                                        target.GOterm=target.GO$category[6])
+p.root.root.ivory.customcategory6
+ggsave(p.root.root.ivory.customcategory6,filename="p.root.root.ivory.customcategory6.leaf_length.associated.root.DEAD.yes.png",path=file.path("RNA","output"),width=8,height=6)
+
+```
+
+# Combine genes.customcategory.module and root.ivory.Dead.yes.genes
+* No diferences beween Up and Down in terms of percentage of "Yes" in GSEA.
+```{r}
+genes.customcategory.module.root.ivory.Dead.yes <- genes.customcategory.module %>% filter(root.voom5.module.signedhybrid=="ivory") %>% left_join(coregenes.yes.DF %>% dplyr::select(name,root_tissue.root.ivory.Dead),by="name") 
+genes.customcategory.module.root.ivory.Dead.yes %>% View()
+genes.customcategory.module.root.ivory.Dead.yes %>% count(value,root_tissue.root.ivory.Dead) %>% #View()
+  write_csv(file.path("RNA","output","genes.customcategory.module.root.ivory.Dead.yes.count.csv"))
+```
+
+# Needs to 
+```{r}
+
+```
+
 

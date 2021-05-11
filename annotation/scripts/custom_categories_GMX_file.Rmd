@@ -1,0 +1,514 @@
+---
+title: "custom_categories_GMX_file"
+author: "Kazu"
+date: "5/9/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+Summary
+
+History
+* copied from "06_f_cor_table.Rmd"
+
+To Do
+*  Expand DEGs with FC threshold for all custom categoreis
+* root data including minusN_Peng_2007 and plusIAA_Nembauser_2006
+* adding Nishida_2017 to root categories (070720)
+* making top20, top50, and top100 for (a) among root/leaf categories, (b) among minusX_up, (c) among minusX_down
+* More stringent FDR for custom category ORA of root.ivory module (050921)
+
+#### making root + shoot category with up and down and
+# prep
+```{r}
+rm(list=ls())
+knitr::opts_chunk$set(echo = TRUE,error=TRUE)
+library(tidyverse);library(GGally);library(readxl)
+library(readr)
+library(stringr)
+# https://bioconductor.org/packages/devel/workflows/vignettes/maEndToEnd/inst/doc/MA-Workflow.html
+# functions for expression pattern
+#source("../../../tools/Expression_pattern_graph.R",chdir=TRUE)
+
+```
+
+# read custom gene categories created in "06_d_cor_permutation.Rmd" -> needs to add this to this scripts
+```{r}
+root.all3 <- read_csv(file.path("annotation","output","root.all.comparison.v3.csv.gz")) 
+shoot.all <- read_csv(file.path("annotation","output","shoot.all.comparison.csv"))
+```
+
+fix names (root)
+```{r}
+root.all.fix.names <- root.all3
+colnames(root.all.fix.names) <- ifelse(str_detect(colnames(root.all.fix.names), "(shoot|root|seedlings|whole)$"),
+       str_c(colnames(root.all.fix.names), "_FC"),
+       colnames(root.all.fix.names))
+colnames(root.all.fix.names) <- str_remove_all(colnames(root.all.fix.names), fixed("\n") )
+root.all.fix.names
+```
+
+fix names (shoot)
+```{r}
+shoot.all.fix.names <- shoot.all
+colnames(shoot.all.fix.names) <- ifelse(str_detect(colnames(shoot.all.fix.names), "(shoot|root)$"),
+       str_c(colnames(shoot.all.fix.names), "_FC"),
+       colnames(shoot.all.fix.names))
+colnames(shoot.all.fix.names) <- str_remove_all(colnames(shoot.all.fix.names), fixed("\n") )
+shoot.all.fix.names
+```
+
+# category (root and shoot combined): bugfixed (052620)
+```{r}
+shoot.all.fix.names <- shoot.all.fix.names %>% dplyr::select(-AGI, -exp1,-exp1_FDR,-exp3cr,-exp3cr_FDR, -At_symbol, -At_short_description)  
+colnames(shoot.all.fix.names)
+# combine two columns (At_symbol from root and shoot) (work later)
+custom.data <- root.all.fix.names %>% full_join(shoot.all.fix.names,by="genes")
+colnames(custom.data)
+custom.FC.names <- str_subset(colnames(custom.data), "FC")
+custom.FC.names
+# write csv file for filtered.custom.data to share with team members
+write_csv(custom.data,file.path("annotation","output","custom_categories.csv.gz"))
+# filter custom.data by FC and FDR cutoff
+custom.data <- read_csv(file.path("annotation","output","custom_categories.csv.gz"))
+FC_cutoff <- 0.58 # log2
+#FDR_cutoff <- 0.01
+FDR_cutoff <- 0.001
+filtered.custom.data <- custom.data
+### under construction
+for(FC in custom.FC.names) {
+  FDR <- str_c(str_remove_all(FC, "_FC"), "_FDR")
+  print(FDR)
+
+  FC_up <- str_c(FC,"_up") %>% as.name()
+  FC_up <- enquo(FC_up)
+  FC_down <- str_c(FC,"_down") %>% as.name()
+  FC_down <- enquo(FC_down)
+  
+  FDR_up <- str_c(FDR,"_up") %>% as.name()
+  FDR_up <- enquo(FDR_up)
+  FDR_down <- str_c(FDR,"_down") %>% as.name()
+  FDR_down <- enquo(FDR_down)
+
+  FC <- as.name(FC)
+  FC <- enquo(FC)
+  print(FC)
+  FDR<- as.name(FDR)
+  FDR <- enquo(FDR)
+
+  filtered.custom.data <- filtered.custom.data %>%
+    mutate(!!FC_up := ifelse( !! FC > FC_cutoff ,  !!FC, NA))  %>%
+    mutate(!!FC_down := ifelse( !! FC < (-1)*FC_cutoff ,  !!FC, NA))
+
+  if(!str_detect(rlang::as_name(FC), "cold|heat|Peng|Nemhauser")) {  # no FDR for cold/heat/Peng/Nemhauser
+    print(FC)
+    print("not cold")
+    filtered.custom.data <- filtered.custom.data %>%
+    mutate(!!FDR_up := ifelse( !! FC >FC_cutoff, !!FDR, NA)) %>% # cut FDR
+    mutate(!!FDR_down := ifelse( !! FC < (-1)*FC_cutoff, !!FDR, NA)) %>%  
+    mutate(!!FDR_up := ifelse( !! FDR_up < FDR_cutoff, !!FDR_up, NA)) %>%
+    mutate(!!FDR_down := ifelse( !! FDR_down < FDR_cutoff, !!FDR_down, NA)) %>%
+      mutate(!!FC_up := ifelse( !! FDR_up < FDR_cutoff ,  !!FC, NA )) %>%
+     mutate(!!FC_down := ifelse( !! FDR_down < FDR_cutoff ,  !!FC, NA)) 
+  } #if
+  
+} #for
+
+summary(!is.na(filtered.custom.data)) 
+names(filtered.custom.data)
+# manually make csv file and save it as txt for gmx file
+write_csv(filtered.custom.data,file=file.path("annotation","output","filtered.custom.data.rootshoot.csv.gz")) # 052620. Note this is an intermediate data. "filtered.custom.data.Total.rootshoot.v3.gmx" created below was used for further analysis (050921)
+# There is type problems in reading the csv
+
+```
+
+# top 20 (up/down): needs to make FDR_up and FDR_down columns.  
+```{r}
+# filtered.custom.data <- read_csv(file.path("..","output","filtered.custom.data.rootshoot.csv.gz"),guess_max = 17000)
+# # howmany genes in the list?
+# summary(!is.na(filtered.custom.data))
+# # top 20 selection
+#  GSEA_cust_rootshoot_equal.updown <- filtered.custom.data %>%
+#   dplyr::select(genes, ends_with("up"), ends_with("down"), -starts_with("exp")) %>%
+#   pivot_longer(-genes, names_to = c("geneset", ".value"), names_pattern = "(^.*_shoot|^.*_root|^.*_seedlings|^.*_whole)_(.*)") %>%
+#   group_by(geneset) %>%
+#   mutate(rankfdr_up=rank(FDR_up, ties.method = "first", na.last = "keep"),
+#          rankfdr_down=rank(FDR_down, ties.method = "first", na.last = "keep"),
+#          rankfc_up=rank(-abs(FC_up), ties.method = "first", na.last = "keep"),
+#          rankfc_down=rank(-abs(FC_down), ties.method = "first", na.last = "keep")
+#          ) %>% 
+#   mutate(finalrank_up=ifelse(is.na(FDR_up)|FDR_up==0, rankfc_up, rankfdr_up),
+#          finalrank_down=ifelse(is.na(FDR_down)|FDR_down==0, rankfc_down, rankfdr_down),
+#          finalrank_up=rank(finalrank_up, ties.method = "first", na.last = "keep"),
+#          finalrank_down=rank(finalrank_down, ties.method = "first", na.last = "keep")) %>% #needed because we are combing different rank lists
+#   filter(finalrank_up <=20 | finalrank_down <=20 )  %>% 
+#    ungroup() %>% 
+#    filter(FC_up>0|FC_down<0)  %>% 
+#    mutate(FC_up2=ifelse(is.na(FC_up),"",FC_up)) %>% 
+#    mutate(FC_down2=ifelse(is.na(FC_down),"",FC_down)) %>%   
+#    unite(FC,FC_up2,FC_down2,sep="") %>% 
+#    mutate(FC = as.numeric(FC)) %>%
+#    mutate(geneset2=ifelse(FC>0,str_c(geneset,"_up"),str_c(geneset,"_down"))) %>% 
+#    select(-FC, -geneset,-FDR_up, -FDR_down, -FC_up, -FC_down, -rankfdr_up, -rankfdr_down, -rankfc_up, -rankfc_down ) %>% 
+#    group_by(geneset2) %>%
+#    pivot_wider(names_from = geneset2, values_from = genes) %>%
+#   arrange(finalrank_up)
+# # 
+# colnames(GSEA_cust_rootshoot_equal.updown) # 
+# summary(!is.na(GSEA_cust_rootshoot_equal.updown))
+# 
+# 
+# # write csv
+# write_csv(GSEA_cust_rootshoot_equal.updown,path=file.path("..","output","GSEA_cust_rootshoot_up_down_equal20.csv")) 
+# GSEA_cust_rootshoot_equal.updown <- GSEA_cust_rootshoot_equal.updown %>% dplyr::select(-finalrank_up, -finalrank_down)
+# forGSEA.updown <- rbind(rep("na", ncol(GSEA_cust_rootshoot_equal.updown)), GSEA_cust_rootshoot_equal.updown)
+# forGSEA.updown
+# write_tsv(forGSEA.updown, "../output/GSEA_cust_rootshoot_equal.20.updown.gmx") #
+# 
+```
+
+# Find unique genes among all custom categories and remove them by calculating majority roles (root and shoot categories)
+```{r}
+library(tidyverse)
+filtered.custom.data <- read_csv(file.path("annotation","output","filtered.custom.data.rootshoot.csv.gz"),guess_max = 17000)
+
+# convert into 0/1 data.frame
+filtered.custom.data.TF <- filtered.custom.data %>% dplyr::select(matches("FC_up|FC_down")) %>% is.na()
+summary(!filtered.custom.data.TF)  
+# invert TRUE/FALSE
+filtered.custom.data.TF2 <- !filtered.custom.data.TF
+# conver into 1 or 0
+filtered.custom.data.TF3 <- filtered.custom.data.TF2*1
+summary(filtered.custom.data.TF3==1)
+```
+
+Alternate plotting
+```{r}
+apply(filtered.custom.data.TF3, 1, sum) %>% hist()
+```
+
+How many left after we remove...
+
+redo the conversion so that we keep gene names
+```{r}
+filtered.custom.data.numeric <- filtered.custom.data %>%
+  select(genes, matches("FC_up|FC_down")) %>%
+  mutate_at(vars(-genes), ~ as.numeric(!is.na(.)))
+```
+
+for each gene total the number of sets that it is in
+```{r}
+filtered.custom.data.numeric <- filtered.custom.data.numeric %>% 
+  mutate(totalSetN=rowSums(filtered.custom.data.numeric[,-1])) %>%
+  select(genes, totalSetN, everything())
+head(filtered.custom.data.numeric)
+```
+
+Now we want to know if we filter by X totalSetN, how many genes are left in each gene set.
+
+```{r}
+filtered.custom.data.numericL <-
+  filtered.custom.data.numeric %>%
+  pivot_longer(-c("genes", "totalSetN"), names_to="set", values_to = "presentInSet")
+head(filtered.custom.data.numericL)
+```
+
+```{r}
+filtered.custom.data.numericL <- filtered.custom.data.numericL %>%
+  mutate(In01 = presentInSet*(totalSetN <= 1), #would be nice to automate this...
+         In02orLess = presentInSet*(totalSetN <= 2),
+         In03orLess = presentInSet*(totalSetN <= 3),
+         In05orLess = presentInSet*(totalSetN <= 5),
+         In10orLess = presentInSet*(totalSetN <= 10),
+         In20orLess = presentInSet*(totalSetN <= 20),
+         Total = presentInSet)
+
+filtered.custom.data.numericL
+```
+
+```{r}
+filtered.custom.data.numericLL <- filtered.custom.data.numericL %>%
+  pivot_longer(c(starts_with("In"),starts_with("Total", ignore.case = FALSE)), names_to = "group", values_to = "group_summary")
+head(filtered.custom.data.numericLL,20)
+```
+
+now summarize it
+```{r}
+filtered.custom.data.summary <- filtered.custom.data.numericLL %>%
+  group_by(set, group) %>%
+  summarize(genesInSet=sum(group_summary))
+filtered.custom.data.summary
+```
+
+plot it
+```{r}
+filtered.custom.data.summary %>%
+  ggplot(aes(x=set, y=genesInSet, color=group)) +
+  geom_point()  +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+plot it percentage
+```{r}
+InSet.percent.plot <- filtered.custom.data.summary %>%
+  group_by(set) %>%
+  mutate(percent_of_set=100*genesInSet/max(genesInSet)) %>%
+    ggplot(aes(x=set, y=percent_of_set, color=group)) +
+  geom_point()  +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+ggsave(InSet.percent.plot,path=file.path("..","output"),filename="InSet.percent.plot.withNishida2017.png",width=8,height=6)
+```
+
+reformat for GSEA
+# In01.forGSEA
+```{r}
+In01.forGSEA <- filtered.custom.data.numericL %>%
+  filter(totalSetN <= 1, presentInSet ==1) %>%
+  select(genes, set) %>%
+  mutate(id=1:nrow(.)) %>% 
+  pivot_wider(names_from = set, values_from = genes, values_fill = list(genes = NA)) %>%
+  select(-id) %>%
+  mutate_all(sort, na.last=TRUE) 
+In01.forGSEA <- In01.forGSEA[apply(In01.forGSEA,1,function(x) !all(is.na(x))),]
+In01.forGSEA %>% View()
+```
+
+# In02.forGSEA
+```{r}
+In02.forGSEA <- filtered.custom.data.numericL %>%
+  filter(totalSetN <= 2, presentInSet ==1) %>%
+  select(genes, set) %>%
+  mutate(id=1:nrow(.)) %>% 
+  pivot_wider(names_from = set, values_from = genes, values_fill = list(genes = NA)) %>%
+  select(-id) %>%
+  mutate_all(sort, na.last=TRUE) 
+In02.forGSEA <- In02.forGSEA[apply(In02.forGSEA,1,function(x) !all(is.na(x))),]
+In02.forGSEA %>% View()
+```
+
+# In03.forGSEA
+```{r}
+In03.forGSEA <- filtered.custom.data.numericL %>%
+  filter(totalSetN <= 3, presentInSet ==1) %>%
+  select(genes, set) %>%
+  mutate(id=1:nrow(.)) %>% 
+  pivot_wider(names_from = set, values_from = genes, values_fill = list(genes = NA)) %>%
+  select(-id) %>%
+  mutate_all(sort, na.last=TRUE) 
+In03.forGSEA <- In03.forGSEA[apply(In03.forGSEA,1,function(x) !all(is.na(x))),]
+In03.forGSEA %>% View()
+```
+
+# In05orless.forGSEA
+```{r}
+In05orless.forGSEA <- filtered.custom.data.numericL %>%
+  filter(totalSetN <= 5, presentInSet ==1) %>%
+  select(genes, set) %>%
+  mutate(id=1:nrow(.)) %>% 
+  pivot_wider(names_from = set, values_from = genes, values_fill = list(genes = NA)) %>%
+  select(-id) %>%
+  mutate_all(sort, na.last=TRUE) 
+In05orless.forGSEA <- In05orless.forGSEA[apply(In05orless.forGSEA,1,function(x) !all(is.na(x))),]
+In05orless.forGSEA %>% View()
+```
+
+# In10orless.forGSEA
+```{r}
+In10orless.forGSEA <- filtered.custom.data.numericL %>%
+  filter(totalSetN <= 10, presentInSet ==1) %>%
+  select(genes, set) %>%
+  mutate(id=1:nrow(.)) %>% 
+  pivot_wider(names_from = set, values_from = genes, values_fill = list(genes = NA)) %>%
+  select(-id) %>%
+  mutate_all(sort, na.last=TRUE) 
+In10orless.forGSEA <- In10orless.forGSEA[apply(In10orless.forGSEA,1,function(x) !all(is.na(x))),]
+In10orless.forGSEA %>% View()
+```
+
+# In20orless.forGSEA
+```{r}
+In20orless.forGSEA <- filtered.custom.data.numericL %>%
+  filter(totalSetN <= 20, presentInSet ==1) %>%
+  select(genes, set) %>%
+  mutate(id=1:nrow(.)) %>% 
+  pivot_wider(names_from = set, values_from = genes, values_fill = list(genes = NA)) %>%
+  select(-id) %>%
+  mutate_all(sort, na.last=TRUE) 
+In20orless.forGSEA <- In20orless.forGSEA[apply(In20orless.forGSEA,1,function(x) !all(is.na(x))),]
+In20orless.forGSEA %>% View()
+```
+
+# total
+```{r eval=FALSE}
+Total.forGSEA <- filtered.custom.data.numericL %>%
+  filter(presentInSet ==1) %>%
+  select(genes, set) %>%
+  mutate(id=1:nrow(.)) %>%
+  pivot_wider(names_from = set, values_from = genes, values_fill = list(genes = NA)) %>%
+  select(-id) %>%
+  mutate_all(sort, na.last=TRUE)
+Total.forGSEA <- Total.forGSEA[apply(Total.forGSEA,1,function(x) !all(is.na(x))),]
+Total.forGSEA %>% View()
+```
+
+
+OK to write it out in gmx format need a first row that is "na"
+
+```{r}
+# In01.forGSEA
+In01.forGSEA <- rbind(rep("na", ncol(In01.forGSEA)), In01.forGSEA)
+In01.forGSEA
+write_tsv(In01.forGSEA, "annotation/output/filtered.custom.data.In01.rootshoot.v3.FDR0.001.gmx") 
+# In02orless.forGSEA
+In02orless.forGSEA <- rbind(rep("na", ncol(In02orless.forGSEA)), In02orless.forGSEA)
+In02orless.forGSEA
+write_tsv(In02orless.forGSEA, "annotation/output/filtered.custom.data.In02orless.rootshoot.v3.FDR0.001.gmx") 
+
+# In03orLess.forGSEA
+In03orless.forGSEA <- rbind(rep("na", ncol(In03orless.forGSEA)), In03orless.forGSEA)
+In03orless.forGSEA
+write_tsv(In03orless.forGSEA, "annotation/output/filtered.custom.data.In03orless.rootshoot.v3.FDR0.001.gmx") 
+
+# In05orless.forGSEA
+In05orless.forGSEA <- rbind(rep("na", ncol(In05orless.forGSEA)), In05orless.forGSEA)
+In05orless.forGSEA
+write_tsv(In05orless.forGSEA, "annotation/output/filtered.custom.data.In05orless.rootshoot.v3.FDR0.001.gmx") 
+# In10orless.forGSEA
+In10orless.forGSEA <- rbind(rep("na", ncol(In10orless.forGSEA)), In10orless.forGSEA)
+In10orless.forGSEA
+write_tsv(In10orless.forGSEA, "annotation/output/filtered.custom.data.In10orless.rootshoot.v3.FDR0.001.gmx") 
+
+# In20orless.forGSEA
+In20orless.forGSEA <- rbind(rep("na", ncol(In20orless.forGSEA)), In20orless.forGSEA)
+In20orless.forGSEA
+write_tsv(In20orless.forGSEA, "annotation/output/filtered.custom.data.In20orless.rootshoot.v3.FDR0.001.gmx") 
+
+# Total.forGSEA
+Total.forGSEA <- rbind(rep("na", ncol(Total.forGSEA)), Total.forGSEA)
+Total.forGSEA
+write_tsv(In05orless.forGSEA, "annotation/output/filtered.custom.data.Total.rootshoot.v3.FDR0.001.gmx") 
+```
+
+# Function to filter by number of sets that a gene is in, and create equal sized sets (when possible)
+* error in reading csv file (050921)
+* The error is becasue FDR is all 1, which is interpretted as True/False.
+* 
+
+```{r}
+topXgenesInYsets <- function(geneCutoff, setCutoff,filtered.custom.data=custom.data,filtered.custom.data.numericL=filtered.custom.data.numericL) {
+# filtered.custom.data <- read_csv(file.path("..","output","filtered.custom.data.rootshoot.csv.gz"),guess_max = 17000)
+# howmany genes in the list?
+summary(!is.na(filtered.custom.data))
+# genes + genest combination in in01
+temp <- filtered.custom.data.numericL %>%
+  filter(totalSetN <= setCutoff, presentInSet ==1) %>%
+  select(genes, set) %>%
+  unite(genes.geneset,genes,set) %>%
+  mutate(genes.geneset=str_remove_all(genes.geneset,"_FC_up")) %>%
+  mutate(genes.geneset=str_remove_all(genes.geneset,"_FC_down")) 
+
+# top 20 selection
+ GSEA_cust_rootshoot_equal.updown <- filtered.custom.data %>%
+  dplyr::select(genes, ends_with("up"), ends_with("down"), -starts_with("exp")) %>%
+  pivot_longer(-genes, names_to = c("geneset", ".value"), names_pattern = "(^.*_shoot|^.*_root|^.*_seedlings|^.*_whole)_(.*)") %>%
+  unite(genes.geneset,genes,geneset) %>% inner_join(temp,by="genes.geneset") %>% # extract in in01
+    mutate(genes.geneset=str_replace_all(genes.geneset,"coldKilian","cold_Kilian")) %>% # fix coldKilian
+#  separate(genes.geneset,into=c("genes", "geneset"),sep="_minus|_plus|_cold|_heat",extra="merge") %>% View()
+  separate(genes.geneset,into=c("genes", "geneset"),sep=".3C_",extra="merge") %>% 
+#  mutate(genes=paste(genes,".3C")) %>% #View()
+  mutate(genes=paste(genes,".3C",sep="")) %>% # pointed out by Julin (061020)
+  group_by(geneset) %>%
+  mutate(rankfdr_up=rank(FDR_up, ties.method = "first", na.last = "keep"),
+         rankfdr_down=rank(FDR_down, ties.method = "first", na.last = "keep"),
+         rankfc_up=rank(-abs(FC_up), ties.method = "first", na.last = "keep"),
+         rankfc_down=rank(-abs(FC_down), ties.method = "first", na.last = "keep")
+         ) %>% 
+  mutate(finalrank_up=ifelse(is.na(FDR_up)|FDR_up==0, rankfc_up, rankfdr_up),
+         finalrank_down=ifelse(is.na(FDR_down)|FDR_down==0, rankfc_down, rankfdr_down),
+         finalrank_up=rank(finalrank_up, ties.method = "first", na.last = "keep"),
+         finalrank_down=rank(finalrank_down, ties.method = "first", na.last = "keep")) %>% #needed because we are combing different rank lists
+  filter(finalrank_up <= geneCutoff | finalrank_down <=geneCutoff )  %>% 
+   ungroup() %>% 
+   filter(FC_up>0|FC_down<0)  %>% 
+   mutate(FC_up2=ifelse(is.na(FC_up),"",FC_up)) %>% 
+   mutate(FC_down2=ifelse(is.na(FC_down),"",FC_down)) %>%   
+   unite(FC,FC_up2,FC_down2,sep="") %>% 
+   mutate(FC = as.numeric(FC)) %>%
+   mutate(geneset2=ifelse(FC>0,str_c(geneset,"_up"),str_c(geneset,"_down"))) %>% 
+   select(-FC, -geneset,-FDR_up, -FDR_down, -FC_up, -FC_down, -rankfdr_up, -rankfdr_down, -rankfc_up, -rankfc_down ) %>% 
+   group_by(geneset2) %>%
+   pivot_wider(names_from = geneset2, values_from = genes) %>%
+  arrange(finalrank_up) 
+# 
+colnames(GSEA_cust_rootshoot_equal.updown) # 
+# 
+summary(is.na(GSEA_cust_rootshoot_equal.updown)) # 
+
+
+GSEA_cust_rootshoot_equal.updown <- GSEA_cust_rootshoot_equal.updown %>% dplyr::select(-finalrank_up, -finalrank_down) %>% mutate_all(sort, na.last=TRUE) 
+#
+GSEA_cust_rootshoot_equal.updown <- GSEA_cust_rootshoot_equal.updown[apply(GSEA_cust_rootshoot_equal.updown,1,function(x) !all(is.na(x))),]
+#
+summary(is.na(GSEA_cust_rootshoot_equal.updown)) # 
+
+forGSEA.updown <- rbind(rep("na", ncol(GSEA_cust_rootshoot_equal.updown)), GSEA_cust_rootshoot_equal.updown)
+
+#convert NA to ""
+forGSEA.updown <- forGSEA.updown %>% 
+  mutate_all(str_replace_na) %>%
+  mutate_all(str_replace, pattern="NA", replacement="")
+
+# forGSEA.updown
+write_tsv(forGSEA.updown, str_c("annotation/output/GSEA_cust_rootshoot_In",setCutoff, ".equal.", geneCutoff, ".updown.v3.gmx") )
+return(forGSEA.updown)
+}
+```
+
+```{r}
+custom.data=read_csv(file.path("annotation","output","filtered.custom.data.rootshoot.csv.gz"),guess_max = 17000)
+# top20
+topXgenesInYsets(20, 1) %>% View()
+topXgenesInYsets(20, 2) %>% View()
+topXgenesInYsets(20, 3) %>% View()
+topXgenesInYsets(20, 5) %>% View()
+topXgenesInYsets(20, 10) %>% View()
+topXgenesInYsets(20, 20) %>% View()
+
+# top50
+topXgenesInYsets(50, 1) %>% View()
+topXgenesInYsets(50, 2) %>% View()
+topXgenesInYsets(50, 3) %>% View()
+topXgenesInYsets(50, 5) %>% View()
+topXgenesInYsets(50, 10) %>% View()
+topXgenesInYsets(50, 20) %>% View()
+
+# top100
+topXgenesInYsets(100, 1) %>% View()
+topXgenesInYsets(100, 2) %>% View()
+topXgenesInYsets(100, 3) %>% View()
+topXgenesInYsets(100, 5) %>% View()
+topXgenesInYsets(100, 10) %>% View()
+topXgenesInYsets(100, 20) %>% View()
+
+```
+
+
+# annotate filtered.custom.data.numericL
+
+```{r}
+# annotation file for v3.0annotation
+Br.v3.0.At.BLAST <- read_csv(file.path("..","..","..","Annotation","output","v3.0annotation","Brapa_v3.0_annotated.csv")) 
+# This annotation is redundant with name (Br grene). Eg 
+Br.v3.0.At.BLAST %>% filter(name=="BraA01g040570.3C")
+# reduce the redundancy (112418)
+Br.v3.0anno.At.BLAST.highscore <- Br.v3.0.At.BLAST %>% group_by(name) %>% arrange(desc(score)) %>% slice(1)
+# reduce the redundancy for Br (051120) (do not use)
+#Br.v3.0anno.At.BLAST.highscore.Br <- Br.v3.0.At.BLAST %>% group_by(AGI) %>% arrange(desc(score)) %>% slice(1) #%>% View()
+```
+
+```{r}
+# bHLH039 ("") as an minusFe up marker
+filtered.custom.data.numericL %>% left_join(Br.v3.0anno.At.BLAST.highscore, by=c("genes"="name")) %>% filter(genes=="BraA04g003660.3C") %>% View() # not in In01. Found in In02 because minusFe has two datasets (minusFe_Kim2019_root_FC_up and minusFe_Kailasam2019_root_FC_up), so that In01 is not good.
+```
+
