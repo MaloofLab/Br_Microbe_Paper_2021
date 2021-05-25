@@ -1,0 +1,223 @@
+name,value,category,over_represented_pvalue,under_represented_pvalue,numDEInCat,numInCat,over_represented_padjust
+leaf.voom5.module.signedhybrid_antiquewhite4,no enriched GO,NA,NA,NA,NA,NA,NA
+leaf.voom5.module.signedhybrid_bisque4,no enriched GO,NA,NA,NA,NA,NA,NA
+leaf.voom5.module.signedhybrid_black,NA,minusMg_Niu_2016_shoot_FC_up,1.0628936711980163e-28,1,78,1550,4.889310887510875e-27
+leaf.voom5.module.signedhybrid_black,NA,coldKilian_2013_shoot_FC_up,3.0124610433097965e-5,0.9999950597547115,10,185,6.928660399612532e-4
+leaf.voom5.module.signedhybrid_black,NA,heat_Kilian_2013_root_FC_down,9.427451056242338e-4,0.9997599643505267,10,336,0.014455424952904918
+leaf.voom5.module.signedhybrid_black,NA,coldKilian_2013_root_FC_down,0.0022919884671790975,0.999211097893354,13,458,0.026357867372559622
+leaf.voom5.module.signedhybrid_black,NA,plusMg_Niu_2016_shoot_FC_up,0.0047424948135401076,0.9988658766609648,7,226,0.04363095228456899
+leaf.voom5.module.signedhybrid_blue,NA,plusMg_Niu_2016_shoot_FC_down,1.2720246508315502e-4,0.9999612582747962,17,201,0.005851313393825131
+leaf.voom5.module.signedhybrid_brown,NA,minusMg_Niu_2016_shoot_FC_up,6.328568208082225e-60,1,155,1550,2.9111413757178236e-58
+leaf.voom5.module.signedhybrid_brown,NA,minusPi_3d_Liu_2016_shoot_FC_down,1.101510246658624e-29,1,35,135,2.533473567314835e-28
+leaf.voom5.module.signedhybrid_brown,NA,coldKilian_2013_shoot_FC_up,6.020893097301628e-8,0.9999999892301179,18,185,9.232036082529163e-7
+leaf.voom5.module.signedhybrid_brown,NA,plusMg_Niu_2016_shoot_FC_down,2.009142481892245e-4,0.9999474624767176,13,201,0.0023105138541760816
+leaf.voom5.module.signedhybrid_brown4,NA,heat_Kilian_2013_shoot_FC_down,4.589423179964968e-4,0.999941337499712,6,155,0.021111346627838853
+leaf.voom5.module.signedhybrid_coral1,NA,minusMg_Niu_2016_shoot_FC_up,1.2360098379290258e-4,0.999972232789103,12,1550,0.005685645254473518
+leaf.voom5.module.signedhybrid_coral1,NA,minusPi_3d_Liu_2016_shoot_FC_down,4.110881556544674e-4,0.9999738133702445,4,135,0.00945502758005275
+leaf.voom5.module.signedhybrid_coral2,NA,minusMg_Niu_2016_shoot_FC_up,5.622476601212019e-5,0.9999904486679333,10,1550,0.0025863392365575288
+leaf.voom5.module.signedhybrid_cyan,NA,minusMg_Niu_2016_shoot_FC_down,2.7805488973933203e-6,0.9999990406147636,30,818,1.2790524928009273e-4
+leaf.voom5.module.signedhybrid_darkgreen,NA,minusMg_Niu_2016_shoot_FC_up,2.296730948341842e-11,1,39,1550,1.0564962362372472e-9
+leaf.voom5.module.signedhybrid_darkgreen,NA,minusPi_3d_Liu_2016_shoot_FC_down,3.1253517489994994e-7,0.9999999701590976,10,135,7.188309022698848e-6
+leaf.voom5.module.signedhybrid_darkgreen,NA,coldKilian_2013_shoot_FC_up,2.064266722763705e-6,0.999999753841419,10,185,3.165208974904348e-5
+leaf.voom5.module.signedhybrid_darkgrey,no enriched GO,NA,NA,NA,NA,NA,NA
+leaf.voom5.module.signedhybrid_darkmagenta,no enriched GO,NA,NA,NA,NA,NA,NA
+leaf.voom5.module.signedhybrid_darkolivegreen,NA,minusMg_Niu_2016_shoot_FC_up,3.185354223268856e-18,1,39,1550,1.4652629427036738e-16
+leaf.voom5.module.signedhybrid_darkolivegreen,NA,coldKilian_2013_shoot_FC_up,2.18726816016771e-4,0.9999754063109212,6,185,0.005030716768385733
+leaf.voom5.module.signedhybrid_darkorange,no enriched GO,NA,NA,NA,NA,NA,NA
+leaf.voom5.module.signedhybrid_darkorange2,no enriched GO,NA,NA,NA,NA,NA,NA
+leaf.voom5.module.signedhybrid_darkred,NA,minusMg_Niu_2016_shoot_FC_up,8.072922804547261e-4,0.9996506271203524,24,1550,0.0371354449009174
+leaf.voom5.module.signedhybrid_darkseagreen4,NA,coldKilian_2013_root_FC_up,1.538928588627136e-5,0.9999995915752364,4,61,7.079071507684826e-4
+leaf.voom5.module.signedhybrid_darkslateblue,NA,coldKilian_2013_shoot_FC_up,3.8070265757197074e-4,0.9999641368013837,5,185,0.00922714947257854
+leaf.voom5.module.signedhybrid_darkslateblue,NA,minusMg_Niu_2016_shoot_FC_up,4.0118041185124083e-4,0.9998827599874772,14,1550,0.00922714947257854
+leaf.voom5.module.signedhybrid_darkslateblue,NA,minusPi_3d_Liu_2016_shoot_FC_down,0.0015838315172146697,0.9998538455104362,4,135,0.021774026039194285
+leaf.voom5.module.signedhybrid_darkslateblue,NA,heat_Kilian_2013_shoot_FC_up,0.00189339356862559,0.9998927969381645,3,79,0.021774026039194285
+leaf.voom5.module.signedhybrid_darkturquoise,NA,minusMg_Niu_2016_shoot_FC_up,2.1066994517227858e-4,0.9999172486829604,24,1550,0.009690817477924815
+leaf.voom5.module.signedhybrid_floralwhite,NA,minusMg_Niu_2016_shoot_FC_up,1.3710308178999515e-4,0.9999600585724099,16,1550,0.006306741762339777
+leaf.voom5.module.signedhybrid_green,NA,minusMg_Niu_2016_shoot_FC_up,4.123571175984894e-12,1,68,1550,1.896842740953051e-10
+leaf.voom5.module.signedhybrid_greenyellow,NA,minusMg_Niu_2016_shoot_FC_up,6.24343340644809e-29,1,75,1550,2.871979366966121e-27
+leaf.voom5.module.signedhybrid_greenyellow,NA,plusMg_Niu_2016_shoot_FC_up,2.483559390375457e-9,1,15,226,5.712186597863551e-8
+leaf.voom5.module.signedhybrid_greenyellow,NA,coldKilian_2013_root_FC_down,3.7434317197753524e-5,0.9999900355258247,16,458,5.739928636988874e-4
+leaf.voom5.module.signedhybrid_grey,NA,minusMg_Niu_2016_shoot_FC_up,1.5692577943888052e-10,1,115,1550,7.218585854188504e-9
+leaf.voom5.module.signedhybrid_grey,NA,coldKilian_2013_root_FC_down,3.2039303808307344e-5,0.9999858382931676,38,458,7.369039875910689e-4
+leaf.voom5.module.signedhybrid_grey,NA,plusMg_Niu_2016_shoot_FC_down,0.0029785019865444153,0.9987554649688569,18,201,0.045670363793681036
+leaf.voom5.module.signedhybrid_grey60,NA,minusMg_Niu_2016_shoot_FC_down,5.723090991958508e-6,0.9999982188010982,24,818,2.632621856300914e-4
+leaf.voom5.module.signedhybrid_honeydew1,no enriched GO,NA,NA,NA,NA,NA,NA
+leaf.voom5.module.signedhybrid_ivory,no enriched GO,NA,NA,NA,NA,NA,NA
+leaf.voom5.module.signedhybrid_lavenderblush3,NA,minusMg_Niu_2016_shoot_FC_down,0.001011604741679818,0.9998191642623641,7,818,0.04653381811727163
+leaf.voom5.module.signedhybrid_lightcyan,no enriched GO,NA,NA,NA,NA,NA,NA
+leaf.voom5.module.signedhybrid_lightcyan1,NA,minusMg_Niu_2016_shoot_FC_down,9.390093452744918e-5,0.9999760303334505,14,818,0.004319442988262662
+leaf.voom5.module.signedhybrid_lightcyan1,NA,minusPi_3d_Liu_2016_shoot_FC_down,7.118350661002799e-4,0.9999230752964618,5,135,0.016372206520306437
+leaf.voom5.module.signedhybrid_lightcyan1,NA,minusN_Peng_2007_whole_FC_down,0.0011178382109324925,0.9999844126729134,2,13,0.017140185900964885
+leaf.voom5.module.signedhybrid_lightgreen,no enriched GO,NA,NA,NA,NA,NA,NA
+leaf.voom5.module.signedhybrid_lightpink4,no enriched GO,NA,NA,NA,NA,NA,NA
+leaf.voom5.module.signedhybrid_lightsteelblue1,no enriched GO,NA,NA,NA,NA,NA,NA
+leaf.voom5.module.signedhybrid_lightyellow,NA,minusMg_Niu_2016_shoot_FC_up,6.151928832179105e-20,1,51,1550,2.8298872628023885e-18
+leaf.voom5.module.signedhybrid_magenta,NA,minusMg_Niu_2016_shoot_FC_up,3.183468655202764e-4,0.9998445857736513,36,1550,0.014643955813932713
+leaf.voom5.module.signedhybrid_maroon,NA,minusPi_3d_Liu_2016_shoot_FC_down,1.4932407435064385e-6,0.9999999327188349,6,135,6.868907420129617e-5
+leaf.voom5.module.signedhybrid_mediumorchid,no enriched GO,NA,NA,NA,NA,NA,NA
+leaf.voom5.module.signedhybrid_mediumpurple3,no enriched GO,NA,NA,NA,NA,NA,NA
+leaf.voom5.module.signedhybrid_midnightblue,NA,minusPi_1d_Liu_2016_shoot_FC_down,5.598337922760218e-6,0.9999995762409961,7,73,2.5752354444697005e-4
+leaf.voom5.module.signedhybrid_navajowhite2,no enriched GO,NA,NA,NA,NA,NA,NA
+leaf.voom5.module.signedhybrid_orange,no enriched GO,NA,NA,NA,NA,NA,NA
+leaf.voom5.module.signedhybrid_orangered4,no enriched GO,NA,NA,NA,NA,NA,NA
+leaf.voom5.module.signedhybrid_paleturquoise,no enriched GO,NA,NA,NA,NA,NA,NA
+leaf.voom5.module.signedhybrid_palevioletred3,no enriched GO,NA,NA,NA,NA,NA,NA
+leaf.voom5.module.signedhybrid_pink,NA,minusMg_Niu_2016_shoot_FC_down,2.3475136688372436e-7,0.9999999236424142,34,818,1.079856287665132e-5
+leaf.voom5.module.signedhybrid_plum,NA,minusMg_Niu_2016_shoot_FC_up,2.1673540242957206e-09,0.999999999817744,14,1550,9.969828511760315e-8
+leaf.voom5.module.signedhybrid_plum1,NA,plusMg_Niu_2016_shoot_FC_up,3.404367274304097e-5,0.999995754441519,8,226,0.0015660089461798845
+leaf.voom5.module.signedhybrid_plum2,NA,minusMg_Niu_2016_shoot_FC_down,3.424666306086259e-6,0.9999994597518969,12,818,1.575346500799679e-4
+leaf.voom5.module.signedhybrid_purple,no enriched GO,NA,NA,NA,NA,NA,NA
+leaf.voom5.module.signedhybrid_red,NA,minusMg_Niu_2016_shoot_FC_up,3.07381576399983e-4,0.9998411672218259,42,1550,0.014139552514399217
+leaf.voom5.module.signedhybrid_red,NA,coldKilian_2013_shoot_FC_up,7.508578684188661e-4,0.9998162504814503,10,185,0.01726973097363392
+leaf.voom5.module.signedhybrid_royalblue,NA,minusN_Peng_2007_whole_FC_up,8.691653077913069e-6,0.9999996524234411,5,38,3.9981604158400116e-4
+leaf.voom5.module.signedhybrid_saddlebrown,no enriched GO,NA,NA,NA,NA,NA,NA
+leaf.voom5.module.signedhybrid_salmon,NA,minusMg_Niu_2016_shoot_FC_up,4.41945302671612e-10,1,42,1550,2.0329483922894152e-8
+leaf.voom5.module.signedhybrid_salmon4,NA,minusMg_Niu_2016_shoot_FC_down,3.903048096090006e-8,0.9999999942164142,16,818,1.795402124201403e-6
+leaf.voom5.module.signedhybrid_sienna3,no enriched GO,NA,NA,NA,NA,NA,NA
+leaf.voom5.module.signedhybrid_skyblue,NA,coldKilian_2013_root_FC_down,4.998219468039861e-4,0.9998834837272469,10,458,0.022991809552983362
+leaf.voom5.module.signedhybrid_skyblue,NA,minusPi_1d_Liu_2016_shoot_FC_up,0.0019147373894845996,0.9998174213917163,4,53,0.044038959958145794
+leaf.voom5.module.signedhybrid_skyblue1,no enriched GO,NA,NA,NA,NA,NA,NA
+leaf.voom5.module.signedhybrid_skyblue2,NA,minusMg_Niu_2016_shoot_FC_up,1.4675558289838718e-4,0.9999721364921274,10,1550,0.004535296220520995
+leaf.voom5.module.signedhybrid_skyblue2,NA,plusAl_Ligaba-OSena_2017_shoot_FC_up,1.97186792196565e-4,0.9999989711054692,2,8,0.004535296220520995
+leaf.voom5.module.signedhybrid_skyblue3,NA,minusMg_Niu_2016_shoot_FC_down,2.458638693969059e-8,0.9999999963848996,16,818,1.130973799225767e-6
+leaf.voom5.module.signedhybrid_skyblue3,NA,heat_Kilian_2013_shoot_FC_down,9.603751139892914e-4,0.9999219728790812,4,155,0.022088627621753704
+leaf.voom5.module.signedhybrid_steelblue,NA,minusMg_Niu_2016_shoot_FC_up,2.2973061463287607e-6,0.9999992916650332,26,1550,1.0567608273112299e-4
+leaf.voom5.module.signedhybrid_steelblue,NA,plusMg_Niu_2016_shoot_FC_up,0.001217107895588998,0.9997731049387555,7,226,0.027993481598546952
+leaf.voom5.module.signedhybrid_tan,NA,minusMg_Niu_2016_shoot_FC_down,3.2109435097022063e-7,0.9999999053851174,28,818,1.4770340144630148e-5
+leaf.voom5.module.signedhybrid_tan,NA,plusMg_Niu_2016_shoot_FC_down,3.4207381630818045e-6,0.9999994554350474,12,201,7.86769777508815e-5
+leaf.voom5.module.signedhybrid_tan,NA,heat_Kilian_2013_root_FC_down,5.100019490066128e-4,0.9998608515856473,12,336,0.007820029884768064
+leaf.voom5.module.signedhybrid_tan,NA,minusPi_3d_Liu_2016_shoot_FC_down,7.864964476632004e-4,0.9998645177371764,7,135,0.009044709148126804
+leaf.voom5.module.signedhybrid_thistle1,no enriched GO,NA,NA,NA,NA,NA,NA
+leaf.voom5.module.signedhybrid_thistle2,no enriched GO,NA,NA,NA,NA,NA,NA
+leaf.voom5.module.signedhybrid_turquoise,NA,minusMg_Niu_2016_shoot_FC_down,8.358334933736454e-54,1,187,818,3.844834069518769e-52
+leaf.voom5.module.signedhybrid_turquoise,NA,minusFe_Kailasam2019_shoot_FC_down,1.4379158472944913e-7,0.9999999817493882,14,48,3.3072064487773297e-6
+leaf.voom5.module.signedhybrid_turquoise,NA,minusN_Peng_2007_whole_FC_down,6.131204111953445e-4,0.9999499503674281,5,13,0.009401179638328615
+leaf.voom5.module.signedhybrid_turquoise,NA,plusMg_Niu_2016_shoot_FC_down,0.0011041302045993236,0.9995086284091628,25,201,0.012697497352892221
+leaf.voom5.module.signedhybrid_turquoise,NA,coldKilian_2013_shoot_FC_down,0.0015417048232956344,0.9993689240318484,20,152,0.014183684374319836
+leaf.voom5.module.signedhybrid_violet,NA,minusMg_Niu_2016_shoot_FC_up,9.785439623097043e-5,0.9999664919995077,21,1550,0.00450130222662464
+leaf.voom5.module.signedhybrid_white,NA,minusMg_Niu_2016_shoot_FC_down,1.4611482133476483e-4,0.9999565163820213,16,818,0.006721281781399182
+leaf.voom5.module.signedhybrid_yellow,NA,minusMg_Niu_2016_shoot_FC_up,4.2814710538427514e-18,1,89,1550,1.9694766847676656e-16
+leaf.voom5.module.signedhybrid_yellow,NA,coldKilian_2013_shoot_FC_up,0.002273024125920987,0.9993082056040854,11,185,0.036328955605381484
+leaf.voom5.module.signedhybrid_yellow,NA,plusMg_Niu_2016_shoot_FC_up,0.0023692797133944444,0.9991881349333808,13,226,0.036328955605381484
+leaf.voom5.module.signedhybrid_yellow4,NA,minusMg_Niu_2016_shoot_FC_down,0,1,15,818,0
+leaf.voom5.module.signedhybrid_yellowgreen,NA,plusAl_Ligaba-OSena_2017_shoot_FC_up,9.061490796431525e-4,0.9999896365703517,2,8,0.04168285766358502
+root.voom5.module.signedhybrid_bisque4,no enriched GO,NA,NA,NA,NA,NA,NA
+root.voom5.module.signedhybrid_black,NA,minusMg_Niu_2016_shoot_FC_up,6.442065049994178e-11,1,48,1550,2.9633499229973218e-9
+root.voom5.module.signedhybrid_black,NA,plusMg_Niu_2016_shoot_FC_down,9.979104041070595e-4,0.9997686325139098,9,201,0.02295193929446237
+root.voom5.module.signedhybrid_black,NA,minusPi_3d_Liu_2016_shoot_FC_down,0.00206147948952124,0.9995804074527933,7,135,0.03160935217265902
+root.voom5.module.signedhybrid_blue,NA,minusMg_Niu_2016_shoot_FC_up,3.981290179534458e-72,1,296,1550,1.831393482585851e-70
+root.voom5.module.signedhybrid_blue,NA,minusPi_3d_Liu_2016_shoot_FC_down,4.8572185125573106e-14,1,34,135,1.1171602578881815e-12
+root.voom5.module.signedhybrid_blue,NA,heat_Kilian_2013_root_FC_down,2.575359296532426e-13,1,55,336,3.948884254683053e-12
+root.voom5.module.signedhybrid_blue,NA,minusMg_Niu_2016_shoot_FC_down,2.760184203191963e-8,1,84,818,3.1742118336707575e-7
+root.voom5.module.signedhybrid_blue,NA,plusMg_Niu_2016_root_FC_down,3.467920529171243e-5,0.9999925170725577,14,60,2.891411568639863e-4
+root.voom5.module.signedhybrid_blue,NA,plusMg_Niu_2016_shoot_FC_down,3.771406393878082e-5,0.9999860925086367,27,201,2.891411568639863e-4
+root.voom5.module.signedhybrid_blue,NA,coldKilian_2013_root_FC_down,3.2899040931537834e-4,0.9998227526849459,48,458,0.0019433160667751024
+root.voom5.module.signedhybrid_blue,NA,minusN_Nishida_2017_root_FC_down,3.379680116130613e-4,0.9998718106560346,22,152,0.0019433160667751024
+root.voom5.module.signedhybrid_blue,NA,heat_Kilian_2013_shoot_FC_up,8.272985038428654e-4,0.9997588672740823,13,79,0.004228414575196867
+root.voom5.module.signedhybrid_blue,NA,coldKilian_2013_shoot_FC_up,0.0015454771157206496,0.999333547762532,22,185,0.007109194732314987
+root.voom5.module.signedhybrid_blue,NA,minusPi_1d_Liu_2016_shoot_FC_down,0.0031060284589369425,0.9989995833545532,12,73,0.012988846282827213
+root.voom5.module.signedhybrid_brown,NA,minusMg_Niu_2016_shoot_FC_up,4.8208125104228735e-21,1,103,1550,2.217573754794522e-19
+root.voom5.module.signedhybrid_brown,NA,coldKilian_2013_root_FC_down,2.737123139795157e-7,0.999999914163766,31,458,6.295383221528861e-6
+root.voom5.module.signedhybrid_brown,NA,minusPi_3d_Liu_2016_shoot_FC_down,1.3979420238967325e-6,0.9999997410015601,15,135,2.143511103308323e-5
+root.voom5.module.signedhybrid_brown,NA,plusMg_Niu_2016_shoot_FC_down,1.425425408348271e-5,0.9999963706897659,17,201,1.6392392196005115e-4
+root.voom5.module.signedhybrid_brown,NA,minusPi_1d_Liu_2016_root_FC_down,4.0044411500233504e-5,0.9999980749898518,5,16,3.684085858021482e-4
+root.voom5.module.signedhybrid_brown,NA,coldKilian_2013_shoot_FC_up,6.074050938315978e-4,0.999821883641773,13,185,0.004656772386042249
+root.voom5.module.signedhybrid_brown4,NA,minusMg_Niu_2016_shoot_FC_up,1.0744871994761463e-6,0.9999997960668954,16,1550,4.942641117590273e-5
+root.voom5.module.signedhybrid_cyan,NA,minusMn_Rodriguez-Celma_2016_root_FC_down,7.863896579552644e-5,0.9999927598056348,6,96,0.003617392426594216
+root.voom5.module.signedhybrid_darkgreen,NA,minusK_Nishida_2017_root_FC_down,4.0217034625109725e-11,1,9,56,1.8499835927550474e-9
+root.voom5.module.signedhybrid_darkgrey,NA,heat_Kilian_2013_root_FC_down,2.7897767156783182e-5,0.9999954627889556,10,336,0.0012832972892120264
+root.voom5.module.signedhybrid_darkgrey,NA,minusMg_Niu_2016_shoot_FC_up,6.176790996546017e-5,0.9999788567204799,22,1550,0.001420661929205584
+root.voom5.module.signedhybrid_darkmagenta,NA,minusN_Nishida_2017_root_FC_up,7.072941268151632e-6,0.9999991558932253,9,272,3.253552983349751e-4
+root.voom5.module.signedhybrid_darkolivegreen,NA,minusN_Nishida_2017_root_FC_up,1.4874453431365463e-5,0.9999980490345866,9,272,6.842248578428113e-4
+root.voom5.module.signedhybrid_darkorange,NA,minusMg_Niu_2016_shoot_FC_up,2.590588255815746e-7,0.9999999293911044,26,1550,1.191670597675243e-5
+root.voom5.module.signedhybrid_darkorange,NA,minusP_Nishida_2017_root_FC_up,2.4645354223726886e-4,0.9999935027186535,3,23,0.005668431471457184
+root.voom5.module.signedhybrid_darkorange,NA,coldKilian_2013_shoot_FC_down,0.0013916672398545603,0.9998239838670014,5,152,0.021338897677769926
+root.voom5.module.signedhybrid_darkorange,NA,coldKilian_2013_root_FC_up,0.004309542261279479,0.999673891189632,3,61,0.049559736004714014
+root.voom5.module.signedhybrid_darkorange2,NA,minusMg_Niu_2016_shoot_FC_up,5.866568048497998e-8,0.9999999904880964,17,1550,2.698621302309079e-6
+root.voom5.module.signedhybrid_darkred,no enriched GO,NA,NA,NA,NA,NA,NA
+root.voom5.module.signedhybrid_darkslateblue,no enriched GO,NA,NA,NA,NA,NA,NA
+root.voom5.module.signedhybrid_darkturquoise,NA,minusMn_Rodriguez-Celma_2016_root_FC_down,1.7436388206049243e-5,0.9999987804605938,6,96,8.020738574782652e-4
+root.voom5.module.signedhybrid_darkturquoise,NA,minusN_Nishida_2017_root_FC_down,2.4258641979903246e-4,0.9999722259763912,6,152,0.005579487655377747
+root.voom5.module.signedhybrid_floralwhite,no enriched GO,NA,NA,NA,NA,NA,NA
+root.voom5.module.signedhybrid_green,no enriched GO,NA,NA,NA,NA,NA,NA
+root.voom5.module.signedhybrid_greenyellow,NA,minusMg_Niu_2016_shoot_FC_up,2.183967235985014e-5,0.9999917452844559,29,1550,0.0010046249285531066
+root.voom5.module.signedhybrid_greenyellow,NA,plusMg_Niu_2016_root_FC_up,8.642916470760314e-5,0.999994234939562,5,55,0.001987870788274872
+root.voom5.module.signedhybrid_greenyellow,NA,coldKilian_2013_shoot_FC_down,0.0020862200116150676,0.9996380128234988,6,152,0.03198870684476437
+root.voom5.module.signedhybrid_greenyellow,NA,heat_Kilian_2013_shoot_FC_up,0.003475637007110844,0.9996024021740834,4,79,0.039969825581774705
+root.voom5.module.signedhybrid_grey,NA,coldKilian_2013_root_FC_down,3.786761488992343e-18,1,117,458,1.7419102849364778e-16
+root.voom5.module.signedhybrid_grey,NA,minusFe_Kailasam2019_root_FC_up,5.598456310396077e-13,1,31,70,1.2876449513910978e-11
+root.voom5.module.signedhybrid_grey,NA,minusN_Nishida_2017_root_FC_down,1.952315234435035e-11,1,47,152,2.9935500261337204e-10
+root.voom5.module.signedhybrid_grey,NA,coldKilian_2013_root_FC_up,1.4732205639714634e-7,0.9999999697506616,23,61,1.694203648567183e-6
+root.voom5.module.signedhybrid_grey,NA,minusK_Nishida_2017_root_FC_down,5.402776741260021e-7,0.9999998925069592,20,56,4.970554601959219e-6
+root.voom5.module.signedhybrid_grey,NA,minusMg_Niu_2016_shoot_FC_up,1.4233799494988874e-6,0.999999226551835,231,1550,1.0912579612824804e-5
+root.voom5.module.signedhybrid_grey,NA,coldKilian_2013_shoot_FC_down,9.548646973501115e-6,0.9999962836488437,37,152,6.274825154015019e-5
+root.voom5.module.signedhybrid_grey,NA,heat_Kilian_2013_root_FC_up,4.767896245471598e-5,0.9999843188869955,24,90,2.7415403411461687e-4
+root.voom5.module.signedhybrid_grey,NA,minusFe_Kailasam2019_root_FC_down,1.4634998043221262e-4,0.999955513120716,19,67,7.480110110979755e-4
+root.voom5.module.signedhybrid_grey,NA,plusMg_Niu_2016_root_FC_up,2.6277940681035687e-4,0.9999258265956863,16,55,0.0012087852713276415
+root.voom5.module.signedhybrid_grey,NA,minusMn_Rodriguez-Celma_2016_root_FC_down,5.125808232965331e-4,0.9998061551093839,22,96,0.0021227327509694433
+root.voom5.module.signedhybrid_grey,NA,minusMg_Niu_2016_shoot_FC_down,5.537563698181157e-4,0.9996143252310157,128,818,0.0021227327509694433
+root.voom5.module.signedhybrid_grey,NA,minusN_Nishida_2017_root_FC_up,0.0029517823339985086,0.9982650459949166,47,272,0.010444768258763953
+root.voom5.module.signedhybrid_grey,NA,minusMg_Niu_2016_root_FC_down,0.005869047058055153,0.9978151737513368,14,62,0.0183213966959743
+root.voom5.module.signedhybrid_grey,NA,minusK_Nishida_2017_root_FC_up,0.005974368487817705,0.9977877443809688,14,58,0.0183213966959743
+root.voom5.module.signedhybrid_grey,NA,minusN_Peng_2007_whole_FC_up,0.00659142754130384,0.9980260576834742,10,38,0.01895035418124854
+root.voom5.module.signedhybrid_grey,NA,minusS_Nishida_2017_root_FC_up,0.008278731595098931,1,2,2,0.022401273727914756
+root.voom5.module.signedhybrid_grey,NA,plusMg_Niu_2016_shoot_FC_up,0.009355836560127596,0.9944044726172456,39,226,0.022949631976790345
+root.voom5.module.signedhybrid_grey,NA,minusMg_Niu_2016_root_FC_up,0.00947919581650036,0.9969765272416689,10,40,0.022949631976790345
+root.voom5.module.signedhybrid_grey,NA,minusPi_3d_Liu_2016_root_FC_up,0.01281224135975728,0.994497993991049,15,76,0.02946815512744174
+root.voom5.module.signedhybrid_grey,NA,minusPi_1d_Liu_2016_root_FC_up,0.01482685443118597,0.996695328782711,6,19,0.032477871611169266
+root.voom5.module.signedhybrid_grey,NA,heat_Kilian_2013_root_FC_down,0.016626801916609833,0.9888518904152241,53,336,0.03476513128018419
+root.voom5.module.signedhybrid_grey60,NA,minusN_Peng_2007_whole_FC_up,1.1572043023862345e-4,0.9999948748108985,4,38,0.005323139790976678
+root.voom5.module.signedhybrid_grey60,NA,minusN_Nishida_2017_root_FC_up,5.470467148276732e-4,0.9998962832564353,8,272,0.012582074441036484
+root.voom5.module.signedhybrid_ivory,no enriched GO,NA,NA,NA,NA,NA,NA
+root.voom5.module.signedhybrid_lightcyan,NA,minusN_Nishida_2017_root_FC_up,1.3289589917292283e-5,0.9999977843074124,11,272,6.11321136195445e-4
+root.voom5.module.signedhybrid_lightcyan1,no enriched GO,NA,NA,NA,NA,NA,NA
+root.voom5.module.signedhybrid_lightgreen,no enriched GO,NA,NA,NA,NA,NA,NA
+root.voom5.module.signedhybrid_lightsteelblue1,NA,minusMg_Niu_2016_shoot_FC_up,9.0525931372843e-5,0.9999771693634593,14,1550,0.004164192843150778
+root.voom5.module.signedhybrid_lightyellow,NA,minusFe_Kailasam2019_root_FC_up,9.382503155606999e-4,0.9999253748191109,4,70,0.0431595145157922
+root.voom5.module.signedhybrid_magenta,NA,minusPi_1d_Liu_2016_shoot_FC_up,6.139474584410179e-6,0.9999995394943497,7,53,2.824158308828682e-4
+root.voom5.module.signedhybrid_magenta,NA,plusMg_Niu_2016_shoot_FC_up,2.4165889154315117e-5,0.9999957044041973,11,226,5.558154505492477e-4
+root.voom5.module.signedhybrid_magenta,NA,minusPi_3d_Liu_2016_root_FC_up,0.002762603826841472,0.9997036606066271,4,76,0.0320532190264704
+root.voom5.module.signedhybrid_magenta,NA,minusPi_1d_Liu_2016_shoot_FC_down,0.002787236437084383,0.9997006775453886,4,73,0.0320532190264704
+root.voom5.module.signedhybrid_mediumpurple3,no enriched GO,NA,NA,NA,NA,NA,NA
+root.voom5.module.signedhybrid_midnightblue,NA,coldKilian_2013_root_FC_down,1.599272023126646e-4,0.9999616278857802,12,458,0.004523189270429268
+root.voom5.module.signedhybrid_midnightblue,NA,minusMg_Niu_2016_shoot_FC_up,1.966604030621421e-4,0.999921290003448,25,1550,0.004523189270429268
+root.voom5.module.signedhybrid_orange,no enriched GO,NA,NA,NA,NA,NA,NA
+root.voom5.module.signedhybrid_orangered4,NA,minusPi_3d_Liu_2016_root_FC_up,9.951881657744437e-5,0.9999956493213568,4,76,0.004577865562562441
+root.voom5.module.signedhybrid_paleturquoise,NA,minusMg_Niu_2016_shoot_FC_up,3.9505952002278684e-4,0.9998577503244958,19,1550,0.018172737921048194
+root.voom5.module.signedhybrid_pink,NA,minusMg_Niu_2016_shoot_FC_up,6.825273934266097e-4,0.999690752963158,27,1550,0.02820609014969936
+root.voom5.module.signedhybrid_pink,NA,heat_Kilian_2013_root_FC_up,0.0012263517456391026,0.9998504985545633,5,90,0.02820609014969936
+root.voom5.module.signedhybrid_pink,NA,coldKilian_2013_root_FC_down,0.002705327977527423,0.9991506342726681,11,458,0.04148169565542049
+root.voom5.module.signedhybrid_plum1,no enriched GO,NA,NA,NA,NA,NA,NA
+root.voom5.module.signedhybrid_purple,NA,minusN_Nishida_2017_root_FC_up,2.545792619826945e-9,1,16,272,1.1710646051203947e-7
+root.voom5.module.signedhybrid_purple,NA,minusMn_Rodriguez-Celma_2016_root_FC_up,0.001980369741405775,0.9998901352330808,3,29,0.04554850405233282
+root.voom5.module.signedhybrid_red,NA,minusMg_Niu_2016_shoot_FC_down,1.1957349100700073e-4,0.9999526274253117,26,818,0.0055003805863220335
+root.voom5.module.signedhybrid_royalblue,no enriched GO,NA,NA,NA,NA,NA,NA
+root.voom5.module.signedhybrid_saddlebrown,no enriched GO,NA,NA,NA,NA,NA,NA
+root.voom5.module.signedhybrid_salmon,NA,minusMg_Niu_2016_shoot_FC_up,1.2750002154380048e-10,1,39,1550,5.865000991014822e-9
+root.voom5.module.signedhybrid_salmon,NA,coldKilian_2013_shoot_FC_up,3.779839231648133e-7,0.9999999570667444,11,185,8.693630232790705e-6
+root.voom5.module.signedhybrid_salmon,NA,minusPi_3d_Liu_2016_shoot_FC_down,2.04719516816445e-5,0.9999976294852835,8,135,3.13903259118549e-4
+root.voom5.module.signedhybrid_sienna3,no enriched GO,NA,NA,NA,NA,NA,NA
+root.voom5.module.signedhybrid_skyblue,NA,plusMg_Niu_2016_root_FC_up,1.1366668983456031e-5,0.9999995082196849,5,55,5.228667732389775e-4
+root.voom5.module.signedhybrid_skyblue3,NA,minusMg_Niu_2016_shoot_FC_down,5.787636864406982e-4,0.9998517348746941,11,818,0.026623129576272116
+root.voom5.module.signedhybrid_steelblue,NA,minusPi_3d_Liu_2016_root_FC_up,4.513280760313323e-4,0.9999704777893084,4,76,0.020761091497441285
+root.voom5.module.signedhybrid_tan,NA,minusMn_Rodriguez-Celma_2016_root_FC_down,5.856401632659663e-8,0.9999999961942315,9,96,2.693944751023445e-6
+root.voom5.module.signedhybrid_tan,NA,minusPi_1d_Liu_2016_root_FC_up,1.4303053992449068e-5,0.9999996590172323,4,19,3.289702418263286e-4
+root.voom5.module.signedhybrid_tan,NA,minusMg_Niu_2016_root_FC_down,1.1397996337776247e-4,0.9999918807231986,5,62,0.0017476927717923578
+root.voom5.module.signedhybrid_tan,NA,minusN_Nishida_2017_root_FC_down,0.0013183547393575117,0.9997909783637977,6,152,0.015161079502611384
+root.voom5.module.signedhybrid_turquoise,NA,minusMg_Niu_2016_shoot_FC_down,4.962124539085391e-16,1,219,818,2.28257728797928e-14
+root.voom5.module.signedhybrid_turquoise,NA,minusMg_Niu_2016_shoot_FC_up,2.4560291642573545e-10,1,283,1550,5.648867077791915e-9
+root.voom5.module.signedhybrid_turquoise,NA,heat_Kilian_2013_shoot_FC_down,1.122412824595639e-9,0.9999999996373214,68,155,1.7210329977133134e-8
+root.voom5.module.signedhybrid_turquoise,NA,heat_Kilian_2013_root_FC_down,2.6218515968158043e-9,1,98,336,3.015129336338175e-8
+root.voom5.module.signedhybrid_turquoise,NA,plusMg_Niu_2016_shoot_FC_up,1.0519076258822666e-6,0.9999996670590919,63,226,9.677550158116852e-6
+root.voom5.module.signedhybrid_turquoise,NA,coldKilian_2013_root_FC_down,2.428023668282477e-6,0.9999988816643844,88,458,1.8614848123498994e-5
+root.voom5.module.signedhybrid_turquoise,NA,plusMg_Niu_2016_shoot_FC_down,5.11712386471179e-5,0.9999753103396815,51,201,3.362681396810605e-4
+root.voom5.module.signedhybrid_turquoise,NA,minusPi_3d_Liu_2016_root_FC_down,1.3369453499614288e-4,0.9999542217038285,25,68,7.687435762278215e-4
+root.voom5.module.signedhybrid_turquoise,NA,minusN_Nishida_2017_root_FC_up,3.401488780735095e-4,0.9998090287611341,60,272,0.0017385387101534928
+root.voom5.module.signedhybrid_violet,no enriched GO,NA,NA,NA,NA,NA,NA
+root.voom5.module.signedhybrid_white,no enriched GO,NA,NA,NA,NA,NA,NA
+root.voom5.module.signedhybrid_yellow,NA,minusMg_Niu_2016_shoot_FC_up,3.3449092377079993e-10,1,52,1550,1.5386582493456798e-8
+root.voom5.module.signedhybrid_yellow,NA,plusMg_Niu_2016_shoot_FC_up,1.7017349149374744e-6,0.9999996965098159,14,226,3.913990304356191e-5
+root.voom5.module.signedhybrid_yellow,NA,heat_Kilian_2013_root_FC_down,1.3917979097856492e-4,0.9999625291178524,14,336,0.0021340901283379956
+root.voom5.module.signedhybrid_yellowgreen,NA,minusMg_Niu_2016_shoot_FC_up,2.306339587944133e-17,1,36,1550,1.0609162104543012e-15
+root.voom5.module.signedhybrid_yellowgreen,NA,minusPi_3d_Liu_2016_shoot_FC_down,2.511024175198869e-6,0.9999998297063687,7,135,5.775355602957398e-5
+root.voom5.module.signedhybrid_yellowgreen,NA,plusMg_Niu_2016_shoot_FC_down,3.8351413677248814e-5,0.9999959869005174,7,201,5.880550097178152e-4
