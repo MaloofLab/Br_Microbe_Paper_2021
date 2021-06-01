@@ -559,7 +559,7 @@ write_tsv(In20orless.forGSEA, "annotation/output/filtered.custom.data.In20orless
 # Total.forGSEA
 Total.forGSEA <- rbind(rep("na", ncol(Total.forGSEA)), Total.forGSEA)
 Total.forGSEA
-write_tsv(In05orless.forGSEA, "annotation/output/filtered.custom.data.Total.rootshoot.v3.FDR0.001.gmx") 
+write_tsv(Total.forGSEA, "annotation/output/filtered.custom.data.Total.rootshoot.v3.FDR0.001.gmx") 
 ```
 
 # Function to filter by number of sets that a gene is in, and create equal sized sets (when possible)
