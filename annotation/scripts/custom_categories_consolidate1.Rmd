@@ -198,7 +198,9 @@ filtered.custom.data.consolidated %>% View()
 
 # convert filtered.custom.data.consolidated into filtered.custom.data.numeric format (does not work)
 ```{r}
-filtered.custom.data.consolidated %>% pivot_wider(names_from=category.cons) # why does not work?
+filtered.custom.data.consolidated %>% pivot_wider(names_from=category.cons, values_from = n) %>% 
+  mutate(across(-genes, ~ ifelse(is.na(.), 0, 1))) %>%
+  View() # why does not work?
 ```
 
 ```{r}
