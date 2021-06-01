@@ -197,6 +197,7 @@ filtered.custom.data.consolidated %>% View()
 ```
 
 # convert filtered.custom.data.consolidated into filtered.custom.data.numeric format (does not work)
+# the final goal is to make list object for GOseq ORA with InX.con.cat (=consolidated category) like In01.forORA.list2 
 ```{r}
 filtered.custom.data.consolidated %>% pivot_wider(names_from=category.cons) # why does not work?
 ```
@@ -208,6 +209,7 @@ filtered.custom.data.consolidated %>% dplyr::select(-n) %>% dplyr::count(genes) 
 
 
 ##### under construction #####
+# below is Julin's scripts for making 
 
 Alternate plotting
 ```{r}
