@@ -1,5 +1,5 @@
 ---
-title: "custom_categories_GMX_file"
+title: "custom_categories_consolidate1"
 author: "Kazu"
 date: "5/9/2021"
 output: html_document
@@ -21,6 +21,9 @@ To Do
 * More stringent FDR for custom category ORA of root.ivory module (050921)
 * "In only" approach for custom ORA (051821)
 * Fair "In only" approach for custom ORA using consolidated categoreis (052821)
+* Using consolidated categories in InX selection process and ORA and heatmap with the consolidated categories 
+* Another version (consolidate2) is using the consolidated categoreis to generate InX, but use the original categories for ORA.
+
 
 #### making root + shoot category with up and down and
 # prep
@@ -792,3 +795,5 @@ WGCNA.voom5.signedhybrid.root.ivory.customcat.GOseq.plot.InXcomparison <- WGCNA.
 WGCNA.voom5.signedhybrid.root.ivory.customcat.GOseq.plot.InXcomparison
 ggsave(path=file.path("RNA","output"),filename="WGCNA.voom5.signedhybrid.root.ivory.customcat.GOseq.plot.InXcomparison.png",height=8,width=11) 
 ```
+
+
