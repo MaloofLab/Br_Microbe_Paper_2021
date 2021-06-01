@@ -158,6 +158,7 @@ save(GSEA_cust_rootshoot_updown3.FDR0.001.list,file=file.path("annotation","outp
 #save(GSEA_cust_rootshoot_updown3.FDR0.01.list,file=file.path("annotation","output","GSEA_cust_rootshoot_updown3.FDR0.01.list.Rdata"))
 ```
 
+# 
 ```{r}
 load(file.path("annotation","output","GSEA_cust_rootshoot_updown3.FDR0.001.list.Rdata"))
 
@@ -173,15 +174,40 @@ library(tidyverse)
 #problems(x)
 #spec_csv(x)
 # convert into 0/1 data.frame
-filtered.custom.data.TF <- filtered.custom.data %>% dplyr::select(matches("FC_up|FC_down")) %>% is.na()
+filtered.custom.data.TF <- filtered.custom.data %>% dplyr::select(matches("FC_up|FC_down")) %>% is.na() 
 summary(!filtered.custom.data.TF)  
 # invert TRUE/FALSE
-filtered.custom.data.TF2 <- !filtered.custom.data.TF
+filtered.custom.data.TF2 <- !filtered.custom.data.TF 
 # conver into 1 or 0
 filtered.custom.data.TF3 <- filtered.custom.data.TF2*1
 summary(filtered.custom.data.TF3==1)
+# 
+filtered.custom.data.TF4 <- bind_cols(filtered.custom.data[,"genes"],as_tibble(filtered.custom.data.TF3))
 ```
 
+# consolidate categories
+```{r}
+filtered.custom.data.TF5 <- filtered.custom.data.TF4 %>% pivot_longer(cols=-genes,names_to="category")  %>% mutate(category=str_replace_all(category,"Kailasam2019","Kailasam_2019")) %>% mutate(category=str_replace_all(category,"minusPi_1d","minusPi")) %>% mutate(category=str_replace_all(category,"minusPi_3d","minusPi")) %>% mutate(category=str_replace_all(category,"coldKilian","cold_Kilian")) %>% mutate(category=str_replace_all(category,"Rodriguez-Celma","RodriguezCelma")) %>% mutate(category=str_replace_all(category,"Kim2019","Kim_2019")) %>% mutate(category=str_replace_all(category,"Wang2003","Wang_2003")) %>% mutate(category=str_replace_all(category,"Aarabi2016","Aarabi_2016")) %>%  mutate(category=str_replace_all(category,"Ligaba-OSena","LigabaOSena")) %>% separate(category,c("category2","au","yr","tissue","FC","up_down"),remove=FALSE) #%>% View()
+
+filtered.custom.data.TF5 %>% dplyr::count(genes,category2,au,yr,tissue,up_down) %>% View()
+# consolidate categories
+filtered.custom.data.consolidated <- filtered.custom.data.TF5 %>% filter(value==1) %>% dplyr::count(genes,category2,tissue,FC,up_down) %>% unite(category.cons,category2,tissue,FC,up_down) #%>% View()
+#
+filtered.custom.data.consolidated %>% View()
+```
+
+# convert filtered.custom.data.consolidated into filtered.custom.data.numeric format (does not work)
+```{r}
+filtered.custom.data.consolidated %>% pivot_wider(names_from=category.cons) # why does not work?
+```
+
+```{r}
+filtered.custom.data.consolidated %>% dplyr::select(-n) %>% dplyr::count(genes) %>% View()
+```
+
+
+
+##### under construction #####
 
 Alternate plotting
 ```{r}
