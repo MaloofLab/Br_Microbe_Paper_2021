@@ -1,0 +1,124 @@
+---
+title: "custom_categories_v4_making"
+author: "Kazu"
+date: "6/8/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Summary
+
+History
+* copied from "06_f_cor_table.Rmd"
+* Use modified N_Peng_2007 to eliminate duplicated gene from root
+
+To Do
+*  Expand DEGs with FC threshold for all custom categoreis
+
+
+
+# copied custom gene categories created in "06_d_cor_permutation.Rmd"
+
+
+# custom (with Nishida_2017, 070720)
+* note. some are no genes in **** (eg. "minusMn_Nishida_2017_root_FC_down")
+
+```{r message=FALSE, warning=FALSE, error=TRUE}
+custom.categories<-list.files(path=file.path("..","..","..","tools","custom_categories"),pattern="(FC.csv.gz|FC.WT.csv.gz|DEGs.all.anno.csv.gz|DEGs.csv.gz|Fe_def_KIM_2019_pnas.1916892116.sd01.csv)",full.names = TRUE)
+custom.categories.filename<-list.files(path=file.path("..","..","..","tools","custom_categories"),pattern="(FC.csv.gz|FC.WT.csv.gz|DEGs.all.anno.csv.gz|DEGs.csv.gz|Fe_def_KIM_2019_pnas.1916892116.sd01.csv)",full.names = FALSE)
+# read all csv.gz files
+custom.categoreis.map<-custom.categories %>% map(read_csv) # tidyverse (or purr) way of lapply
+# using file name for each data.frame
+names(custom.categoreis.map) <- custom.categories.filename
+```
+
+# combined table (root): root.exp1 all
+```{r, message=FALSE, warning=FALSE, error=TRUE}
+all.data <-
+  # root.exp1and3.FDR0.1 vs Al_Ligaba-OSena_2017_root
+  root.exp1plus3.all %>% left_join(custom.categoreis.map[["plusAl_Ligaba-OSena_2017_root.DEGs.csv.gz"]] %>% dplyr::select(AGI,logFC,FDR), by="AGI")  %>% dplyr::rename(!!c(`plusAl_\nLigaba-OSena_2017_\nroot`="logFC",`plusAl_Ligaba-OSena_2017_root_FDR`="FDR"))  %>%
+  # root.exp1and3.FDR0.1 vs cold.root.Kilian_2013 (lmer)
+  left_join(custom.categoreis.map[["cold_Kilian_2007.root.fits.summary.AGI.FC.csv.gz"]] %>% dplyr::select(AGI,mean.logFC.AGI), by="AGI") %>% 
+  dplyr::rename(`cold\nKilian_2013_\nroot`="mean.logFC.AGI") %>% 
+  # root.exp1and3.FDR0.1 vs Fe_deficiency.Kailasam2019
+  left_join(custom.categoreis.map[["minusFe_Kailasam2019.DEGs.all.anno.csv.gz"]] %>% dplyr::select(AGI,logFC,FDR), by="AGI") %>% 
+  dplyr::rename(!!c(`minusFe_\nKailasam2019_\nroot`="logFC",`minusFe_Kailasam2019_root_FDR`="FDR")) %>%
+  # root.exp1and3.FDR0.1 vs Fe_deficiency.Kailasam2019
+  left_join(custom.categoreis.map[["minusFe_Kim2019.fits.summary.AGI.FC.WT.csv.gz"]] %>% dplyr::select(AGI,mean.FC.AGI,`FDR_trtFe-`), by="AGI") %>%
+  dplyr::rename(!!c(`minusFe_\nKim2019_\nroot`="mean.FC.AGI",`minusFe_Kim2019_root_FDR`="FDR_trtFe-")) %>%
+  # root.exp1and3.FDR0.1 vs heat.root.Kilian_2013.AGI.exp.value.FC.csv.gz (lmer)
+  left_join(custom.categoreis.map[["Heat_Kilian_2007.root.fits.summary.AGI.FC.csv.gz"]] %>% dplyr::select(AGI,mean.logFC.AGI), by="AGI") %>% 
+  dplyr::rename(`heat_\nKilian_2013_\nroot`="mean.logFC.AGI") %>%
+  # root.exp1and3.FDR0.1 vs Mg_high_Niu_2016_root.DEGs.csv.gz
+  left_join(custom.categoreis.map[["plusMg_Niu_2016_root.DEGs.csv.gz"]] %>% dplyr::select(AGI,logFC,FDR), by="AGI") %>% dplyr::rename(!!c(`plusMg_\nNiu_2016_\nroot`="logFC",`plusMg_Niu_2016_root_FDR`="FDR")) %>%
+  # root.exp1and3.FDR0.1 vs Mg_low_Niu_2016_root.DEGs.csv.gz
+  left_join(custom.categoreis.map[["minusMg_Niu_2016_root.DEGs.csv.gz"]] %>% dplyr::select(AGI,logFC,FDR), by="AGI") %>%
+  dplyr::rename(!!c(`minusMg_\nNiu_2016_\nroot`="logFC",`minusMg_Niu_2016_root_FDR`="FDR")) %>% #View()
+  # root.exp1and3.FDR0.1 vs minusPi_1d_Liu_2016_root.DEGs.csv.gz
+  left_join(custom.categoreis.map[["minusPi_1d_Liu_2016_root.DEGs.csv.gz"]] %>% dplyr::select(AGI,logFC,FDR), by="AGI") %>%
+  dplyr::rename(!!c(`minusPi_1d_\nLiu_2016_\nroot`="logFC",`minusPi_1d_Liu_2016_root_FDR`="FDR")) %>% #View()
+  # root.exp1and3.FDR0.1 vs minusPi_3d_Liu_2016_root.DEGs.csv.gz
+  left_join(custom.categoreis.map[["minusPi_3d_Liu_2016_root.DEGs.csv.gz"]] %>% dplyr::select(AGI,logFC,FDR), by="AGI") %>%
+  dplyr::rename(!!c(`minusPi_3d_\nLiu_2016_\nroot`="logFC",`minusPi_3d_Liu_2016_root_FDR`="FDR")) %>% #View()
+  # root.exp1and3.FDR0.1 vs Mn_deficiency.Rodriguez-Celma_2016.DEGs.all.anno.csv.gz
+  left_join(custom.categoreis.map[["minusMn_Rodriguez-Celma_2016.DEGs.all.anno.csv.gz"]] %>% dplyr::select(AGI,logFC,FDR), by="AGI") %>% dplyr::rename(!!c(`minusMn_\nRodriguez-Celma_2016_\nroot`="logFC",`minusMn_Rodriguez-Celma_2016_root_FDR`="FDR")) %>% #View()
+  # root.exp1and3.FDR0.1 vs N_Wang2013.root.fits.summary.AGI.FC.csv.gz
+  left_join(custom.categoreis.map[["plusN_Wang2003.root.fits.summary.AGI.FC.csv.gz"]] %>%
+              dplyr::select(AGI,mean.FC.AGI,FDR_trtKCl), by="AGI") %>%
+  dplyr::rename(!!c(`plusN_\nWang2003_\nroot`="mean.FC.AGI",`plusN_Wang2003_root_FDR`="FDR_trtKCl")) %>% 
+  # minusS_Aarabi2016.fits.summary.AGI.FC.csv.gz
+left_join(custom.categoreis.map[["minusS_Aarabi2016.fits.summary.AGI.FC.csv.gz"]] %>% dplyr::select(AGI,mean.FC.AGI,`FDR_trt-S`), by="AGI") %>% dplyr::rename(!!c(`minusS_\nAarabi2016_\nroot`="mean.FC.AGI",`minusS_Aarabi2016_root_FDR`="FDR_trt-S"))  %>%
+  # minusN Peng 2007 whole plant
+left_join(custom.categoreis.map[["minusN_Peng_2007.AGI.FC.csv.gz"]], by="AGI") %>% dplyr::rename(!!c(`minusN_\nPeng_2007_\nwhole`="logFC")) %>%
+  # plusIAA
+left_join(custom.categoreis.map[["plusIAA_Nemhauser_2006_seedlings.AGI.FC.csv.gz"]], by="AGI") %>% dplyr::rename(!!c(`plusIAA_\nNemhauser_2006_\nseedlings`="logFC")) %>%
+## Needs to add Nishida_2017 data (062620)
+left_join(custom.categoreis.map[["minusB_Nishida_2017_root.DEGs.csv.gz"]] %>% dplyr::select(AGI,logFC,FDR), by="AGI") %>%
+  dplyr::rename(!!c(`minusB_\nNishida_2017_\nroot`="logFC",`minusB_\nNishida_2017_\nroot_FDR`="FDR")) %>% 
+  #   minusCa_Nishida_2017_root.DEGs.csv.gz
+  left_join(custom.categoreis.map[["minusCa_Nishida_2017_root.DEGs.csv.gz"]] %>% dplyr::select(AGI,logFC,FDR), by="AGI") %>%
+  dplyr::rename(!!c(`minusCa_\nNishida_2017_\nroot`="logFC",`minusCa_\nNishida_2017_\nroot_FDR`="FDR")) %>%
+# minusCu_Nishida_2017_root.DEGs.csv.gz
+  left_join(custom.categoreis.map[["minusCu_Nishida_2017_root.DEGs.csv.gz"]] %>% dplyr::select(AGI,logFC,FDR), by="AGI") %>%
+  dplyr::rename(!!c(`minusCu_\nNishida_2017_\nroot`="logFC",`minusCu_\nNishida_2017_\nroot_FDR`="FDR")) %>%
+# minusFe_Nishida_2017_root.DEGs.csv.gz
+  left_join(custom.categoreis.map[["minusFe_Nishida_2017_root.DEGs.csv.gz"]] %>% dplyr::select(AGI,logFC,FDR), by="AGI") %>%
+  dplyr::rename(!!c(`minusFe_\nNishida_2017_\nroot`="logFC",`minusFe_\nNishida_2017_\nroot_FDR`="FDR")) %>%
+# minusK_Nishida_2017_root.DEGs.csv.gz
+    left_join(custom.categoreis.map[["minusK_Nishida_2017_root.DEGs.csv.gz"]] %>% dplyr::select(AGI,logFC,FDR), by="AGI") %>%
+  dplyr::rename(!!c(`minusK_\nNishida_2017_\nroot`="logFC",`minusK_\nNishida_2017_\nroot_FDR`="FDR")) %>%
+# minusMg_Nishida_2017_root.DEGs.csv.gz
+  left_join(custom.categoreis.map[["minusMg_Nishida_2017_root.DEGs.csv.gz"]] %>% dplyr::select(AGI,logFC,FDR), by="AGI") %>%
+  dplyr::rename(!!c(`minusMg_\nNishida_2017_\nroot`="logFC",`minusMg_\nNishida_2017_\nroot_FDR`="FDR")) %>%
+# minusMn_Nishida_2017_root.DEGs.csv.gz
+  left_join(custom.categoreis.map[["minusMn_Nishida_2017_root.DEGs.csv.gz"]] %>% dplyr::select(AGI,logFC,FDR), by="AGI") %>%
+  dplyr::rename(!!c(`minusMn_\nNishida_2017_\nroot`="logFC",`minusMn_\nNishida_2017_\nroot_FDR`="FDR")) %>%
+# minusN_Nishida_2017_root.DEGs.csv.gz
+  left_join(custom.categoreis.map[["minusN_Nishida_2017_root.DEGs.csv.gz"]] %>% dplyr::select(AGI,logFC,FDR), by="AGI") %>%
+  dplyr::rename(!!c(`minusN_\nNishida_2017_\nroot`="logFC",`minusN_\nNishida_2017_\nroot_FDR`="FDR")) %>%
+# minusP_Nishida_2017_root.DEGs.csv.gz
+  left_join(custom.categoreis.map[["minusP_Nishida_2017_root.DEGs.csv.gz"]] %>% dplyr::select(AGI,logFC,FDR), by="AGI") %>%
+  dplyr::rename(!!c(`minusP_\nNishida_2017_\nroot`="logFC",`minusP_\nNishida_2017_\nroot_FDR`="FDR")) %>%
+# minusS_Nishida_2017_root.DEGs.csv.gz
+  left_join(custom.categoreis.map[["minusS_Nishida_2017_root.DEGs.csv.gz"]] %>% dplyr::select(AGI,logFC,FDR), by="AGI") %>%
+  dplyr::rename(!!c(`minusS_\nNishida_2017_\nroot`="logFC",`minusS_\nNishida_2017_\nroot_FDR`="FDR")) %>%
+# minusZn_Nishida_2017_root.DEGs.csv.gz
+left_join(custom.categoreis.map[["minusZn_Nishida_2017_root.DEGs.csv.gz"]] %>% dplyr::select(AGI,logFC,FDR), by="AGI") %>%
+  dplyr::rename(!!c(`minusZn_\nNishida_2017_\nroot`="logFC",`minusZn_\nNishida_2017_\nroot_FDR`="FDR"))
+colnames(all.data)
+```
+# 
+what does the data sheet look like?  
+```{r}
+all.data
+summary(all.data)
+table(is.na(all.data$genes)) # all FALSE
+# write_csv(all.data, path="../output/root.all.comparison.csv")
+#write_csv(all.data, path="../output/root.all.comparison.v2.csv.gz") # adding minusN_Peng_2007_up/down, plusIAA_Nemhauser_2006_up/down
+# When Nishida_2017 data have been added run next line.
+write_csv(all.data, path="../output/root.all.comparison.v3.csv.gz") # adding many data from Nishida_2017
+
+```

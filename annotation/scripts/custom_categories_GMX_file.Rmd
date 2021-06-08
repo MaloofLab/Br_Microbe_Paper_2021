@@ -565,7 +565,7 @@ write_tsv(Total.forGSEA, "annotation/output/filtered.custom.data.Total.rootshoot
 # Function to filter by number of sets that a gene is in, and create equal sized sets (when possible)
 * error in reading csv file (050921)
 * The error is becasue FDR is all 1, which is interpretted as True/False.
-* 
+* Temporally do not read the csv file.
 
 ```{r}
 topXgenesInYsets <- function(geneCutoff, setCutoff,filtered.custom.data=custom.data,filtered.custom.data.numericL=filtered.custom.data.numericL) {
@@ -637,7 +637,7 @@ return(forGSEA.updown)
 }
 ```
 
-```{r}
+```{r eval=FALSE}
 custom.data=read_csv(file.path("annotation","output","filtered.custom.data.rootshoot.csv.gz"),guess_max = 17000)
 # top20
 topXgenesInYsets(20, 1) %>% View()

@@ -23,6 +23,9 @@ To Do
 * Fair "In only" approach for custom ORA using consolidated categoreis (052821)
 * Using consolidated categories in InX selection process and ORA and heatmap with the consolidated categories 
 * Another version (consolidate2) is using the consolidated categoreis to generate InX, but use the original categories for ORA.
+* plot heatmap of InX comparison for root.ivory module
+* and more modules.
+* Making v4 custom categories and use it for this script
 
 
 #### making root + shoot category with up and down and
@@ -42,10 +45,12 @@ library(cowplot)
 library(ggnewscale)
 ```
 
-# read custom gene categories created in "06_d_cor_permutation.Rmd" -> needs to add this to this scripts
+# read custom gene categories created in "06_d_cor_permutation.Rmd" -> needs to add this to this scripts -> use updated version (v4; 06**21) made by "custom_categories_v4_making.Rmd"
 ```{r}
 root.all3 <- read_csv(file.path("annotation","output","root.all.comparison.v3.csv.gz")) 
 shoot.all <- read_csv(file.path("annotation","output","shoot.all.comparison.csv"))
+#root.all4 <- read_csv(file.path("annotation","output","root.all.comparison.v4.csv.gz")) 
+
 ```
 
 fix names (root)
@@ -210,9 +215,6 @@ filtered.custom.data.consolidated.numeric <- filtered.custom.data.consolidated %
 filtered.custom.data.consolidated %>% dplyr::select(-n) %>% dplyr::count(genes) %>% View()
 ```
 
-
-
-##### under construction #####
 # below is Julin's scripts for making 
 
 Alternate plotting
@@ -809,12 +811,14 @@ data2[data2$over_represented_padjust < 10^-10,"over_represented_padjust"] <- 10^
 data3 <- data2 %>% mutate(InX=str_replace(InX.FDR0.001,"WGCNA.voom5.signedhybrid.all.modules.customcat.Total.consolidated.FDR0.001.GOseq.csv","total")) %>% mutate(InX=str_remove_all(InX,"WGCNA.voom5.signedhybrid.all.modules.customcat.")) %>% mutate(InX=str_remove_all(InX,"\\.consolidated.FDR0.001.GOseq.csv")) #%>% View() # does not work
 
 data3 <- data3 %>% mutate(InX=factor(InX,levels=c("total","In20orless","In10orless","In05orless","In03orless","In02orless","In01")))
-# select modules
+```
+
+
+# plot root.ivory module
+```{r}
 data3.root.ivory <- data3 %>% filter(NAME=="root.voom5.module.signedhybrid.ivory")
 data3.root.ivory %>% View()
 unique(data3$InX) # error in In03orless
-# 
-####### under construction #######
 # plot 
 WGCNA.voom5.signedhybrid.root.ivory.customcat.GOseq.plot.InXcomparison <- ggplot(data3.root.ivory, aes(x=category3.up_down,y=InX)) + geom_tile(aes(fill=-log10(over_represented_padjust)),colour="white") + scale_fill_gradient2(limit=c(0,10), high=muted("magenta")) + facet_grid(.~tissue3,scales="free_x",space="free")
 
@@ -832,4 +836,79 @@ WGCNA.voom5.signedhybrid.root.ivory.customcat.GOseq.plot.InXcomparison
 ggsave(path=file.path("RNA","output"),filename="WGCNA.voom5.signedhybrid.root.ivory.customcat.consolidated.GOseq.plot.InXcomparison.png",height=8,width=11) 
 ```
 
+# plot each module, making  function
+```{r}
+InX.comparison.plot <- function(data=data3,target.module="root.voom5.module.signedhybrid.darkred") {# data3.root.darkred <- data3 %>% filter(NAME=="root.voom5.module.signedhybrid.darkred")
+data.target <- data %>% filter(NAME==target.module)
+data.target %>% View()
+# plot 
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- ggplot(data.target, aes(x=category3.up_down,y=InX)) + geom_tile(aes(fill=-log10(over_represented_padjust)),colour="white") + scale_fill_gradient2(limit=c(0,10), high=muted("magenta")) + facet_grid(.~tissue3,scales="free_x",space="free")
+
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison + theme(axis.text.x=element_text(size=8,angle=90,hjust=1,vjust=0.3),
+                                      axis.text.y=element_text(size=8),
+                                      axis.title=element_text(size=8),
+                                      axis.ticks = element_blank(),
+                                      strip.text.y = element_text(angle=0),
+                                      strip.text.x = element_text(size=8,angle=90),
+                                      panel.background = element_rect(fill = "white",colour="black"),
+                                      plot.title=element_text(size=14),
+                                      axis.line=element_blank()) + 
+      labs(x="",y="",fill="-log10\n FDR",title=str_remove(target.module,"voom5.module.signedhybrid."))
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison
+ggsave(path=file.path("RNA","output"),filename=str_c("WGCNA.",target.module,".customcat.consolidated.GOseq.plot.InXcomparison.png"),height=8,width=11) 
+}
+InX.comparison.plot(data=data3,target.module="root.voom5.module.signedhybrid.darkred")
+#
+data3 %>% distinct(NAME) 
+# 
+data3 %>% distinct(NAME)  %>% map(~InX.comparison.plot(target.module=.$NAME)) # does not owrk
+#
+data3 %>% distinct(NAME) %>% apply(.,1,function(x) InX.comparison.plot(target.module=x))
+```
+
+
+
+
+
+
+
+
+
+
+
+# troubleshooting (June 2021)
+```{r eval=FALSE}
+# duplicated genes in 
+root.all3 %>% filter(duplicated(genes)) %>% View()
+root.all3 %>% semi_join(root.all3[duplicated(root.all3$genes),"genes"],by="genes") %>% View()
+root.all3 %>% semi_join(root.all3[duplicated(root.all3$genes),"genes"],by="genes") %>% dplyr::select(matches("minusN_\nPeng")) # this has different values in the same gene.
+# multiple!
+N_Peng_2007_ST1and2 %>% filter(genes=="BraA04g024020.3C")
+# due to AGI -> Br conversion? -> No. Only one...
+Br.v3.0anno.At.BLAST.highscore %>% filter(name=="BraA04g024020.3C")
+# 
+Br.v3.0anno.At.BLAST.highscore.Br %>% filter(name=="BraA04g024020.3C")
+#
+N_Peng_2007_ST1_down <- read_xls(file.path("intermediate","N_Peng_2007","11103_2007_9241_MOESM1_ESM.xls"),skip=9, col_names=TRUE)
+N_Peng_2007_ST1_down %>% View()
+N_Peng_2007_ST1_down %>% dplyr::select(`AGI ID`,bRatio) %>% dplyr::rename(AGI=`AGI ID`) %>% mutate(AGI=str_to_upper(AGI)) %>% left_join(Br.v3.0anno.At.BLAST.highscore,by="AGI") %>% filter(name=="BraA04g024020.3C") %>% View() # the original data has duplicated data for one gene! or due to AGI -> Br conversion?
+
+# AT2G33450
+N_Peng_2007_ST1_down %>% dplyr::select(`AGI ID`,bRatio) %>% dplyr::rename(AGI=`AGI ID`) %>% mutate(AGI=str_to_upper(AGI))
+
+# original table 
+temp <- N_Peng_2007_ST1_down %>% dplyr::select(`AGI ID`,bRatio) %>% dplyr::rename(AGI=`AGI ID`) %>% mutate(AGI=str_to_upper(AGI)) %>% left_join(Br.v3.0anno.At.BLAST.highscore,by="AGI")
+# 
+dim(temp)
+temp[duplicated(temp$AGI),] %>% View()
+temp[temp$AGI=="AT2G33450",] # two
+#
+N_Peng_2007_ST1_down %>% dplyr::select(`AGI ID`,bRatio) %>% dplyr::rename(AGI=`AGI ID`) %>% mutate(AGI=str_to_upper(AGI)) %>% filter(AGI=="AT2G33450") # two. I looked up the original xls file and there are two "AT2G33450"! So use higher bRatio for this.
+
+```
+
+# Does shoot.all have duplicated genes?
+```{r}
+shoot.all %>% filter(duplicated(genes)) %>% View() #none. No need to change.
+```
 
