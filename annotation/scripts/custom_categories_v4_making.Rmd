@@ -3,6 +3,8 @@ title: "custom_categories_v4_making"
 author: "Kazu"
 date: "6/8/2021"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -14,39 +16,71 @@ Summary
 History
 * copied from "06_f_cor_table.Rmd"
 * Use modified N_Peng_2007 to eliminate duplicated gene from root
+* 
 
 To Do
 *  Expand DEGs with FC threshold for all custom categoreis
+* new custom categoreis (v4) that removed duplicated genes in N_peng_2007
+
+# prep
+```{r}
+rm(list=ls())
+knitr::opts_chunk$set(echo = TRUE,error=TRUE)
+library(tidyverse);library(GGally);library(readxl)
+library(readr)
+library(stringr)
+# https://bioconductor.org/packages/devel/workflows/vignettes/maEndToEnd/inst/doc/MA-Workflow.html
+# functions for expression pattern
+#source("../../../tools/Expression_pattern_graph.R",chdir=TRUE)
+library(scales) # for muted function
+library(ggdendro) # for dendrogram
+library(cowplot)
+library(ggnewscale)
+```
 
 
 
-# copied custom gene categories created in "06_d_cor_permutation.Rmd"
+# copied custom gene categories created in "06_d_cor_permutation.Rmd" D
+
+# Instead of root.exp1and3.all, use Br.v3.0anno.At.BLAST.highscore
+```{r}
+# annotation file for v3.0annotation
+Br.v3.0.At.BLAST <- read_csv(file.path("annotation","output","Brapa_v3.0_annotated.csv")) 
+# This annotation is redundant with name (Br grene). Eg 
+Br.v3.0.At.BLAST %>% filter(name=="BraA01g040570.3C")
+# reduce the redundancy (112418)
+Br.v3.0anno.At.BLAST.highscore <- Br.v3.0.At.BLAST %>% group_by(name) %>% arrange(desc(score)) %>% dplyr::slice(1)
+# reduce the redundancy for Br (051120) (do not use)
+#Br.v3.0anno.At.BLAST.highscore.Br <- Br.v3.0.At.BLAST %>% group_by(AGI) %>% arrange(desc(score)) %>% slice(1) #%>% View()
+```
 
 
-# custom (with Nishida_2017, 070720)
+
+## custom (with Nishida_2017, 070720)
 * note. some are no genes in **** (eg. "minusMn_Nishida_2017_root_FC_down")
-
-```{r message=FALSE, warning=FALSE, error=TRUE}
-custom.categories<-list.files(path=file.path("..","..","..","tools","custom_categories"),pattern="(FC.csv.gz|FC.WT.csv.gz|DEGs.all.anno.csv.gz|DEGs.csv.gz|Fe_def_KIM_2019_pnas.1916892116.sd01.csv)",full.names = TRUE)
-custom.categories.filename<-list.files(path=file.path("..","..","..","tools","custom_categories"),pattern="(FC.csv.gz|FC.WT.csv.gz|DEGs.all.anno.csv.gz|DEGs.csv.gz|Fe_def_KIM_2019_pnas.1916892116.sd01.csv)",full.names = FALSE)
+```{r message=FALSE, warning=TRUE, error=TRUE}
+custom.categories <- list.files(path=file.path("annotation","input","custom_categories"),pattern="(FC.csv.gz|FC.WT.csv.gz|DEGs.all.anno.csv.gz|DEGs.all.anno.csv|DEGs.csv.gz|Fe_def_KIM_2019_pnas.1916892116.sd01.csv)",full.names = TRUE) # not working, why??????? 061221
+#
+custom.categories.filename <- list.files(path=file.path("annotation","input","custom_categories"),pattern="(FC.csv.gz|FC.WT.csv.gz|DEGs.all.anno.csv.gz|DEGs.all.anno.csv|DEGs.csv.gz|Fe_def_KIM_2019_pnas.1916892116.sd01.csv)",full.names = FALSE)
 # read all csv.gz files
-custom.categoreis.map<-custom.categories %>% map(read_csv) # tidyverse (or purr) way of lapply
+custom.categoreis.map <- custom.categories %>% map(read_csv) # tidyverse (or purr) way of lapply
 # using file name for each data.frame
 names(custom.categoreis.map) <- custom.categories.filename
 ```
 
-# combined table (root): root.exp1 all
+# combined table (root): 
 ```{r, message=FALSE, warning=FALSE, error=TRUE}
 all.data <-
   # root.exp1and3.FDR0.1 vs Al_Ligaba-OSena_2017_root
-  root.exp1plus3.all %>% left_join(custom.categoreis.map[["plusAl_Ligaba-OSena_2017_root.DEGs.csv.gz"]] %>% dplyr::select(AGI,logFC,FDR), by="AGI")  %>% dplyr::rename(!!c(`plusAl_\nLigaba-OSena_2017_\nroot`="logFC",`plusAl_Ligaba-OSena_2017_root_FDR`="FDR"))  %>%
+  #root.exp1plus3.all %>%
+  Br.v3.0anno.At.BLAST.highscore %>% left_join(custom.categoreis.map[["plusAl_Ligaba-OSena_2017_root.DEGs.csv.gz"]] %>% dplyr::select(AGI,logFC,FDR), by="AGI")  %>% dplyr::rename(!!c(`plusAl_\nLigaba-OSena_2017_\nroot`="logFC",`plusAl_Ligaba-OSena_2017_root_FDR`="FDR"))  %>%
   # root.exp1and3.FDR0.1 vs cold.root.Kilian_2013 (lmer)
   left_join(custom.categoreis.map[["cold_Kilian_2007.root.fits.summary.AGI.FC.csv.gz"]] %>% dplyr::select(AGI,mean.logFC.AGI), by="AGI") %>% 
   dplyr::rename(`cold\nKilian_2013_\nroot`="mean.logFC.AGI") %>% 
-  # root.exp1and3.FDR0.1 vs Fe_deficiency.Kailasam2019
-  left_join(custom.categoreis.map[["minusFe_Kailasam2019.DEGs.all.anno.csv.gz"]] %>% dplyr::select(AGI,logFC,FDR), by="AGI") %>% 
+  # root.exp1and3.FDR0.1 vs Fe_deficiency.Kailasam2019 
+  left_join(custom.categoreis.map[["minusFe_Kailasam2019.DEGs.all.anno.csv"]] %>% dplyr::select(AGI,logFC,FDR), by="AGI") %>% 
   dplyr::rename(!!c(`minusFe_\nKailasam2019_\nroot`="logFC",`minusFe_Kailasam2019_root_FDR`="FDR")) %>%
-  # root.exp1and3.FDR0.1 vs Fe_deficiency.Kailasam2019
+  # root.exp1and3.FDR0.1 vs Fe_deficiency.Kailasam2019 
   left_join(custom.categoreis.map[["minusFe_Kim2019.fits.summary.AGI.FC.WT.csv.gz"]] %>% dplyr::select(AGI,mean.FC.AGI,`FDR_trtFe-`), by="AGI") %>%
   dplyr::rename(!!c(`minusFe_\nKim2019_\nroot`="mean.FC.AGI",`minusFe_Kim2019_root_FDR`="FDR_trtFe-")) %>%
   # root.exp1and3.FDR0.1 vs heat.root.Kilian_2013.AGI.exp.value.FC.csv.gz (lmer)
@@ -107,7 +141,8 @@ left_join(custom.categoreis.map[["minusB_Nishida_2017_root.DEGs.csv.gz"]] %>% dp
   dplyr::rename(!!c(`minusS_\nNishida_2017_\nroot`="logFC",`minusS_\nNishida_2017_\nroot_FDR`="FDR")) %>%
 # minusZn_Nishida_2017_root.DEGs.csv.gz
 left_join(custom.categoreis.map[["minusZn_Nishida_2017_root.DEGs.csv.gz"]] %>% dplyr::select(AGI,logFC,FDR), by="AGI") %>%
-  dplyr::rename(!!c(`minusZn_\nNishida_2017_\nroot`="logFC",`minusZn_\nNishida_2017_\nroot_FDR`="FDR"))
+  dplyr::rename(!!c(`minusZn_\nNishida_2017_\nroot`="logFC",`minusZn_\nNishida_2017_\nroot_FDR`="FDR")) %>%
+  dplyr::rename(genes=name)
 colnames(all.data)
 ```
 # 
@@ -115,10 +150,56 @@ what does the data sheet look like?
 ```{r}
 all.data
 summary(all.data)
-table(is.na(all.data$genes)) # all FALSE
-# write_csv(all.data, path="../output/root.all.comparison.csv")
-#write_csv(all.data, path="../output/root.all.comparison.v2.csv.gz") # adding minusN_Peng_2007_up/down, plusIAA_Nemhauser_2006_up/down
+table(is.na(all.data$name)) # all FALSE
 # When Nishida_2017 data have been added run next line.
-write_csv(all.data, path="../output/root.all.comparison.v3.csv.gz") # adding many data from Nishida_2017
+write_csv(all.data, file=file.path("annotation","output","root.all.comparison.v4.csv.gz")) 
+```
 
+# shoot
+```{r, message=FALSE, warning=FALSE, error=TRUE}
+all.data <-
+  # shoot.exp1and3.FDR0.1 vs Al_Ligaba-OSena_2017_shoot
+  #leaf.exp1plus3.all %>%
+  Br.v3.0anno.At.BLAST.highscore %>% left_join(custom.categoreis.map[["plusAl_Ligaba-OSena_2017_shoot.DEGs.csv.gz"]] %>% dplyr::select(AGI,logFC,FDR), by="AGI")  %>% dplyr::rename(!!c(`plusAl_\nLigaba-OSena_2017_\nshoot`="logFC",`plusAl_Ligaba-OSena_2017_shoot_FDR`="FDR"))  %>%
+  # root.exp1and3.FDR0.1 vs cold.root.Kilian_2013 (lmer)
+  left_join(custom.categoreis.map[["cold_Kilian_2007.shoot.fits.summary.AGI.FC.csv.gz"]] %>% dplyr::select(AGI,mean.logFC.AGI), by="AGI") %>% 
+  dplyr::rename(`cold\nKilian_2013_\nshoot`="mean.logFC.AGI") %>% 
+  # # shoot.exp1and3.FDR0.1 vs Fe_deficiency.Kailasam2019
+  # left_join(custom.categoreis.map[["minusFe_Kailasam2019.DEGs.all.anno.csv.gz"]] %>% dplyr::select(AGI,logFC,FDR) , by="AGI") %>% 
+  # dplyr::rename(!!c(`minusFe_\nKailasam2019_\nshoot`="logFC",`minusFe_Kailasam2019_shoot_FDR`="FDR")) %>%
+  # shoot.exp1and3.FDR0.1 vs Fe_deficiency.Kailasam2019
+  left_join(custom.categoreis.map[["minusFe_Kim2019.fits.summary.AGI.FC.WT.csv.gz"]] %>% dplyr::select(AGI,mean.FC.AGI,`FDR_trtFe-`), by="AGI") %>%
+  dplyr::rename(!!c(`minusFe_\nKim2019_\nshoot`="mean.FC.AGI",`minusFe_Kim2019_shoot_FDR`="FDR_trtFe-")) %>%
+  # shoot.exp1and3.FDR0.1 vs heat.shoot.Kilian_2013.AGI.exp.value.FC.csv.gz (lmer)
+  left_join(custom.categoreis.map[["Heat_Kilian_2007.shoot.fits.summary.AGI.FC.csv.gz"]] %>% dplyr::select(AGI,mean.logFC.AGI), by="AGI") %>% 
+  dplyr::rename(`heat_\nKilian_2013_\nshoot`="mean.logFC.AGI") %>%
+  # shoot.exp1and3.FDR0.1 vs Mg_high_Niu_2016_shoot.DEGs.csv.gz
+  left_join(custom.categoreis.map[["plusMg_Niu_2016_shoot.DEGs.csv.gz"]] %>% dplyr::select(AGI,logFC,FDR), by="AGI") %>% dplyr::rename(!!c(`plusMg_\nNiu_2016_\nshoot`="logFC",`plusMg_Niu_2016_shoot_FDR`="FDR")) %>%
+  # shoot.exp1and3.FDR0.1 vs Mg_low_Niu_2016_shoot.DEGs.csv.gz
+  left_join(custom.categoreis.map[["minusMg_Niu_2016_shoot.DEGs.csv.gz"]] %>% dplyr::select(AGI,logFC,FDR), by="AGI") %>%
+  dplyr::rename(!!c(`minusMg_\nNiu_2016_\nshoot`="logFC",`minusMg_Niu_2016_shoot_FDR`="FDR")) %>% #View()
+  # shoot.exp1and3.FDR0.1 vs minusPi_1d_Liu_2016_shoot.DEGs.csv.gz
+  left_join(custom.categoreis.map[["minusPi_1d_Liu_2016_shoot.DEGs.csv.gz"]] %>% dplyr::select(AGI,logFC,FDR) , by="AGI") %>%
+  dplyr::rename(!!c(`minusPi_1d_\nLiu_2016_\nshoot`="logFC",`minusPi_1d_Liu_2016_shoot_FDR`="FDR")) %>% #View()
+  # shoot.exp1and3.FDR0.1 vs minusPi_3d_Liu_2016_shoot.DEGs.csv.gz
+  left_join(custom.categoreis.map[["minusPi_3d_Liu_2016_shoot.DEGs.csv.gz"]] %>% dplyr::select(AGI,logFC,FDR), by="AGI") %>%
+  dplyr::rename(!!c(`minusPi_3d_\nLiu_2016_\nshoot`="logFC",`minusPi_3d_Liu_2016_shoot_FDR`="FDR")) %>% rename(genes=name) #%>% #View()
+  # shoot.exp1and3.FDR0.1 vs N_Wang2013.shoot.fits.summary.AGI.FC.csv.gz
+  # full_join(custom.categoreis.map[["plusN_Wang2003.shoot.fits.summary.AGI.FC.csv.gz"]] %>%
+  #             dplyr::select(AGI,mean.FC.AGI,FDR_trtKCl) , by="AGI") %>%
+  # dplyr::rename(!!c(`plusN_\nWang2003_\nshoot`="mean.FC.AGI",`plusN_Wang2003_shoot_FDR`="FDR_trtKCl")) %>% #View()
+  # shoot.exp1and3.FDR0.1 vs S_Aarabi2016.fits.summary.AGI.FC.csv.gz (tissu from root)
+  # left_join(custom.categoreis.map[["minusS_Aarabi2016.fits.summary.AGI.FC.csv.gz"]] %>% dplyr::select(AGI,mean.FC.AGI,`FDR_trt-S`) , by="AGI") %>% dplyr::rename(!!c(`minusS_\nAarabi2016_\nshoot`="mean.FC.AGI",`minusS_Aarabi2016_shoot_FDR`="FDR_trt-S")) 
+
+colnames(all.data)
+```
+
+# 
+what does the data sheet look like?  
+```{r}
+all.data
+summary(all.data)
+table(is.na(all.data$genes)) # TRUE 19741 ???? why? (042720) -> fix full_join to left_join (042720)
+#
+write_csv(all.data, file=file.path("annotation","output","shoot.all.comparison.v4.csv.gz"))
 ```
