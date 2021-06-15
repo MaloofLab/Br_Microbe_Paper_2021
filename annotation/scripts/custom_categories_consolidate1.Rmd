@@ -955,9 +955,9 @@ data.target %>% View()
 # plot 
 WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- ggplot(data.target, aes(x=category3.up_down,y=InX)) + geom_tile(aes(fill=-log10(over_represented_padjust)),colour="white") + scale_fill_gradient2(limit=c(0,10), high=muted("magenta")) + facet_grid(.~tissue3,scales="free_x",space="free")
 
-WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison + theme(axis.text.x=element_text(size=8,angle=90,hjust=1,vjust=0.3),
-                                      axis.text.y=element_text(size=8),
-                                      axis.title=element_text(size=8),
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison + theme(axis.text.x=element_text(size=12,angle=90,hjust=1,vjust=0.3),
+                                      axis.text.y=element_text(size=12),
+                                      axis.title=element_text(size=10),
                                       axis.ticks = element_blank(),
                                       strip.text.y = element_text(angle=0),
                                       strip.text.x = element_text(size=8,angle=90),
@@ -965,6 +965,9 @@ WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- WGCNA.voom
                                       plot.title=element_text(size=14),
                                       axis.line=element_blank()) + 
       labs(x="",y="",fill="-log10\n FDR",title=str_remove(target.module,"voom5.module.signedhybrid."))
+# adding overlap numbers
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison + geom_text(aes(label=numDEInCat))
+
 WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison
 ggsave(path=file.path("RNA","output"),filename=str_c("WGCNA.",target.module,".customcat.consolidated.GOseq.plot.InXcomparison.png"),height=8,width=11) 
 }
