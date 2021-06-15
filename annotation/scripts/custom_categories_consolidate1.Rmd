@@ -927,24 +927,24 @@ data3 <- data3 %>% mutate(InX=factor(InX,levels=c("In10orMore","In05orMore","tot
 
 # plot root.ivory module
 ```{r}
-data3.root.ivory <- data3 %>% filter(NAME=="root.voom5.module.signedhybrid.ivory")
-data3.root.ivory %>% View()
-unique(data3$InX) # error in In03orless
-# plot 
-WGCNA.voom5.signedhybrid.root.ivory.customcat.GOseq.plot.InXcomparison <- ggplot(data3.root.ivory, aes(x=category3.up_down,y=InX)) + geom_tile(aes(fill=-log10(over_represented_padjust)),colour="white") + scale_fill_gradient2(limit=c(0,10), high=muted("magenta")) + facet_grid(.~tissue3,scales="free_x",space="free")
-
-WGCNA.voom5.signedhybrid.root.ivory.customcat.GOseq.plot.InXcomparison <- WGCNA.voom5.signedhybrid.root.ivory.customcat.GOseq.plot.InXcomparison + theme(axis.text.x=element_text(size=8,angle=90,hjust=1,vjust=0.3),
-                                      axis.text.y=element_text(size=8),
-                                      axis.title=element_text(size=8),
-                                      axis.ticks = element_blank(),
-                                      strip.text.y = element_text(angle=0),
-                                      strip.text.x = element_text(size=8,angle=90),
-                                      panel.background = element_rect(fill = "white",colour="black"),
-                                      plot.title=element_text(size=14),
-                                      axis.line=element_blank()) + 
-      labs(x="",y="",fill="-log10\n FDR",title=" ")
-WGCNA.voom5.signedhybrid.root.ivory.customcat.GOseq.plot.InXcomparison
-ggsave(path=file.path("RNA","output"),filename="WGCNA.voom5.signedhybrid.root.ivory.customcat.consolidated.GOseq.plot.InXcomparison.png",height=8,width=11) 
+# data3.root.ivory <- data3 %>% filter(NAME=="root.voom5.module.signedhybrid.ivory")
+# data3.root.ivory %>% View()
+# unique(data3$InX) # error in In03orless
+# # plot 
+# WGCNA.voom5.signedhybrid.root.ivory.customcat.GOseq.plot.InXcomparison <- ggplot(data3.root.ivory, aes(x=category3.up_down,y=InX)) + geom_tile(aes(fill=-log10(over_represented_padjust)),colour="white") + scale_fill_gradient2(limit=c(0,10), high=muted("magenta")) + facet_grid(.~tissue3,scales="free_x",space="free")
+# 
+# WGCNA.voom5.signedhybrid.root.ivory.customcat.GOseq.plot.InXcomparison <- WGCNA.voom5.signedhybrid.root.ivory.customcat.GOseq.plot.InXcomparison + theme(axis.text.x=element_text(size=8,angle=90,hjust=1,vjust=0.3),
+#                                       axis.text.y=element_text(size=8),
+#                                       axis.title=element_text(size=8),
+#                                       axis.ticks = element_blank(),
+#                                       strip.text.y = element_text(angle=0),
+#                                       strip.text.x = element_text(size=8,angle=90),
+#                                       panel.background = element_rect(fill = "white",colour="black"),
+#                                       plot.title=element_text(size=14),
+#                                       axis.line=element_blank()) + 
+#       labs(x="",y="",fill="-log10\n FDR",title=" ")
+# WGCNA.voom5.signedhybrid.root.ivory.customcat.GOseq.plot.InXcomparison
+# ggsave(path=file.path("RNA","output"),filename="WGCNA.voom5.signedhybrid.root.ivory.customcat.consolidated.GOseq.plot.InXcomparison.png",height=8,width=11) 
 ```
 
 # plot each module, making  function
@@ -991,10 +991,13 @@ data3 %>% distinct(NAME) %>% apply(.,1,function(x) InX.comparison.plot(target.mo
 
 
 
-# troubleshooting (June 2021)
+# troubleshooting (June 2021) -> solved (June 13, 2021)
 ```{r eval=FALSE}
 # duplicated genes in 
-root.all3 %>% filter(duplicated(genes)) %>% View()
+root.all4 %>% filter(duplicated(genes)) %>% View() # none
+#
+root.all3 %>% filter(duplicated(genes)) %>% View() # one
+
 root.all3 %>% semi_join(root.all3[duplicated(root.all3$genes),"genes"],by="genes") %>% View()
 root.all3 %>% semi_join(root.all3[duplicated(root.all3$genes),"genes"],by="genes") %>% dplyr::select(matches("minusN_\nPeng")) # this has different values in the same gene.
 # multiple!
@@ -1027,6 +1030,33 @@ N_Peng_2007_ST1_down %>% dplyr::select(`AGI ID`,bRatio) %>% dplyr::rename(AGI=`A
 shoot.all %>% filter(duplicated(genes)) %>% View() #none. No need to change.
 ```
 
+# Overlap between "minusN_root_FC_down","plugMg_root_FC_down" in In02orLess (found in root.ivory)? (061521)
+```{r}
+target.module="root.voom5.module.signedhybrid.ivory"
+data <- data3
+data.target <- data %>% filter(NAME==target.module) %>% filter(str_detect(InX.FDR0.001,"In02orless")) 
+# load
+load(file.path("annotation","output","In02orless.consolidated.forORA.list2.Rdata"))
+In02orless.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plugMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # no overlap
 # 
+load(file.path("annotation","output","In03orless.consolidated.forORA.list2.Rdata"))
+In03orless.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plugMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # no overlap
+# 
+load(file.path("annotation","output","In05orless.consolidated.forORA.list2.Rdata"))
+In05orless.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plugMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # no overlap
+# 
+load(file.path("annotation","output","In10orless.consolidated.forORA.list2.Rdata"))
+In10orless.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plugMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # no overlap
+# 
+load(file.path("annotation","output","In20orless.consolidated.forORA.list2.Rdata"))
+In20orless.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plugMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # no overlap
+# 
+load(file.path("annotation","output","Total.consolidated.forORA.list2.Rdata"))
+In05orMore.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plugMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # no overlap
+#
+load(file.path("annotation","output","In05orMore.consolidated.forORA.list2.Rdata"))
+In05orMore.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plugMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # no overlap
+
+```
 
 
