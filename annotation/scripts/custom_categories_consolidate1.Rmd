@@ -982,15 +982,6 @@ data3 %>% distinct(NAME) %>% apply(.,1,function(x) InX.comparison.plot(target.mo
 ```
 
 
-
-
-
-
-
-
-
-
-
 # troubleshooting (June 2021) -> solved (June 13, 2021)
 ```{r eval=FALSE}
 # duplicated genes in 
@@ -1030,32 +1021,74 @@ N_Peng_2007_ST1_down %>% dplyr::select(`AGI ID`,bRatio) %>% dplyr::rename(AGI=`A
 shoot.all %>% filter(duplicated(genes)) %>% View() #none. No need to change.
 ```
 
-# Overlap between "minusN_root_FC_down","plugMg_root_FC_down" in In02orLess (found in root.ivory)? (061521)
+# Overlap between "minusN_root_FC_down","plusMg_root_FC_down" in In02orLess (found in root.ivory)? (061521)
 ```{r}
 target.module="root.voom5.module.signedhybrid.ivory"
 data <- data3
 data.target <- data %>% filter(NAME==target.module) %>% filter(str_detect(InX.FDR0.001,"In02orless")) 
 # load
 load(file.path("annotation","output","In02orless.consolidated.forORA.list2.Rdata"))
-In02orless.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plugMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # no overlap
+In02orless.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # 6 overlap
 # 
 load(file.path("annotation","output","In03orless.consolidated.forORA.list2.Rdata"))
-In03orless.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plugMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # no overlap
+In03orless.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # 17 overlap
 # 
 load(file.path("annotation","output","In05orless.consolidated.forORA.list2.Rdata"))
-In05orless.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plugMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # no overlap
+In05orless.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # 39 overlap
 # 
 load(file.path("annotation","output","In10orless.consolidated.forORA.list2.Rdata"))
-In10orless.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plugMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # no overlap
+In10orless.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # 92 overlap
 # 
 load(file.path("annotation","output","In20orless.consolidated.forORA.list2.Rdata"))
-In20orless.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plugMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # no overlap
+In20orless.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # 96 overlap
 # 
 load(file.path("annotation","output","Total.consolidated.forORA.list2.Rdata"))
-In05orMore.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plugMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # no overlap
+In05orMore.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # 67 overlap
 #
 load(file.path("annotation","output","In05orMore.consolidated.forORA.list2.Rdata"))
-In05orMore.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plugMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # no overlap
+In05orMore.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # 67 overlap
+```
+
+
+```{r}
+# 
+load(file.path("annotation","output","In02orless.consolidated.forORA.list2.Rdata"))
+In02orless.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_up","minusPi_root_FC_up")) %>% count(name) %>% count(n,name="n of n") # 112 overlap
+
+```
+
+# better to use UpSet plot (by Scott and Julin at Br. meeting June 15 2021)
+```{r}
+library(UpSetR)
+filtered.custom.data.consolidated.numericLL %>% filter(set %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% filter(group=="In02orLess") %>% 
+  upset()
+
+filtered.custom.data.consolidated.numeric %>%
+  filter(totalSetN <= 2) %>% dplyr::select(genes,minusN_root_FC_down,plusMg_root_FC_down) %>% upset(nsets=2) 
+
+```
+
+
+
+# which genes found in root.ivory module?
+```{r}
+filtered.custom.data.consolidated.numericLL
+Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid
+# overlapped with root.ivory
+In02orless.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% inner_join(Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid %>% filter(root.voom5.module.signedhybrid=="ivory"), by="name")
+#
+filtered.custom.data.consolidated.numericLL %>% filter(set %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% filter(group=="In02orLess") %>% filter(presentInSet==1) %>% inner_join(Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid %>% filter(root.voom5.module.signedhybrid=="ivory"), by=c("genes"="name")) %>% arrange(desc(totalSetN)) %>% View()
+#
+filtered.custom.data.consolidated.numericLL %>% filter(set %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% filter(group=="In02orLess") %>% filter(presentInSet==1) %>% inner_join(Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid %>% filter(root.voom5.module.signedhybrid=="ivory"), by=c("genes"="name")) %>% arrange(desc(totalSetN)) %>% count(totalSetN)
+#
+filtered.custom.data.consolidated.numericLL %>% filter(set %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% filter(group=="In02orLess") %>% filter(presentInSet==1) %>% inner_join(Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid %>% filter(root.voom5.module.signedhybrid=="ivory"), by=c("genes"="name")) %>% arrange(totalSetN) %>% View()
+#
+filtered.custom.data.consolidated.numericLL %>% filter(set %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% filter(str_detect(genes,"BraA07g012800.3C")) # 
+#
+temp <- filtered.custom.data.consolidated.numericLL %>% filter(set %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% filter(group=="In02orLess") %>% filter(presentInSet==1) %>% inner_join(Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid %>% filter(root.voom5.module.signedhybrid=="ivory"), by=c("genes"="name")) %>% arrange(totalSetN) %>% dplyr::select("genes","totalSetN","set","AGI","At_symbol","At_short_description","root.voom5.module.signedhybrid","leaf.voom5.module.signedhybrid","presentInSet") 
+# count
+temp.count <- temp %>% count(genes) #%>% View()
+temp %>% pivot_wider(names_from="set",values_from="presentInSet") %>% left_join(temp.count,by="genes") %>% group_by(plusMg_root_FC_down) %>% arrange(n,.group_by=TRUE)  %>% write_csv(file.path("RNA","output","root.ivory.specific.genelist.csv")) #View()
 
 ```
 
