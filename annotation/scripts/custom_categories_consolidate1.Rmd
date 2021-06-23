@@ -144,6 +144,7 @@ filtered.custom.data %>% dplyr::select(minusZn_Nishida_2017_root_FDR_down) # all
 ```
 
 # formatting custom categories for GOseq (Sep 29, 2020) (run once)
+# updated (062221)
 ```{r eval=FALSE}
 #filtered.custom.data <- read_csv(file.path("annotation","output","filtered.custom.data.rootshoot.csv.gz"),guess_max = 3000)
 # howmany genes in the list?
@@ -158,14 +159,14 @@ categories.up.down.combined <- categories.up.down %>% gsub("_up","",.) %>% gsub(
   dplyr::select(genes, ends_with("up"), ends_with("down"), -starts_with("exp")) %>%
   pivot_longer(-genes) 
 #GSEA_cust_rootshoot_updown2 %>% drop_na(value) %>% View()
-GSEA_cust_rootshoot_updown3.FDR0.001.list <- GSEA_cust_rootshoot_updown2 %>% drop_na(value) %>% filter(str_detect(name,"FC")) %>% dplyr::select(-value) %>%split(.$genes) %>%   map(~dplyr::select(.,name)) %>% map(~as_vector(.))
-save(GSEA_cust_rootshoot_updown3.FDR0.001.list,file=file.path("annotation","output","GSEA_cust_rootshoot_updown3.FDR0.001.list.Rdata"))
+GSEA_cust_rootshoot_updown4.consolidated.FDR0.001.list <- GSEA_cust_rootshoot_updown2 %>% drop_na(value) %>% filter(str_detect(name,"FC")) %>% dplyr::select(-value) %>%split(.$genes) %>%   map(~dplyr::select(.,name)) %>% map(~as_vector(.))
+save(GSEA_cust_rootshoot_updown4.consolidated.FDR0.001.list,file=file.path("annotation","output","GSEA_cust_rootshoot_updown4.consolidated.FDR0.001.list.Rdata"))
 #save(GSEA_cust_rootshoot_updown3.FDR0.01.list,file=file.path("annotation","output","GSEA_cust_rootshoot_updown3.FDR0.01.list.Rdata"))
 ```
 
 # 
 ```{r}
-load(file.path("annotation","output","GSEA_cust_rootshoot_updown3.FDR0.001.list.Rdata"))
+load(file.path("annotation","output","GSEA_cust_rootshoot_updown4.consolidated.FDR0.001.list.Rdata"))
 
 ```
 
@@ -264,8 +265,10 @@ filtered.custom.data.consolidated.numericL <- filtered.custom.data.consolidated.
          Total = presentInSet)
 
 filtered.custom.data.consolidated.numericL
+save(filtered.custom.data.consolidated.numericL,file=file.path("RNA","output","filtered.custom.data.consolidated.numericL.Rdata"))
 ```
 
+# Something is wrong with making "filtered.custom.data.consolidated.numericLL" below (chunk 17)? (061821, Kazu)
 ```{r}
 filtered.custom.data.consolidated.numericLL <- filtered.custom.data.consolidated.numericL %>%
   pivot_longer(c(starts_with("In"),starts_with("Total", ignore.case = FALSE)), names_to = "group", values_to = "group_summary")
@@ -1062,7 +1065,7 @@ In02orless.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(
 library(UpSetR)
 filtered.custom.data.consolidated.numericLL %>% filter(set %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% filter(group=="In02orLess") %>% 
   upset()
-
+# does not work
 filtered.custom.data.consolidated.numeric %>%
   filter(totalSetN <= 2) %>% dplyr::select(genes,minusN_root_FC_down,plusMg_root_FC_down) %>% upset(nsets=2) 
 
@@ -1072,24 +1075,18 @@ filtered.custom.data.consolidated.numeric %>%
 
 # which genes found in root.ivory module?
 ```{r}
+load(file.path("RNA","output","filtered.custom.data.consolidated.numericL.Rdata"))
+filtered.custom.data.consolidated.numericLL <- filtered.custom.data.consolidated.numericL %>%
+  pivot_longer(c(starts_with("In"),starts_with("Total", ignore.case = FALSE)), names_to = "group", values_to = "group_summary")
+head(filtered.custom.data.consolidated.numericLL,20)
+
 filtered.custom.data.consolidated.numericLL
 Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid
-# overlapped with root.ivory
-In02orless.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% inner_join(Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid %>% filter(root.voom5.module.signedhybrid=="ivory"), by="name")
 #
-filtered.custom.data.consolidated.numericLL %>% filter(set %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% filter(group=="In02orLess") %>% filter(presentInSet==1) %>% inner_join(Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid %>% filter(root.voom5.module.signedhybrid=="ivory"), by=c("genes"="name")) %>% arrange(desc(totalSetN)) %>% View()
-#
-filtered.custom.data.consolidated.numericLL %>% filter(set %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% filter(group=="In02orLess") %>% filter(presentInSet==1) %>% inner_join(Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid %>% filter(root.voom5.module.signedhybrid=="ivory"), by=c("genes"="name")) %>% arrange(desc(totalSetN)) %>% count(totalSetN)
-#
-filtered.custom.data.consolidated.numericLL %>% filter(set %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% filter(group=="In02orLess") %>% filter(presentInSet==1) %>% inner_join(Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid %>% filter(root.voom5.module.signedhybrid=="ivory"), by=c("genes"="name")) %>% arrange(totalSetN) %>% View()
-#
-filtered.custom.data.consolidated.numericLL %>% filter(set %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% filter(str_detect(genes,"BraA07g012800.3C")) # 
-#
-temp <- filtered.custom.data.consolidated.numericLL %>% filter(set %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% filter(group=="In02orLess") %>% filter(presentInSet==1) %>% inner_join(Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid %>% filter(root.voom5.module.signedhybrid=="ivory"), by=c("genes"="name")) %>% arrange(totalSetN) %>% dplyr::select("genes","totalSetN","set","AGI","At_symbol","At_short_description","root.voom5.module.signedhybrid","leaf.voom5.module.signedhybrid","presentInSet") 
+temp <- filtered.custom.data.consolidated.numericLL %>% filter(set %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% filter(totalSetN <=20, group_summary=="1") %>% filter(presentInSet==1) %>% inner_join(Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid %>% filter(root.voom5.module.signedhybrid=="ivory"), by=c("genes"="name")) %>% arrange(totalSetN) %>% dplyr::select("genes","totalSetN","set","AGI","At_symbol","At_short_description","root.voom5.module.signedhybrid","leaf.voom5.module.signedhybrid","presentInSet") %>% distinct()
 # count
 temp.count <- temp %>% count(genes) #%>% View()
-temp %>% pivot_wider(names_from="set",values_from="presentInSet") %>% left_join(temp.count,by="genes") %>% group_by(plusMg_root_FC_down) %>% arrange(n,.group_by=TRUE)  %>% write_csv(file.path("RNA","output","root.ivory.specific.genelist.csv")) #View()
-
+temp %>% pivot_wider(names_from="set",values_from="presentInSet") %>% left_join(temp.count,by="genes") %>% group_by(plusMg_root_FC_down) %>% arrange(n,.group_by=TRUE) %>% write_csv(file.path("RNA","output","root.ivory.specific.genelist.csv")) #View()
 ```
 
 
