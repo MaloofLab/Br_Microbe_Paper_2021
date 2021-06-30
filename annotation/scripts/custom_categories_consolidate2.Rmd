@@ -23,6 +23,7 @@ To Do
 * Fair "In only" approach for custom ORA using consolidated categoreis (052821)
 * Using consolidated categories in InX selection process and ORA and heatmap with the consolidated categories 
 * Another version (consolidate2= this sceript) is using the consolidated categoreis to generate InX, but use the original categories for ORA.
+* 
 
 
 #### making root + shoot category with up and down and
@@ -138,28 +139,7 @@ filtered.custom.data %>% dplyr::select(minusZn_Nishida_2017_root_FDR_down) # all
 
 ```
 
-<!-- # formatting custom categories for GOseq (Sep 29, 2020) (run once) -->
-<!-- # updated (062229) -->
-<!-- ```{r eval=FALSE} -->
-<!-- #filtered.custom.data <- read_csv(file.path("annotation","output","filtered.custom.data.rootshoot.csv.gz"),guess_max = 3000) -->
-<!-- # how many genes in the list? -->
-<!-- summary(!is.na(filtered.custom.data)) -->
-<!-- # how many categories? -->
-<!-- TF <- names(filtered.custom.data) %>% str_detect(c("plus","minus")) -->
-<!-- categories.up.down <- names(filtered.custom.data)[TF] %>% gsub("_FC","",.) %>% gsub("_FDR","",.) %>% unique() # 58 categories -->
-<!-- categories.up.down.combined <- categories.up.down %>% gsub("_up","",.) %>% gsub("_down","",.) %>% unique() # 30 categories -->
 
-<!-- # convert into list object -->
-<!--  GSEA_cust_rootshoot_updown2 <- filtered.custom.data %>% -->
-<!--   dplyr::select(genes, ends_with("up"), ends_with("down"), -starts_with("exp")) %>% -->
-<!--   pivot_longer(-genes)  -->
-<!-- #GSEA_cust_rootshoot_updown2 %>% drop_na(value) %>% View() -->
-<!-- GSEA_cust_rootshoot_updown4.consolidated.FDR0.001.list <- GSEA_cust_rootshoot_updown2 %>% drop_na(value) %>% filter(str_detect(name,"FC")) %>% dplyr::select(-value) %>%split(.$genes) %>%   map(~dplyr::select(.,name)) %>% map(~as_vector(.)) -->
-<!-- save(GSEA_cust_rootshoot_updown4.consolidated.FDR0.001.list,file=file.path("annotation","output","GSEA_cust_rootshoot_updown4.consolidated.FDR0.001.list.Rdata")) -->
-<!-- #save(GSEA_cust_rootshoot_updown3.FDR0.01.list,file=file.path("annotation","output","GSEA_cust_rootshoot_updown3.FDR0.01.list.Rdata")) -->
-<!-- ``` -->
-
-<!-- #  -->
 ```{r}
 load(file.path("annotation","output","GSEA_cust_rootshoot_updown4.consolidated.FDR0.001.list.Rdata"))
 
@@ -213,7 +193,7 @@ filtered.custom.data.TF6 <- filtered.custom.data.TF11 %>% filter(value==1) %>% u
 filtered.custom.data.TF6 %>% dplyr::count(value) # all 1. Good.
 filtered.custom.data.TF6 %>% unite(genes.category, genes, category) %>% dplyr::count(genes.category) %>% arrange(desc(n)) # all 1. Good
 duplicates <- filtered.custom.data.TF6 %>% unite(genes.category, genes, category) %>% dplyr::count(genes.category) %>% filter(n>1) # none. OK
-
+duplicates
 filtered.custom.data.TF6 %>% unite(genes.category, genes, category) %>% filter(genes.category %in% duplicates$genes.category)
 ```
 
@@ -249,7 +229,7 @@ for each gene total the number of sets that it is in
 ```{r}
 filtered.custom.data.numeric  # original
 filtered.custom.data.consolidated2.numeric <- filtered.custom.data.consolidated2.numeric %>% 
-  mutate(totalSetN=rowSums(filtered.custom.data.consolidated.numeric[,-1])) %>%
+  mutate(totalSetN=rowSums(filtered.custom.data.consolidated2.numeric[,-1])) %>%
   dplyr::select(genes, totalSetN, everything())
 head(filtered.custom.data.consolidated2.numeric)
 ```
@@ -816,13 +796,79 @@ data3 <- data3 %>% mutate(InX=factor(InX,levels=c("In10orMore","In05orMore","tot
 data3 %>% dplyr::count(InX)
 ```
 
+# full category list (Jun 29, 2021). I did not used it.
+```{r eval=FALSE}
+category.list <- filtered.custom.data.consolidated2.numericL %>% count(set)    %>% # View()
+  mutate(category2=
+  str_to_upper(set) %>%
+  str_replace_all("KAILASAM2019", "KAILASAM_2019") %>%
+ str_replace_all("MINUSPI_1D","MINUSPI-1D") %>%
+  str_replace_all("MINUSPI_3D","MINUSPI-3D") %>%
+  str_replace_all("AARABI2016","AARABI_2016") %>%
+  str_replace_all("KIM2019","KIM_2019") %>%
+  str_replace_all("WANG2003","WANG_2003") %>%
+   str_replace_all("COLDKILIAN","COLD_KILIAN") %>%
+  str_replace_all("BL_SEEDLINGS","plusBL_Nemhauser_2006_seedlings") %>%
+  str_replace_all("IAA_SEEDLINGS","plusIAA_Nemhauser_2006_seedlings") ) %>% 
+  separate(category2,into=c("category3","au","yr","tissue3","FC","up_down"),sep="_") %>% # View()
+  mutate(category3=category3 %>% 
+           str_replace_all("MINUSMG","MG-") %>%
+           str_replace_all("PLUSMG","MG+") %>%
+           str_replace_all("MINUSFE","FE-") %>%
+    str_replace_all("PLUSFE","FE_PLUS") %>%
+  str_replace_all("MINUSPI-1D","PI-1D-") %>%
+    str_replace_all("PLUSPI-1D","PI-1D+") %>%
+  str_replace_all("MINUSPI-3D","PI-3D+") %>%
+    str_replace_all("PLUSPI-3D","PI-3D+") %>%
+  str_replace_all("MINUSN","N-") %>%
+  str_replace_all("PLUSN","N+") %>%
+  str_replace_all("MINUSMN","MN-") %>%
+  str_replace_all("PLUSMN","MN+") %>% 
+  str_replace_all("MINUSP","P-") %>% 
+    str_replace_all("PLUSP","P+") %>% 
+    str_replace_all("PLUSIAA","IAA+") %>% 
+    str_replace_all("PLUSAL","AL+") %>%
+    str_replace_all("MINUSCA","CA-") %>% 
+      str_replace_all("PLUSCA","CA+") %>%
+    str_replace_all("MINUSK","K-") %>% 
+    str_replace_all("PLUSK","K+") %>% 
+    str_replace_all("MINUSS","S-") %>% 
+    str_replace_all("PLUSS","S+")) %>%
+  drop_na(category3) %>%
+  unite(category3.au,c("category3","au"),remove=FALSE) %>% 
+  mutate(au2 = str_replace_all(au,"KAILASAM","(1)") %>% 
+           str_replace_all("KIM","(2)") %>% 
+           str_replace_all("NISHIDA","(3)") %>%
+           str_replace_all("NIU","(4)") %>%
+           str_replace_all("KILIAN","(5)") %>%
+           str_replace_all("RODRIGUEZ-CELMA","(6)") %>%
+           str_replace_all("LIU","(7)") %>%
+           str_replace_all("PENG","(8)") %>%
+           str_replace_all("AARABI","(9)") %>%
+           str_replace_all("LIGABA-OSENA","(10)") %>%
+           str_replace_all("NEMHAUSER","(11)") %>%
+           str_replace_all("WANG","(12)")) %>%
+  unite(category3.au.up_down,c("category3","up_down","au2"),sep=" ",remove=FALSE) %>%
+  drop_na(category3) %>%
+  unite(category3.up_down,category3, up_down)
+category.list
+```
+
+
+
 # plot each module, making  function
 ```{r}
-InX.comparison.plot <- function(data=data3,target.module="root.voom5.module.signedhybrid.darkred") {# data3.root.darkred <- data3 %>% filter(NAME=="root.voom5.module.signedhybrid.darkred")
+InX.comparison.plot <- function(data=data3,target.module="root.voom5.module.signedhybrid.darkred",full.category=c("TRUE","FALSE")) {# data3.root.darkred <- data3 %>% filter(NAME=="root.voom5.module.signedhybrid.darkred")
 data.target <- data %>% filter(NAME==target.module)
 data.target %>% View()
+# x axis is full category or not
+# if(full.category=="TRUE") {
+#   data.target <- data.target %>% mutate(category3.au.up_down=factor(category3.au.up_down,levels=category.list$category3.au.up_down))
+# } else if(full.category=="FALSE") {
+#   data.target <- data.target
+# }
 # plot 
-WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- ggplot(data.target, aes(x=category3.au.up_down,y=InX)) + geom_tile(aes(fill=-log10(over_represented_padjust)),colour="white") + scale_fill_gradient2(limit=c(0,10), high=muted("magenta")) + facet_grid(.~tissue3,scales="free_x",space="free")
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- ggplot(data.target, aes(x=category3.au.up_down,y=InX)) + geom_tile(aes(fill=-log10(over_represented_padjust)),colour="white") + scale_fill_gradient2(limit=c(0,10), high=muted("magenta")) + facet_grid(.~tissue3,scales="free_x",space="free",drop=FALSE)
 
 WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison + theme(axis.text.x=element_text(size=12,angle=90,hjust=1,vjust=0.3),
                                       axis.text.y=element_text(size=12),
@@ -838,10 +884,10 @@ WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- WGCNA.voom
 WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison + geom_text(aes(label=numDEInCat))
 
 WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison
-ggsave(path=file.path("RNA","output"),filename=str_c("WGCNA.",target.module,".customcat.consolidated2.GOseq.plot.InXcomparison.png"),height=8,width=11) 
+ggsave(path=file.path("RNA","output"),filename=str_c("WGCNA.",target.module,".customcat.consolidated2.GOseq.plot.InXcomparison.v2.png"),height=8,width=11) 
 }
 # test
-InX.comparison.plot(data=data3,target.module="root.voom5.module.signedhybrid.darkred")
+InX.comparison.plot(data=data3,target.module="leaf.voom5.module.signedhybrid.skyblue",full.category="TRUE")
 # how many mnodules we have?
 data3 %>% distinct(NAME) 
 # 
@@ -849,3 +895,38 @@ data3 %>% distinct(NAME)
 # plot for all WGCNA modules
 data3 %>% distinct(NAME) %>% apply(.,1,function(x) InX.comparison.plot(target.module=x))
 ```
+
+```{r}
+InX.comparison.plot2 <- function(data=data3) {# data3.root.darkred <- data3 %>% filter(NAME=="root.voom5.module.signedhybrid.darkred")
+# data.target <- data %>% filter(NAME==target.module)
+# data.target %>% View()
+# x axis is full category or not
+# if(full.category=="TRUE") {
+#   data.target <- data.target %>% mutate(category3.au.up_down=factor(category3.au.up_down,levels=category.list$category3.au.up_down))
+# } else if(full.category=="FALSE") {
+#   data.target <- data.target
+# }
+# plot 
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- ggplot(data, aes(x=category3.au.up_down,y=InX)) + geom_tile(aes(fill=-log10(over_represented_padjust)),colour="white") + scale_fill_gradient2(limit=c(0,10), high=muted("magenta")) + facet_grid(NAME~tissue3,scales="free_x",space="free",drop=FALSE)
+
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison + theme(axis.text.x=element_text(size=12,angle=90,hjust=1,vjust=0.3),
+                                      axis.text.y=element_text(size=12),
+                                      axis.title=element_text(size=10),
+                                      axis.ticks = element_blank(),
+                                      strip.text.y = element_text(size=16,angle=0),
+                                      strip.text.x = element_text(size=8,angle=90),
+                                      panel.background = element_rect(fill = "white",colour="black"),
+                                      plot.title=element_text(size=14),
+                                      axis.line=element_blank()) + 
+      labs(x="",y="",fill="-log10\n FDR",title="WGCNA.customcat.consolidated2.GOseq.plot.InXcomparison.allv2.pdf")
+# adding overlap numbers
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison + geom_text(aes(label=numDEInCat))
+
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison
+ggsave(path=file.path("RNA","output"),filename=str_c("WGCNA.customcat.consolidated2.GOseq.plot.InXcomparison.allv2.pdf"),height=200,width=20,limitsize=FALSE) 
+}
+# test
+InX.comparison.plot2()
+
+```
+
