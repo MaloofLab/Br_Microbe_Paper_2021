@@ -1089,4 +1089,30 @@ temp.count <- temp %>% count(genes) #%>% View()
 temp %>% pivot_wider(names_from="set",values_from="presentInSet") %>% left_join(temp.count,by="genes") %>% group_by(plusMg_root_FC_down) %>% arrange(n,.group_by=TRUE) %>% write_csv(file.path("RNA","output","root.ivory.specific.genelist.csv")) #View()
 ```
 
+# all in one plot (June 29, 2021)
+```{r}
+InX.comparison.plot3 <- function(data=data3) {
+  
+  # plot 
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- ggplot(data, aes(x=category3.up_down,y=InX)) + geom_tile(aes(fill=-log10(over_represented_padjust)),colour="white") + scale_fill_gradient2(limit=c(0,10), high=muted("magenta")) + facet_grid(NAME~tissue3,scales="free_x",space="free")
 
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison + theme(axis.text.x=element_text(size=12,angle=90,hjust=1,vjust=0.3),
+                                      axis.text.y=element_text(size=12),
+                                      axis.title=element_text(size=10),
+                                      axis.ticks = element_blank(),
+                                      strip.text.y = element_text(size=16,angle=0),
+                                      strip.text.x = element_text(size=8,angle=90),
+                                      panel.background = element_rect(fill = "white",colour="black"),
+                                      plot.title=element_text(size=14),
+                                      axis.line=element_blank()) + 
+      labs(x="",y="",fill="-log10\n FDR",title="WGCNA.customcat.consolidated.GOseq.plot.InXcomparison.allv2")
+# adding overlap numbers
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison + geom_text(aes(label=numDEInCat))
+
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison
+ggsave(path=file.path("RNA","output"),filename=str_c("WGCNA.customcat.consolidated.GOseq.plot.InXcomparison.allv2.pdf"),height=200,width=20,limitsize=FALSE) 
+}
+# test
+InX.comparison.plot3()
+
+```
