@@ -116,6 +116,12 @@ met_per_mg_lm_results %>% ungroup() %>%
   summarize(sig.trt=sum(FDR.trt<0.1), sig.leaf=sum(FDR.leaf<0.1), sig.both=sum(FDR.trt<0.1&FDR.leaf<0.1), count=n())
 ```
 
+```{r}
+met_per_mg_lm_results %>% ungroup() %>%
+  filter(FDR.trt<0.1, FDR.leaf<0.1)
+```
+
+
 raw
 ```{r}
 met_amt_lm <- met_amt %>%
@@ -144,6 +150,10 @@ met_amt_lm_results<- met_amt_lm %>% mutate(broomtidy.trt = map(lm_trt, broom::ti
 
 met_amt_lm_results %>% ungroup() %>%
   summarize(sig.trt=sum(FDR.trt<0.1), sig.leaf=sum(FDR.leaf<0.1), sig.both=sum(FDR.trt<0.1&FDR.leaf<0.1), count=n())
+```
+```{r}
+met_amt_lm_results %>% ungroup() %>%
+  filter(FDR.trt<0.1, FDR.leaf<0.1)
 ```
 
 

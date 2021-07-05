@@ -286,11 +286,11 @@ d %>% ggplot(aes(x=MEivory_root, y=leaf_avg_std)) +
   geom_point()
 ```
 
-```{r}
+```{r, fig.asp=1}
 d %>% dplyr::select(all_of(vars)) %>%
   pivot_longer(cols = !leaf_avg_std, names_to = "module", values_to ="eigenGene") %>%
   ggplot(aes(x=eigenGene, y=leaf_avg_std)) +
   geom_point() +
-  facet_wrap(~module, ncol = 3)
+  facet_wrap(~module, ncol = 3, scales = "free")
 ```
 
