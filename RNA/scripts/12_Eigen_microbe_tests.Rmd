@@ -1,0 +1,115 @@
+---
+title: "Eigen Gene Treatment Tests"
+output: html_notebook
+author: "Julin Maloof"
+---
+
+This is an alternative approach to look for modules that are responsive to treatment.  Do a t-test or equivalent on eigen gene expression levels split by treatment.
+
+```{r}
+library(tidyverse)
+```
+
+## load sample info
+
+### exp1
+```{r}
+exp1 <- readxl::read_excel("../input/wy001_RNAseq.xlsx") %>%
+  filter(time_point=="wk2", autoclave %in% c("dead", "live")) %>%
+  mutate(sampleID=str_c(genotype, 
+                        str_pad(block, width = 2, pad = "0"),
+                        str_pad(pot, width = 3, pad = "0"),
+                        sep="_")) %>%
+  select(sampleID, trt=autoclave)
+exp1
+```
+### exp3 
+
+```{r}
+exp3 <- read_csv("../input/wy003-metadata.csv") %>%
+  filter(CROWDING=="CR") %>%
+  select(sampleID=`SAMPLE ID`, trt=TREATMENT)
+exp3
+```
+
+combine it
+```{r}
+sample_info <- bind_rows(exp1, exp3)
+sample_info
+```
+
+# roots
+
+load root modules
+```{r}
+root.voom5 <- readr::read_tsv(file.path("..","output","voom_expression.e1and3.resid.exp_gt.root.plusR500.txt.gz"))
+load("../output/voom_expression.e1and3.resid.exp_gt.root.plusR500.signedhybrid.txt.gz.WGCNA.softthresh10.signedhybrid.RData")
+
+rootMEs <- MEs %>% as_tibble() %>%
+  rename_all(~ str_remove(., "ME")) %>%
+  rename_all(~ str_c("root.", .)) %>%
+  mutate(sampleID=colnames(root.voom5)[-1],
+         sampleID=str_remove(sampleID, "wyo_root_"),
+         sampleID=str_remove(sampleID, "_S[0-9]{1,3}$")) %>%
+  select(sampleID, everything())
+rootMEs
+rm(MEs)
+```
+
+```{r}
+root_results <- inner_join(sample_info, rootMEs) %>%
+  pivot_longer(starts_with("root"), names_to = "module", values_to = "eigen_value") %>%
+  nest(data = c(sampleID, trt, eigen_value)) %>%
+  mutate(lm=map(data, ~lm(eigen_value ~ trt, data=.)),
+         lmglance=map(lm, broom::glance),
+         lmtidy=map(lm, broom::tidy)) %>%
+  #unnest(lmglance) %>% 
+  #select(1:lmtidy, lm.p.value=p.value) %>% 
+  #mutate(lmfdr=p.adjust(lm.p.value, method="fdr")) %>%
+  unnest(lmtidy)
+
+root_results <- root_results %>% 
+  filter(term=="trtlive") %>%
+  arrange(p.value) %>% 
+  mutate(fdr=p.adjust(p.value, method="fdr")) %>%
+  select(module, term, estimate, p.value, fdr)
+
+root_results
+```
+
+# leaf
+
+load leaf modules
+```{r}
+leaf.voom5 <- readr::read_tsv(file.path("..","output","voom_expression.e1and3.resid.exp_gt.leaf.plusR500.txt.gz"))
+load("../output/voom_expression.e1and3.resid.exp_gt.leaf.plusR500.signedhybrid.txt.gz.WGCNA.softthresh10.signedhybrid.RData")
+
+leafMEs <- MEs %>% as_tibble() %>%
+  rename_all(~ str_remove(., "ME")) %>%
+  rename_all(~ str_c("leaf.", .)) %>%
+  mutate(sampleID=colnames(leaf.voom5)[-1],
+         sampleID=str_remove(sampleID, "wyo_leaf_"),
+         sampleID=str_remove(sampleID, "_S[0-9]{1,3}$")) %>%
+  select(sampleID, everything())
+leafMEs
+rm(MEs)
+```
+
+```{r}
+leaf_results <- inner_join(sample_info, leafMEs) %>%
+  pivot_longer(starts_with("leaf"), names_to = "module", values_to = "eigen_value") %>%
+  nest(data = c(sampleID, trt, eigen_value)) %>%
+  mutate(lm=map(data, ~lm(eigen_value ~ trt, data=.)),
+         lmglance=map(lm, broom::glance),
+         lmtidy=map(lm, broom::tidy)) %>%
+  unnest(lmtidy)
+
+leaf_results <- leaf_results %>% 
+  filter(term=="trtlive") %>%
+  arrange(p.value) %>% 
+  mutate(fdr=p.adjust(p.value, method="fdr")) %>%
+  select(module, term, estimate, p.value, fdr)
+
+leaf_results
+```
+
