@@ -1,0 +1,81 @@
+---
+title: "compare Eigen genes"
+output: html_notebook
+---
+
+Test whether Eigen genes match in various data sets
+
+```{r}
+library(tidyverse)
+```
+
+## load leaf Rdata
+```{r}
+load("../output/voom_expression.e1and3.resid.exp_gt.leaf.plusR500.signedhybrid.txt.gz.WGCNA.softthresh10.signedhybrid.RData")
+```
+
+```{r}
+leaf.Rdata <- colnames(MEs) %>%
+  str_replace("ME", "leaf.")
+leaf.Rdata
+```
+
+## load root Rdata
+
+```{r}
+load("../output/voom_expression.e1and3.resid.exp_gt.root.plusR500.signedhybrid.txt.gz.WGCNA.softthresh10.signedhybrid.RData")
+```
+
+```{r}
+root.Rdata <- colnames(MEs) %>%
+  str_replace("ME", "root.")
+root.Rdata
+```
+
+
+```{r}
+GO <- read_csv("../output/WGCNA.voom5.signedhybrid.all.modules.GOseq.csv")
+GOnames <- GO$name %>% unique %>% str_remove("voom5.module.signedhybrid_")
+
+leafGO <- GOnames %>% str_subset("leaf")
+leafGO
+
+rootGO <- GOnames %>% str_subset("root")
+rootGO
+```
+
+## compare leaf
+
+number of modules
+```{r}
+length(leaf.Rdata) # 31
+length(leafGO) # 68
+```
+
+modules in Rdata but not in GO Table
+```{r}
+setdiff(leaf.Rdata, leafGO) #none
+```
+
+modules in GO table but not in Rdata:
+```{r}
+setdiff(leafGO, leaf.Rdata) 
+```
+
+## compare root
+
+number of modules
+```{r}
+length(root.Rdata) # 25
+length(rootGO) # 49
+```
+
+modules in Rdata but not in GO Table
+```{r}
+setdiff(root.Rdata, rootGO) #none
+```
+
+modules in GO table but not in Rdata:
+```{r}
+setdiff(rootGO, root.Rdata) 
+```
