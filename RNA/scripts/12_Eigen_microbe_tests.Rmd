@@ -2,6 +2,8 @@
 title: "Eigen Gene Treatment Tests"
 output: html_notebook
 author: "Julin Maloof"
+editor_options: 
+  chunk_output_type: console
 ---
 
 This is an alternative approach to look for modules that are responsive to treatment.  Do a t-test or equivalent on eigen gene expression levels split by treatment.
@@ -83,7 +85,23 @@ load leaf modules
 ```{r}
 leaf.voom5 <- readr::read_tsv(file.path("..","output","voom_expression.e1and3.resid.exp_gt.leaf.plusR500.txt.gz"))
 load("../output/voom_expression.e1and3.resid.exp_gt.leaf.plusR500.signedhybrid.txt.gz.WGCNA.softthresh10.signedhybrid.RData")
+```
 
+# checing module names in "MEs" (Kazu: July 18 - 19, 2021
+```{r}
+# number of modules
+tibble(dynamicColors) %>% count(dynamicColors) # 68
+dim(MEs) # 31, why different from dynamiccolors?
+tibble(moduleColors) %>% count(moduleColors) # 31. Instead of dynamicColors, I should have used "moduleColors"... 
+# module names in MEs are identical to ones in moduleColors?
+MEs.colnames <- colnames(MEs) %>% str_remove("ME")
+moduleColors.modules <- tibble(moduleColors) %>% count(moduleColors) %>% select(moduleColors) %>% as_vector()
+MEs.colnames %in% moduleColors.modules # all TRUE. 
+# the end of checing module names in "MEs" 
+```
+
+```{r}
+#
 leafMEs <- MEs %>% as_tibble() %>%
   rename_all(~ str_remove(., "ME")) %>%
   rename_all(~ str_c("leaf.", .)) %>%
