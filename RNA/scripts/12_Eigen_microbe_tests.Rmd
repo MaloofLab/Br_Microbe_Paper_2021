@@ -3,7 +3,7 @@ title: "Eigen Gene Treatment Tests"
 output: html_notebook
 author: "Julin Maloof"
 editor_options: 
-  chunk_output_type: console
+  chunk_output_type: inline
 ---
 
 This is an alternative approach to look for modules that are responsive to treatment.  Do a t-test or equivalent on eigen gene expression levels split by treatment.
@@ -77,6 +77,8 @@ root_results <- root_results %>%
   select(module, term, estimate, p.value, fdr)
 
 root_results
+
+write_csv(root_results, "../output/root_eigen_microbes_lm.csv")
 ```
 
 # leaf
@@ -87,7 +89,7 @@ leaf.voom5 <- readr::read_tsv(file.path("..","output","voom_expression.e1and3.re
 load("../output/voom_expression.e1and3.resid.exp_gt.leaf.plusR500.signedhybrid.txt.gz.WGCNA.softthresh10.signedhybrid.RData")
 ```
 
-# checing module names in "MEs" (Kazu: July 18 - 19, 2021
+# checking module names in "MEs" (Kazu: July 18 - 19, 2021
 ```{r}
 # number of modules
 tibble(dynamicColors) %>% count(dynamicColors) # 68
@@ -97,7 +99,7 @@ tibble(moduleColors) %>% count(moduleColors) # 31. Instead of dynamicColors, I s
 MEs.colnames <- colnames(MEs) %>% str_remove("ME")
 moduleColors.modules <- tibble(moduleColors) %>% count(moduleColors) %>% select(moduleColors) %>% as_vector()
 MEs.colnames %in% moduleColors.modules # all TRUE. 
-# the end of checing module names in "MEs" 
+# the end of checking module names in "MEs" 
 ```
 
 ```{r}
@@ -129,5 +131,7 @@ leaf_results <- leaf_results %>%
   select(module, term, estimate, p.value, fdr)
 
 leaf_results
+
+write_csv(leaf_results, "../output/leaf_eigen_microbes_lm.csv")
 ```
 
