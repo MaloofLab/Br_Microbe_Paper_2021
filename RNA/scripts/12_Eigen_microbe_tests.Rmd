@@ -134,4 +134,56 @@ leaf_results
 
 write_csv(leaf_results, "../output/leaf_eigen_microbes_lm.csv")
 ```
+# combine with leaf.length and GO results
+
+```{r}
+combined <- rbind(leaf_results, root_results) %>%
+  select(module, term, microbe.estimate=estimate, microbe.fdr=fdr)
+combined
+```
+
+
+```{r}
+leaf.length <- read_csv("../output/ElasticNet0.5_multiCV_Pct_var.signed.hybrid.csv") %>%
+  mutate(module=str_c(Module_Organ,".",Module_Name)) %>%
+  select(module, leaf_length_pct_var=Pct_Var_Explained, leaf_length_effect=Effect)
+head(leaf.length)
+```
+
+```{r}
+combined <- full_join(combined, leaf.length, by="module")
+combined
+```
+
+GO terms
+```{r}
+GO <- read_csv("../output/WGCNA.voom5.signedhybrid.all.moduleColors.GOseq.csv")
+max(GO$over_represented_padjust,na.rm = TRUE)
+GO
+```
+
+Get names to match
+```{r}
+GO <- GO %>% mutate(module=str_remove(name,"voom5.module.signedhybrid_"))
+unique(GO$module)
+```
+
+Consolidate GOs to single line per module
+```{r}
+GO_summary <- GO %>% select(module, term)%>%
+  mutate(term=ifelse(is.na(term), "no enriched GO", term)) %>%
+  group_by(module) %>%
+  summarize(terms= str_c(term, collapse="; "))
+
+GO_summary
+```
+
+```{r}
+combined <- full_join(combined, GO_summary)
+combined
+```
+
+```{r}
+write_csv(combined, "../output/voom5.signedhybrid.GO_leaf_length_microbe.csv")
+```
 
