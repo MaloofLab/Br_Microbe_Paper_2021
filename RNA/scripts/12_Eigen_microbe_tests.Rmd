@@ -173,7 +173,7 @@ Consolidate GOs to single line per module
 GO_summary <- GO %>% select(module, term)%>%
   mutate(term=ifelse(is.na(term), "no enriched GO", term)) %>%
   group_by(module) %>%
-  summarize(terms= str_c(term, collapse="; "))
+  summarize(top15GOterms= str_c(term[1:(min(15,length(term)))], collapse="; "))
 
 GO_summary
 ```
