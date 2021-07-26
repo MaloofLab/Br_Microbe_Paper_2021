@@ -462,18 +462,19 @@ pivot_longer(cols=-1,names_to = "voom")  %>% drop_na(value) %>% unite(voom.modul
 
 
 
-# making gmx file for GSEA with WGCNA modules
+# making gmx file for GSEA with WGCNA modules -> WGCNA.signedhybrid.moduleColors.voom5.csv.gz (072021)
+# no need to make because GSEA is not used any more.
 ```{r}
 #WGCNA.modules2 
-Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid <- read_csv(file.path("RNA","output","WGCNA.signedhybrid.modules.voom5.csv.gz")) # change object name
+Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid <- read_csv(file.path("RNA","output","WGCNA.signedhybrid.moduleColors.voom5.csv.gz")) # change object name
 
-Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid.list <- Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid %>% dplyr::select(name,contains("voom")) %>% 
+Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid.list <- Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid %>% dplyr::select(name,contains("voom")) %>% 
   pivot_longer(cols=-1,names_to="voom",values_to="module") %>%
   split(.$voom) %>%   map(~dplyr::select(.,c(name,module))) # !!!
 
 #write_tsv(test, "../output/test.gmx") 
 
-making.gmx <- function(x,data.list=Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid.list) {
+making.gmx <- function(x,data.list=Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid.list) {
   load("n.Rdata")
   n <- n + 1
   print("n is")
@@ -493,14 +494,14 @@ return(test)
 # run
 n <- 0
 save(n,file="n.Rdata")
-Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid.list.gmx <- Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid.list %>% map(~making.gmx(.))
-rm("n.Rdata")
+Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid.list.gmx <- Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid.list %>% map(~making.gmx(.))
+rm("n.Rdata") # not found... why?
 
 #WGCNA.modules2.gmx <- WGCNA.modules2.list.gmx %>% bind_cols() # error due to different length of rows
 # write csv
 #WGCNA.modules2.list.gmx %>% map(.,write_csv(., path=file.path("..","output",str_c(names))))
-for(x in names(Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid.list.gmx)) {
-  write_tsv(Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid.list.gmx[[x]],file=file.path("annotation","output",str_c(x,".gmx",sep="")))
+for(x in names(Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid.list.gmx)) {
+  write_tsv(Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid.list.gmx[[x]],file=file.path("annotation","output",str_c(x,".gmx",sep="")))
 }
 ```
 
