@@ -166,15 +166,6 @@ ggsave(plot.full,filename="plot.full.signedhybrid.soiltrtFDR0.05.png",path=file.
 
 # how about expression pattern
 # scatter plot of genes within a module: microbe FC vs N and MG FC for each gene in Root Ivory
-```{r}
-mod <- "root.ivory"
-customcategory <- ""
-# N FC
-fits.summary.AGI.FC <- read_csv(file.path("annotation","input","custom_categories","plusN_Wang2003.root.fits.summary.AGI.FC.csv.gz")) 
-hist(fits.summary.AGI.FC$mean.FC.AGI) # log2
-# MG FC
-
-```
 
 # calculate microbe FC
 # load normalized log2 expression data (Brassica genome v3.0 annotation) {data-navmenu="Data import"}
@@ -229,14 +220,32 @@ root.voom5.trt.mean.FPsc.live <- root.voom5.trt.mean %>% filter(trt=="live",geno
 root.voom5.trt.mean.FPsc.live.ATG.moduleColors.signedhybrid <- root.voom5.trt.mean.FPsc.live %>% inner_join(Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid,by=c("genes"="name"))
 ```
 
+```{r}
+mod <- "root.ivory"
+customcategory <- ""
+# N FC
+fits.summary.AGI.FC <- read_csv(file.path("annotation","input","custom_categories","plusN_Wang2003.root.fits.summary.AGI.FC.csv.gz")) 
+hist(fits.summary.AGI.FC$mean.FC.AGI) # log2
+# MG FC
+plusMg_Niu_2016_root.DEGs <- read.csv(file.path("annotation","input","custom_categories","plusMg_Niu_2016_root.DEGs.csv.gz"))
+
+```
+
 # plot (root.ivory module, plusN_Wang2003)
 ```{r}
 p <- root.voom5.trt.mean.FPsc.live.ATG.moduleColors.signedhybrid %>% filter(root.voom5.module.signedhybrid=="ivory") %>% inner_join(fits.summary.AGI.FC[,c("AGI","mean.FC.AGI"),by="AGI"]) %>% rename(plusN_Wang2003.root.log2=mean.FC.AGI) %>%
   rename(microbeFC.live.log2=mean) %>%
   ggplot(aes(x=microbeFC.live.log2,y=plusN_Wang2003.root.log2)) + geom_point() + labs(title="root.ivory")
-ggsave(p,file=file.path("RNA","output","root.ivory.microbe.VS.plusN_Wang2003.png"))
+ggsave(p,file=file.path("RNA","output","root.ivory.microbe.VS.plusN_Wang2003_root.png"))
 ```
 
+# plot (root.ivory module, plusN_Wang2003)
+```{r}
+p <- root.voom5.trt.mean.FPsc.live.ATG.moduleColors.signedhybrid %>% filter(root.voom5.module.signedhybrid=="ivory") %>% inner_join(plusMg_Niu_2016_root.DEGs[,c("AGI","logFC")],by="AGI") %>% dplyr::rename(plusMg_Niu_2016_root.DEGs.log2=logFC) %>%
+  rename(microbeFC.live.log2=mean) %>%
+  ggplot(aes(x=microbeFC.live.log2,y=plusMg_Niu_2016_root.DEGs.log2)) + geom_point() + labs(title="root.ivory")
+ggsave(p,file=file.path("RNA","output","root.ivory.microbe.VS.plusMg_Niu_2016_root.png"))
+```
 
 
 
