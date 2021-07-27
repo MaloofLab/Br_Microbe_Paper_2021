@@ -28,7 +28,7 @@ editor_options:
 * Module gene numbers
 * leaf length assocation
 * dendrogram (clustering)
-
+* scatter plot (microbe FC vs given custom category FC) for genes in a given module (072621)
 
 ```{r setup}
 rm(list=ls())
@@ -164,24 +164,102 @@ ggsave(plot.full,filename="plot.full.signedhybrid.soiltrtFDR0.05.png",path=file.
 
 ```
 
-
-
-
+# how about expression pattern
+# scatter plot of genes within a module: microbe FC vs N and MG FC for each gene in Root Ivory
 ```{r}
-# format GSEA plot
-cutoff <- 0.3
-plot.GSEA <- GSEA_reports.DF.plot.dendrogram.v10.WGCNAmodule.signedhybrid.notitle.ML(data = GSEA_reports.DF,
-                                            GSEA.FDR.cutoff = cutoff,
-                                            top.margin=290,
-                                            bottom.margin=30,
-                                            dendrogram="FALSE",
-                                            legend.height=30,
-                                            legend.width=10,
-                                            modules="fullmodule") 
-#plot.GSEA  +  guides(fill = guide_legend(nrow=2)) # this is not what I want
-plot.GSEA <- plot.GSEA + theme(legend.position="left",legend.key.height=unit(10,"pt"),legend.text=element_text(size=10,angle=0),plot.margin = margin(44, 0, 34, 0, "pt")) + 
-ggsave(plot.GSEA,filename="GSEA.RNAseq.plot.ML.full.signedhybrid.FDR0.3.png",path=file.path("RNA","output"),width=8,height=20)
+mod <- "root.ivory"
+customcategory <- ""
+# N FC
+fits.summary.AGI.FC <- read_csv(file.path("annotation","input","custom_categories","plusN_Wang2003.root.fits.summary.AGI.FC.csv.gz")) 
+hist(fits.summary.AGI.FC$mean.FC.AGI) # log2
+# MG FC
+
 ```
+
+# calculate microbe FC
+# load normalized log2 expression data (Brassica genome v3.0 annotation) {data-navmenu="Data import"}
+```{r}
+# plus R500 in residual
+root.voom5 <- readr::read_tsv(file.path("RNA","output","voom_expression.e1and3.resid.exp_gt.root.plusR500.txt.gz"))
+leaf.voom5 <- readr::read_tsv(file.path("RNA","output","voom_expression.e1and3.resid.exp_gt.leaf.plusR500.txt.gz"))
+```
+
+# make sample description data frame {data-navmenu="Data import"}
+```{r}
+sample.description.e1 <- read_csv(file.path("plant","output","Br.mbio.e1.sample.description.csv"))
+sample.description.e3 <- read_csv(file.path("plant","output","Br.mbio.e3.sample.description.csv"))
+
+sample.description.e1 %>% summarize(n_distinct(group))
+sample.description.e1 %>% group_by(trt) %>% summarize(n())
+##
+root.voom5.e1 <- tibble(root.voom5 = colnames(root.voom5)[-1]) %>% inner_join(sample.description.e1[,c("sample","genotype","tissue","trt")],by=c("root.voom5"="sample"))
+root.voom5.e3 <- tibble(root.voom5 = colnames(root.voom5)[-1]) %>% mutate(genotype="FPsc") %>% inner_join(sample.description.e3[,c("sample","tissue","trt")],by=c("root.voom5"="sample"))  
+root.voom5.sample <- bind_rows(root.voom5.e1,root.voom5.e3) %>% mutate(trt=str_remove(trt,"5E_"))
+# for Whitney
+# root.voom5.sample <- bind_rows(root.voom5.e1,root.voom5.e3)
+# root.voom5.sample$trt <- gsub("5E_","",root.voom5.sample$trt)
+root.voom5.sample %>% group_by(genotype) %>% summarise(num=n())
+
+
+# leaf.voom5.sample
+leaf.voom5.e1 <- tibble(leaf.voom5 = colnames(leaf.voom5)[-1]) %>% inner_join(sample.description.e1[,c("sample","genotype","tissue","trt")],by=c("leaf.voom5"="sample"))
+leaf.voom5.e3 <- tibble(leaf.voom5 = colnames(leaf.voom5)[-1]) %>% mutate(genotype="FPsc") %>% inner_join(sample.description.e3[,c("sample","tissue","trt")],by=c("leaf.voom5"="sample"))  
+leaf.voom5.sample <- bind_rows(leaf.voom5.e1,leaf.voom5.e3) %>% mutate(trt=str_remove(trt,"5E_")) # str_remove did not work in Whitney (041721)
+# for Whitney
+# leaf.voom5.sample <- bind_rows(leaf.voom5.e1,leaf.voom5.e3)
+# leaf.voom5.sample$trt <- gsub("5E_","",root.voom5.sample$trt)
+leaf.voom5.sample %>% group_by(genotype) %>% summarise(num=n())
+```
+
+## gene annotation
+```{r}
+# annotation file for v3.0annotation
+Br.v3.0.At.BLAST <- read_csv(file.path("annotation","output","Brapa_v3.0_annotated.csv")) 
+# This annotation is redundant with name (Br grene). Eg 
+Br.v3.0.At.BLAST %>% filter(name=="BraA01g040570.3C")
+# reduce the redundancy (112418)
+Br.v3.0anno.At.BLAST.highscore <- Br.v3.0.At.BLAST %>% group_by(name) %>% arrange(desc(score)) %>% slice(1)
+```
+# calculate microbe FC
+```{r}
+root.voom5.trt.mean <- root.voom5 %>% pivot_longer(col=-1) %>% inner_join(root.voom5.sample,by=c("name"="root.voom5")) %>% group_by(genes,genotype,trt) %>% summarize(mean=mean(value))
+root.voom5.trt.mean # scaled to zero
+root.voom5.trt.mean.FPsc.live <- root.voom5.trt.mean %>% filter(trt=="live",genotype=="FPsc")
+# add ATG
+root.voom5.trt.mean.FPsc.live.ATG.moduleColors.signedhybrid <- root.voom5.trt.mean.FPsc.live %>% inner_join(Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid,by=c("genes"="name"))
+```
+
+# plot (root.ivory module, plusN_Wang2003)
+```{r}
+p <- root.voom5.trt.mean.FPsc.live.ATG.moduleColors.signedhybrid %>% filter(root.voom5.module.signedhybrid=="ivory") %>% inner_join(fits.summary.AGI.FC[,c("AGI","mean.FC.AGI"),by="AGI"]) %>% rename(plusN_Wang2003.root.log2=mean.FC.AGI) %>%
+  rename(microbeFC.live.log2=mean) %>%
+  ggplot(aes(x=microbeFC.live.log2,y=plusN_Wang2003.root.log2)) + geom_point() + labs(title="root.ivory")
+ggsave(p,file=file.path("RNA","output","root.ivory.microbe.VS.plusN_Wang2003.png"))
+```
+
+
+
+
+# function (scatter plot) # under construction
+```{r}
+expression.module7 <- function(tissue=c("leaf","root"),target.module=mod,target=target.genes$name,dat.voom=leaf.voom5.mod,target.customcategory="") {
+  dat.voom
+ # longer format
+dat.voom.long <- dat.voom %>% filter(genes %in% target) %>% dplyr::select(-dat.voom.module) %>%   pivot_longer(-genes,names_to="sampleID",values_to="value") %>% mutate(sampleID=str_remove(sampleID,"_root")) %>% mutate(sampleID=str_remove(sampleID,"_leaf")) 
+
+
+
+
+
+%>% inner_join(leaf_length[,c("sampleID","leaf_avg_std")],by="sampleID")
+ 
+}
+
+
+
+```
+
+
 
 
 
