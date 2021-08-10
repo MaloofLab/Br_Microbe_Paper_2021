@@ -27,6 +27,7 @@ To Do
 * and more modules.
 * Making v4 custom categories and use it for this script
 * Modify for updated plusN_Wang2003 using v5 (080621-081021)
+* I made a mistake to use this script for v5. Recover this from backup. For v5, use new script.
 
 #### making root + shoot category with up and down and
 # prep
