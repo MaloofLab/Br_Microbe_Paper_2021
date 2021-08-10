@@ -209,7 +209,7 @@ Br.v3.0.At.BLAST <- read_csv(file.path("annotation","output","Brapa_v3.0_annotat
 # This annotation is redundant with name (Br grene). Eg 
 Br.v3.0.At.BLAST %>% filter(name=="BraA01g040570.3C")
 # reduce the redundancy (112418)
-Br.v3.0anno.At.BLAST.highscore <- Br.v3.0.At.BLAST %>% group_by(name) %>% arrange(desc(score)) %>% slice(1)
+Br.v3.0anno.At.BLAST.highscore <- Br.v3.0.At.BLAST %>% group_by(name) %>% arrange(desc(score)) %>% dplyr::slice(1)
 ```
 # calculate microbe FC
 ```{r}
@@ -223,7 +223,10 @@ root.voom5.trt.mean.FPsc.live.ATG.moduleColors.signedhybrid <- root.voom5.trt.me
 ```{r}
 mod <- "root.ivory"
 customcategory <- ""
-# N FC
+# minsN FC
+# AGI version
+N_Peng_2007_ST1and2.AGI <- read_csv(file.path("annotation","input","custom_categories","minusN_Peng_2007.AGI.FC.csv.gz")) 
+# plusN FC
 fits.summary.AGI.FC <- read_csv(file.path("annotation","input","custom_categories","plusN_Wang2003.root.fits.summary.AGI.FC.csv.gz")) # 
 hist(fits.summary.AGI.FC$mean.FC.AGI) # log2, but mean.FC.AGI was reversed! (072721) -> corrected? (072721)
 fits.summary.AGI.FC %>% filter(AGI=="AT1G21060") # still mean.FC.AGI is negative...
@@ -231,6 +234,13 @@ fits.summary.AGI.FC %>% filter(AGI=="AT1G21060") # still mean.FC.AGI is negative
 plusMg_Niu_2016_root.DEGs <- read.csv(file.path("annotation","input","custom_categories","plusMg_Niu_2016_root.DEGs.csv.gz"))
 
 ```
+
+# plot (root.ivory module, minusN_Peng2007)
+```{r}
+  p <- root.voom5.trt.mean.FPsc.live.ATG.moduleColors.signedhybrid %>% filter(root.voom5.module.signedhybrid=="ivory") %>% inner_join(N_Peng_2007_ST1and2.AGI,by="AGI") %>% dplyr::rename(minusN_Peng2007.root.log2=logFC) %>% dplyr::rename(microbeFC.live.log2=mean) %>% ggplot(aes(x=microbeFC.live.log2,y=minusN_Peng2007.root.log2)) + geom_point() + labs(title="root.ivory")
+ggsave(p,file=file.path("RNA","output","root.ivory.microbe.VS.minusN_Peng2007_root.png"))
+```
+
 
 # plot (root.ivory module, plusN_Wang2003)
 ```{r}
