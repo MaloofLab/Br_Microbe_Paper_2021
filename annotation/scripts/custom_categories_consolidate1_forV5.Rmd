@@ -1,0 +1,1118 @@
+---
+title: "custom_categories_consolidate1_for_V5"
+author: "Kazu"
+date: "5/9/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+Summary
+
+History
+* copied from "06_f_cor_table.Rmd"
+* add GSEA_cust_rootshoot_updown3.FDR0.001.list (051221)
+
+To Do
+*  Expand DEGs with FC threshold for all custom categoreis
+* root data including minusN_Peng_2007 and plusIAA_Nembauser_2006
+* adding Nishida_2017 to root categories (070720)
+* making top20, top50, and top100 for (a) among root/leaf categories, (b) among minusX_up, (c) among minusX_down
+* More stringent FDR for custom category ORA of root.ivory module (050921)
+* "In only" approach for custom ORA (051821)
+* Fair "In only" approach for custom ORA using consolidated categoreis (052821)
+* Using consolidated categories in InX selection process and ORA and heatmap with the consolidated categories 
+* Another version (consolidate2) is using the consolidated categoreis to generate InX, but use the original categories for ORA.
+* plot heatmap of InX comparison for root.ivory module
+* and more modules.
+* Making v4 custom categories and use it for this script
+* Modify for updated plusN_Wang2003 (080621) by using v5
+
+#### making root + shoot category with up and down and
+# prep
+```{r}
+rm(list=ls())
+knitr::opts_chunk$set(echo = TRUE,error=TRUE)
+library(tidyverse);library(GGally);library(readxl)
+library(readr)
+library(stringr)
+# https://bioconductor.org/packages/devel/workflows/vignettes/maEndToEnd/inst/doc/MA-Workflow.html
+# functions for expression pattern
+#source("../../../tools/Expression_pattern_graph.R",chdir=TRUE)
+library(scales) # for muted function
+library(ggdendro) # for dendrogram
+library(cowplot)
+library(ggnewscale)
+```
+
+# read custom gene categories created in "06_d_cor_permutation.Rmd" -> needs to add this to this scripts -> use updated version (v4; 06**21) made by "custom_categories_v4_making.Rmd". Use root.all.comparison.v5.csv.gz & leaf.all.comparison.v5.csv.gz
+```{r}
+root.all5 <- read_csv(file.path("annotation","output","root.all.comparison.v5.csv.gz")) 
+shoot.all5 <- read_csv(file.path("annotation","output","shoot.all.comparison.v5.csv.gz"))
+
+```
+
+fix names (root)
+```{r}
+root.all.fix.names <- root.all5
+colnames(root.all.fix.names) <- ifelse(str_detect(colnames(root.all.fix.names), "(shoot|root|seedlings|whole)$"),
+       str_c(colnames(root.all.fix.names), "_FC"),
+       colnames(root.all.fix.names))
+colnames(root.all.fix.names) <- str_remove_all(colnames(root.all.fix.names), fixed("\n") )
+root.all.fix.names
+```
+
+fix names (shoot)
+```{r}
+shoot.all.fix.names <- shoot.all5
+colnames(shoot.all.fix.names) <- ifelse(str_detect(colnames(shoot.all.fix.names), "(shoot|root)$"),
+       str_c(colnames(shoot.all.fix.names), "_FC"),
+       colnames(shoot.all.fix.names))
+colnames(shoot.all.fix.names) <- str_remove_all(colnames(shoot.all.fix.names), fixed("\n") )
+shoot.all.fix.names
+```
+
+# category (root and shoot combined): bugfixed (052620)
+# FDR_cutoff <- 0.001 (053021)
+# bug fixed by removng duplicated gene. 
+```{r}
+shoot.all.fix.names <- shoot.all.fix.names %>% dplyr::select(-AGI, -exp1,-exp1_FDR,-exp3cr,-exp3cr_FDR, -At_symbol, -At_short_description)  
+colnames(shoot.all.fix.names)
+# combine two columns (At_symbol from root and shoot) (work later)
+custom.data <- root.all.fix.names %>% full_join(shoot.all.fix.names,by="genes")
+colnames(custom.data)
+custom.FC.names <- str_subset(colnames(custom.data), "FC")
+custom.FC.names
+# write csv file for filtered.custom.data to share with team members
+write_csv(custom.data,file.path("annotation","output","custom_categories.csv.gz"))
+# filter custom.data by FC and FDR cutoff
+custom.data <- read_csv(file.path("annotation","output","custom_categories.csv.gz"))
+FC_cutoff <- 0.58 # log2
+#FDR_cutoff <- 0.01
+FDR_cutoff <- 0.001
+filtered.custom.data <- custom.data
+### under construction
+# needs to remove column that has only 1 in FDR, which was treated as TRUE/FALSE when reading csv.
+
+for(FC in custom.FC.names) {
+  FDR <- str_c(str_remove_all(FC, "_FC"), "_FDR")
+  print(FDR)
+
+  FC_up <- str_c(FC,"_up") %>% as.name()
+  FC_up <- enquo(FC_up)
+  FC_down <- str_c(FC,"_down") %>% as.name()
+  FC_down <- enquo(FC_down)
+  
+  FDR_up <- str_c(FDR,"_up") %>% as.name()
+  FDR_up <- enquo(FDR_up)
+  FDR_down <- str_c(FDR,"_down") %>% as.name()
+  FDR_down <- enquo(FDR_down)
+
+  FC <- as.name(FC)
+  FC <- enquo(FC)
+  print(FC)
+  FDR<- as.name(FDR)
+  FDR <- enquo(FDR)
+
+  filtered.custom.data <- filtered.custom.data %>%
+    mutate(!!FC_up := ifelse( !! FC > FC_cutoff ,  !!FC, NA))  %>%
+    mutate(!!FC_down := ifelse( !! FC < (-1)*FC_cutoff ,  !!FC, NA))
+
+  if(!str_detect(rlang::as_name(FC), "cold|heat|Peng|Nemhauser")) {  # no FDR for cold/heat/Peng/Nemhauser
+    print(FC)
+    print("not cold")
+    filtered.custom.data <- filtered.custom.data %>%
+    mutate(!!FDR_up := ifelse( !! FC >FC_cutoff, !!FDR, NA)) %>% # cut FDR
+    mutate(!!FDR_down := ifelse( !! FC < (-1)*FC_cutoff, !!FDR, NA)) %>%  
+    mutate(!!FDR_up := ifelse( !! FDR_up < FDR_cutoff, !!FDR_up, NA)) %>%
+    mutate(!!FDR_down := ifelse( !! FDR_down < FDR_cutoff, !!FDR_down, NA)) %>%
+      mutate(!!FC_up := ifelse( !! FDR_up < FDR_cutoff ,  !!FC, NA )) %>%
+     mutate(!!FC_down := ifelse( !! FDR_down < FDR_cutoff ,  !!FC, NA)) 
+  } #if
+  
+} #for
+
+summary(!is.na(filtered.custom.data)) 
+names(filtered.custom.data)
+# remove 
+filtered.custom.data %>% dplyr::select(minusZn_Nishida_2017_root_FDR_down) # all NA
+
+# manually make csv file and save it as txt for gmx file
+#write_csv(filtered.custom.data,file=file.path("annotation","output","filtered.custom.data.rootshoot.csv.gz")) # 052620. Note this is an intermediate data. "filtered.custom.data.Total.rootshoot.v3.gmx" created below was used for further analysis (050921)
+# There is type problems in reading the csv
+
+```
+
+# formatting custom categories for GOseq (Sep 29, 2020) (run once)
+# updated (062221)
+```{r eval=FALSE}
+#filtered.custom.data <- read_csv(file.path("annotation","output","filtered.custom.data.rootshoot.csv.gz"),guess_max = 3000)
+# howmany genes in the list?
+summary(!is.na(filtered.custom.data))
+# how many categories?
+TF <- names(filtered.custom.data) %>% str_detect(c("plus","minus"))
+categories.up.down <- names(filtered.custom.data)[TF] %>% gsub("_FC","",.) %>% gsub("_FDR","",.) %>% unique() # 58 categories
+categories.up.down.combined <- categories.up.down %>% gsub("_up","",.) %>% gsub("_down","",.) %>% unique() # 30 categories. 29... why? (080721)
+
+# convert into list object
+ GSEA_cust_rootshoot_updown2 <- filtered.custom.data %>%
+  dplyr::select(genes, ends_with("up"), ends_with("down"), -starts_with("exp")) %>%
+  pivot_longer(-genes) 
+#GSEA_cust_rootshoot_updown2 %>% drop_na(value) %>% View()
+GSEA_cust_rootshoot_updown4.consolidated.FDR0.001.list <- GSEA_cust_rootshoot_updown2 %>% drop_na(value) %>% filter(str_detect(name,"FC")) %>% dplyr::select(-value) %>%split(.$genes) %>%   map(~dplyr::select(.,name)) %>% map(~as_vector(.))
+save(GSEA_cust_rootshoot_updown4.consolidated.FDR0.001.list,file=file.path("annotation","output","cust_rootshoot_updown.v5.consolidated.FDR0.001.list.Rdata"))
+#save(GSEA_cust_rootshoot_updown3.FDR0.01.list,file=file.path("annotation","output","GSEA_cust_rootshoot_updown3.FDR0.01.list.Rdata"))
+```
+
+# 
+```{r}
+load(file.path("annotation","output","cust_rootshoot_updown.v5.consolidated.FDR0.001.list.Rdata"))
+
+```
+
+# Find unique genes among all custom categories and remove them by calculating majority roles (root and shoot categories)
+```{r}
+library(tidyverse) 
+# tentatively stop reading the csv file and create custom.data from the beggining.
+#x <- file.path("annotation","output","filtered.custom.data.rootshoot.csv.gz")
+#filtered.custom.data <- read_csv(x,guess_max = 17000)
+# 
+#problems(x)
+#spec_csv(x)
+# convert into 0/1 data.frame
+filtered.custom.data.TF <- filtered.custom.data %>% dplyr::select(matches("FC_up|FC_down")) %>% is.na() 
+summary(!filtered.custom.data.TF)  
+# invert TRUE/FALSE
+filtered.custom.data.TF2 <- !filtered.custom.data.TF 
+# conver into 1 or 0
+filtered.custom.data.TF3 <- filtered.custom.data.TF2*1
+summary(filtered.custom.data.TF3==1)
+# 
+filtered.custom.data.TF4 <- bind_cols(filtered.custom.data[,"genes"],as_tibble(filtered.custom.data.TF3))
+```
+
+# consolidate categories
+```{r}
+filtered.custom.data.TF5 <- filtered.custom.data.TF4 %>% pivot_longer(cols=-genes,names_to="category")  %>% mutate(category=str_replace_all(category,"Kailasam2019","Kailasam_2019")) %>% mutate(category=str_replace_all(category,"minusPi_1d","minusPi")) %>% mutate(category=str_replace_all(category,"minusPi_3d","minusPi")) %>% mutate(category=str_replace_all(category,"coldKilian","cold_Kilian")) %>% mutate(category=str_replace_all(category,"Rodriguez-Celma","RodriguezCelma")) %>% mutate(category=str_replace_all(category,"Kim2019","Kim_2019")) %>% mutate(category=str_replace_all(category,"Wang2003","Wang_2003")) %>% mutate(category=str_replace_all(category,"Aarabi2016","Aarabi_2016")) %>%  mutate(category=str_replace_all(category,"Ligaba-OSena","LigabaOSena")) %>% separate(category,c("category2","au","yr","tissue","FC","up_down"),remove=FALSE) #%>% View()
+
+filtered.custom.data.TF5 %>% dplyr::count(genes,category2,au,yr,tissue,up_down) %>% View()
+# consolidate categories
+filtered.custom.data.consolidated <- filtered.custom.data.TF5 %>% filter(value==1) %>% dplyr::count(genes,category2,tissue,FC,up_down) %>% unite(category.cons,category2,tissue,FC,up_down) #%>% View()
+#
+filtered.custom.data.consolidated %>% View()
+# make list
+filtered.custom.data.consolidated.list <- filtered.custom.data.consolidated  %>% dplyr::select(-n) %>% split(.$genes) %>%   map(~dplyr::select(.,category.cons)) %>% map(~as_vector(.))
+save(filtered.custom.data.consolidated.list,file=file.path("annotation","output","GSEA_cust_rootshoot_updown4.consolidated.FDR0.001.list.Rdata")) # updated from "GSEA_cust_rootshoot_updown3.consolidated.FDR0.001.list.Rdata" (061321)
+```
+
+# convert filtered.custom.data.consolidated into filtered.custom.data.numeric format (does not work)
+# the final goal is to make list object for GOseq ORA with InX.con.cat (=consolidated category) like In01.forORA.list2 
+```{r}
+filtered.custom.data.consolidated.numeric <- filtered.custom.data.consolidated %>% pivot_wider(names_from=category.cons, values_from = n) %>% 
+  mutate(across(-genes, ~ ifelse(is.na(.), 0, 1))) #%>%View() # why
+```
+
+```{r}
+filtered.custom.data.consolidated %>% dplyr::select(-n) %>% dplyr::count(genes) %>% View()
+```
+
+# below is Julin's scripts for making 
+
+Alternate plotting
+```{r}
+apply(filtered.custom.data.TF3, 1, sum) %>% hist()
+```
+
+How many left after we remove...
+
+redo the conversion so that we keep gene names
+```{r}
+#filtered.custom.data.numeric <- filtered.custom.data %>%
+#  dplyr::select(genes, matches("FC_up|FC_down")) %>%
+#  mutate_at(vars(-genes), ~ as.numeric(!is.na(.)))
+```
+
+for each gene total the number of sets that it is in
+```{r}
+filtered.custom.data.numeric  # original
+filtered.custom.data.consolidated.numeric <- filtered.custom.data.consolidated.numeric %>% 
+  mutate(totalSetN=rowSums(filtered.custom.data.consolidated.numeric[,-1])) %>%
+  dplyr::select(genes, totalSetN, everything())
+head(filtered.custom.data.consolidated.numeric)
+```
+
+Now we want to know if we filter by X totalSetN, how many genes are left in each gene set.
+
+```{r}
+filtered.custom.data.consolidated.numericL <-
+  filtered.custom.data.consolidated.numeric %>%
+  pivot_longer(-c("genes", "totalSetN"), names_to="set", values_to = "presentInSet")
+head(filtered.custom.data.consolidated.numericL)
+```
+
+# new filtered.custom.data.consolidated.numericL with "XorMore" (061321)
+```{r}
+filtered.custom.data.consolidated.numericL <- filtered.custom.data.consolidated.numericL %>%
+  mutate(In01 = presentInSet*(totalSetN <= 1), #would be nice to automate this...
+         In02orLess = presentInSet*(totalSetN <= 2),
+         In03orLess = presentInSet*(totalSetN <= 3),
+         In05orLess = presentInSet*(totalSetN <= 5),
+         In10orLess = presentInSet*(totalSetN <= 10),
+         In20orLess = presentInSet*(totalSetN <= 20),
+         In05orMore = presentInSet*(totalSetN >= 5),
+         In10orMore = presentInSet*(totalSetN >= 10),
+         In20orMore = presentInSet*(totalSetN >= 20),
+         Total = presentInSet)
+
+filtered.custom.data.consolidated.numericL
+save(filtered.custom.data.consolidated.numericL,file=file.path("RNA","output","filtered.custom.data.consolidated.numericL.Rdata"))
+```
+
+# Something is wrong with making "filtered.custom.data.consolidated.numericLL" below (chunk 17)? (061821, Kazu)
+```{r}
+filtered.custom.data.consolidated.numericLL <- filtered.custom.data.consolidated.numericL %>%
+  pivot_longer(c(starts_with("In"),starts_with("Total", ignore.case = FALSE)), names_to = "group", values_to = "group_summary")
+head(filtered.custom.data.consolidated.numericLL,20)
+```
+
+now summarize it
+```{r}
+filtered.custom.data.consolidated.summary <- filtered.custom.data.consolidated.numericLL %>%
+  group_by(set, group) %>%
+  summarize(genesInSet=sum(group_summary))
+filtered.custom.data.consolidated.summary
+```
+
+plot it
+```{r}
+filtered.custom.data.consolidated.summary %>%
+  ggplot(aes(x=set, y=genesInSet, color=group)) +
+  geom_point()  +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+plot it percentage (needs to facet_grid with Xorless and Xormore)
+```{r}
+InSet.percent.plot <- filtered.custom.data.consolidated.summary %>%
+  group_by(set) %>%
+  mutate(percent_of_set=100*genesInSet/max(genesInSet)) %>%
+    ggplot(aes(x=set, y=percent_of_set, color=group)) +
+  geom_point()  +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+ggsave(InSet.percent.plot,path=file.path("annotation","output"),filename="InSet.percent.plot.consolidation.png",width=8,height=6)
+```
+
+reformat for GSEA. Also for ORA (051821)
+# Signature of WGCNA modules by looking enrichement of custom categories
+```{r eval=TRUE,error=TRUE}
+# GOseq
+library(ShortRead);library(goseq);library(GO.db);library("annotate")
+# for ggplot heatmap
+## uncompress gz file
+system(paste("gunzip -c ",file.path("annotation","input","Brapa_genome_v3.0_cds.gz")," > ",file.path("annotation","input","Brapa_genome_v3.0_cds.fa")))
+## read cDNA fasta file 
+Bra.v3.0_cdna<-readDNAStringSet(file.path("annotation","input","Brapa_genome_v3.0_cds.fa")) # copied from /Volumes/data_work/Data8/NGS_related/Brassica_rapa_Upendra/G3
+Bra.v3.0_cdna
+## remove fasta file
+system(paste("rm ",file.path("annotation","input","Brapa_genome_v3.0_cds.fa"),sep=""))
+
+# GOseq function
+GOseq.Brgo.v3.0.Atgoslim.BP.list.ORA2<-function(genelist,padjust=0.05,ontology="BP",custom.category.list=Brgo.v3.0anno.Atgoslim.BP.list,Br_cdna=Bra.v3.0_cdna) { # return GO enrichment table, padjus, padjust=0.05. 
+  print(genelist)
+  bias<-nchar(Br_cdna)
+  names(bias)<-names(Br_cdna)
+  # convert list of genelist into vector
+  genelist <- genelist %>% unlist()
+  TF<-(names(bias) %in% genelist)*1
+  names(TF)<-names(bias)
+  #print(TF)
+  pwf<-nullp(TF,bias.data=bias,plot.fit=FALSE)
+  #print(pwf$DEgenes)
+  GO.pval <- goseq(pwf,gene2cat=custom.category.list,use_genes_without_cat=TRUE) # format became different in new goseq version (021111). Does not work (042716)
+  #GO.pval <- goseq(pwf,gene2cat=Brgo.DF3,use_genes_without_cat=TRUE) # format became different in new goseq version (021111)
+  
+  #head(GO.pval) 
+  if(ontology=="BP") {
+    GO.pval2<-subset(GO.pval,ontology=="BP")
+  } else if(ontology=="CC") {
+    GO.pval2<-subset(GO.pval,ontology=="CC")
+  } else if(ontology=="MF") {
+    GO.pval2<-subset(GO.pval,ontology=="MF")
+  } else {
+    GO.pval2<-GO.pval
+  }
+    
+  GO.pval2$over_represented_padjust<-p.adjust(GO.pval2$over_represented_pvalue,method="BH")
+  if(GO.pval2$over_represented_padjust[1]>padjust) return("no enriched GO")
+  else {
+    enriched.GO<-GO.pval2[GO.pval2$over_represented_padjust<padjust,] 
+    print("enriched.GO is")
+    print(enriched.GO)
+    
+    ## write Term and Definition 
+    if(ontology=="BP"|ontology=="CC"|ontology=="MF") {
+    for(i in 1:dim(enriched.GO)[1]) {
+      if(is.null(Term(GOTERM[enriched.GO[i,"category"]]))) {next} else {
+      enriched.GO$Term[i]<-Term(GOTERM[[enriched.GO[i,"category"]]])
+      enriched.GO$Definition[i]<-Definition(GOTERM[[enriched.GO[i,"category"]]])
+      }
+    }
+    }
+    enriched.GO.tb <- as_tibble(enriched.GO)
+    print("As tibble enriched.GO is")
+    print(enriched.GO.tb)
+    return(enriched.GO.tb)
+  }
+}
+#
+head(Bra.v3.0_cdna)
+# length(bias) # 44239 > 45019 where the bias come from?
+#  bias.data vector must have the same length as DEgenes vector!
+```
+
+# In01.forGSEA
+```{r}
+# gene list
+Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid <- read_csv(file.path("RNA","output","WGCNA.signedhybrid.modules.voom5.csv.gz"))
+
+In01.consolidated.forGSEA <- filtered.custom.data.consolidated.numericL %>%
+  filter(totalSetN <= 1, presentInSet ==1) %>%
+  dplyr::select(genes, set) %>%
+  mutate(id=1:nrow(.)) %>% 
+  pivot_wider(names_from = set, values_from = genes, values_fill = list(genes = NA)) %>%
+  dplyr::select(-id) %>%
+  mutate_all(sort, na.last=TRUE) 
+In01.consolidated.forGSEA <- In01.consolidated.forGSEA[apply(In01.consolidated.forGSEA,1,function(x) !all(is.na(x))),]
+In01.consolidated.forGSEA %>% View()
+### for ORA　(copied from AnnotateV3.0_ORA_categories.Rmd)
+# trial
+In01.consolidated.forGSEA %>% dplyr::select(1) %>% pivot_longer(1)
+# 
+#In01.consolidated.forGSEA %>% map(~pivot_longer(cols=name)) # does not work
+##
+In01.consolidated.forGSEA.list <- list()
+for(i in 1:(dim(In01.consolidated.forGSEA)[2]-1)) {
+In01.consolidated.forGSEA.list[[i]] <- In01.consolidated.forGSEA %>% dplyr::select(i) %>% pivot_longer(1) %>% dplyr::rename(category=name)
+}
+#
+In01.consolidated.forGSEA.DF <- In01.consolidated.forGSEA.list %>% enframe() %>% unnest(value) %>% drop_na(value)# does not work if I did not rename "category" columns
+# convert into list by gene name
+In01.consolidated.forORA.list2 <- In01.consolidated.forGSEA.DF %>%split(.$value) %>%   map(~dplyr::select(.,category)) %>% map(~as_vector(.))
+save(In01.consolidated.forORA.list2,file=file.path("annotation","output","In01.consolidated.forORA.list2.Rdata"))
+# ORA
+# all modules
+GOseq.temp <- Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid %>% ungroup() %>% dplyr::select(name,root.voom5.module.signedhybrid,leaf.voom5.module.signedhybrid) %>%
+pivot_longer(cols=-1,names_to = "voom")  %>% drop_na(value) %>% unite(voom.module,c("voom","value")) %>%  split(.$voom.module) %>% map(~GOseq.Brgo.v3.0.Atgoslim.BP.list.ORA2(genelist=.$name,custom.category.list=In01.consolidated.forORA.list2,ontology="none")) # ,custom.category.list=GSEA_cust_rootshoot_updown2.list
+GOseq.temp %>% enframe() %>% unnest(value) %>% write_csv(file.path("RNA","output","WGCNA.voom5.signedhybrid.all.modules.customcat.In01.consolidated.FDR0.001.GOseq.csv"))
+
+```
+
+# In02orless.forGSEA
+```{r}
+In02orless.consolidated.forGSEA <- filtered.custom.data.consolidated.numericL %>%
+  filter(totalSetN <= 2, presentInSet ==1) %>%
+  dplyr::select(genes, set) %>%
+  mutate(id=1:nrow(.)) %>% 
+  pivot_wider(names_from = set, values_from = genes, values_fill = list(genes = NA)) %>%
+  dplyr::select(-id) %>%
+  mutate_all(sort, na.last=TRUE) 
+In02orless.consolidated.forGSEA <- In02orless.consolidated.forGSEA[apply(In02orless.consolidated.forGSEA,1,function(x) !all(is.na(x))),]
+In02orless.consolidated.forGSEA %>% View()
+### for ORA　(copied from AnnotateV3.0_ORA_categories.Rmd)
+# trial
+In02orless.consolidated.forGSEA %>% dplyr::select(1) %>% pivot_longer(1)
+# 
+#In02orless.consolidated.forGSEA %>% map(~pivot_longer(cols=name)) # does not work
+##
+In02orless.consolidated.forGSEA.list <- list()
+for(i in 1:(dim(In02orless.consolidated.forGSEA)[2]-1)) {
+In02orless.consolidated.forGSEA.list[[i]] <- In02orless.consolidated.forGSEA %>% dplyr::select(i) %>% pivot_longer(1) %>% dplyr::rename(category=name)
+}
+#
+In02orless.consolidated.forGSEA.DF <- In02orless.consolidated.forGSEA.list %>% enframe() %>% unnest(value) %>% drop_na(value)# does not work if I did not rename "category" columns
+# convert into list by gene name
+In02orless.consolidated.forORA.list2 <- In02orless.consolidated.forGSEA.DF %>%split(.$value) %>%   map(~dplyr::select(.,category)) %>% map(~as_vector(.))
+save(In02orless.consolidated.forORA.list2,file=file.path("annotation","output","In02orless.consolidated.forORA.list2.Rdata"))
+# ORA
+# all modules
+GOseq.temp <- Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid %>% ungroup() %>% dplyr::select(name,root.voom5.module.signedhybrid,leaf.voom5.module.signedhybrid) %>%
+pivot_longer(cols=-1,names_to = "voom")  %>% drop_na(value) %>% unite(voom.module,c("voom","value")) %>%  split(.$voom.module) %>% map(~GOseq.Brgo.v3.0.Atgoslim.BP.list.ORA2(genelist=.$name,custom.category.list=In02orless.consolidated.forORA.list2,ontology="none")) # ,custom.category.list=GSEA_cust_rootshoot_updown2.list
+GOseq.temp %>% enframe() %>% unnest(value) %>% write_csv(file.path("RNA","output","WGCNA.voom5.signedhybrid.all.modules.customcat.In02orless.consolidated.FDR0.001.GOseq.csv"))
+
+```
+
+# In03.forGSEA
+```{r}
+In03orless.consolidated.forGSEA <- filtered.custom.data.consolidated.numericL %>%
+  filter(totalSetN <= 3, presentInSet ==1) %>%
+  dplyr::select(genes, set) %>%
+  mutate(id=1:nrow(.)) %>% 
+  pivot_wider(names_from = set, values_from = genes, values_fill = list(genes = NA)) %>%
+  dplyr::select(-id) %>%
+  mutate_all(sort, na.last=TRUE) 
+In03orless.consolidated.forGSEA <- In03orless.consolidated.forGSEA[apply(In03orless.consolidated.forGSEA,1,function(x) !all(is.na(x))),]
+In03orless.consolidated.forGSEA %>% View()
+### for ORA　(copied from AnnotateV3.0_ORA_categories.Rmd)
+# trial
+In03orless.consolidated.forGSEA %>% dplyr::select(1) %>% pivot_longer(1)
+# 
+#In03orless.consolidated.forGSEA %>% map(~pivot_longer(cols=name)) # does not work
+##
+In03orless.consolidated.forGSEA.list <- list()
+for(i in 1:(dim(In03orless.consolidated.forGSEA)[2]-1)) {
+In03orless.consolidated.forGSEA.list[[i]] <- In03orless.consolidated.forGSEA %>% dplyr::select(i) %>% pivot_longer(1) %>% dplyr::rename(category=name)
+}
+#
+In03orless.consolidated.forGSEA.DF <- In03orless.consolidated.forGSEA.list %>% enframe() %>% unnest(value) %>% drop_na(value)# does not work if I did not rename "category" columns
+# convert into list by gene name
+In03orless.consolidated.forORA.list2 <- In03orless.consolidated.forGSEA.DF %>%split(.$value) %>%   map(~dplyr::select(.,category)) %>% map(~as_vector(.))
+save(In03orless.consolidated.forORA.list2,file=file.path("annotation","output","In03orless.consolidated.forORA.list2.Rdata"))
+# ORA
+# all modules
+GOseq.temp <- Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid %>% ungroup() %>% dplyr::select(name,root.voom5.module.signedhybrid,leaf.voom5.module.signedhybrid) %>%
+pivot_longer(cols=-1,names_to = "voom")  %>% drop_na(value) %>% unite(voom.module,c("voom","value")) %>%  split(.$voom.module) %>% map(~GOseq.Brgo.v3.0.Atgoslim.BP.list.ORA2(genelist=.$name,custom.category.list=In03orless.consolidated.forORA.list2,ontology="none")) # ,custom.category.list=GSEA_cust_rootshoot_updown2.list
+GOseq.temp %>% enframe() %>% unnest(value) %>% write_csv(file.path("RNA","output","WGCNA.voom5.signedhybrid.all.modules.customcat.In03orless.consolidated.FDR0.001.GOseq.csv"))
+```
+
+# In05.forGSEA
+```{r}
+In05orless.consolidated.forGSEA <- filtered.custom.data.consolidated.numericL %>%
+  filter(totalSetN <= 5, presentInSet ==1) %>%
+  dplyr::select(genes, set) %>%
+  mutate(id=1:nrow(.)) %>% 
+  pivot_wider(names_from = set, values_from = genes, values_fill = list(genes = NA)) %>%
+  dplyr::select(-id) %>%
+  mutate_all(sort, na.last=TRUE) 
+In05orless.consolidated.forGSEA <- In05orless.consolidated.forGSEA[apply(In05orless.consolidated.forGSEA,1,function(x) !all(is.na(x))),]
+In05orless.consolidated.forGSEA %>% View()
+### for ORA　(copied from AnnotateV3.0_ORA_categories.Rmd)
+# trial
+In05orless.consolidated.forGSEA %>% dplyr::select(1) %>% pivot_longer(1)
+# 
+#In05orless.consolidated.forGSEA %>% map(~pivot_longer(cols=name)) # does not work
+##
+In05orless.consolidated.forGSEA.list <- list()
+for(i in 1:(dim(In05orless.consolidated.forGSEA)[2]-1)) {
+In05orless.consolidated.forGSEA.list[[i]] <- In05orless.consolidated.forGSEA %>% dplyr::select(i) %>% pivot_longer(1) %>% dplyr::rename(category=name)
+}
+#
+In05orless.consolidated.forGSEA.DF <- In05orless.consolidated.forGSEA.list %>% enframe() %>% unnest(value) %>% drop_na(value)# does not work if I did not rename "category" columns
+# convert into list by gene name
+In05orless.consolidated.forORA.list2 <- In05orless.consolidated.forGSEA.DF %>%split(.$value) %>%   map(~dplyr::select(.,category)) %>% map(~as_vector(.))
+save(In05orless.consolidated.forORA.list2,file=file.path("annotation","output","In05orless.consolidated.forORA.list2.Rdata"))
+# ORA
+# all modules
+GOseq.temp <- Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid %>% ungroup() %>% dplyr::select(name,root.voom5.module.signedhybrid,leaf.voom5.module.signedhybrid) %>%
+pivot_longer(cols=-1,names_to = "voom")  %>% drop_na(value) %>% unite(voom.module,c("voom","value")) %>%  split(.$voom.module) %>% map(~GOseq.Brgo.v3.0.Atgoslim.BP.list.ORA2(genelist=.$name,custom.category.list=In05orless.consolidated.forORA.list2,ontology="none")) # ,custom.category.list=GSEA_cust_rootshoot_updown2.list
+GOseq.temp %>% enframe() %>% unnest(value) %>% write_csv(file.path("RNA","output","WGCNA.voom5.signedhybrid.all.modules.customcat.In05orless.consolidated.FDR0.001.GOseq.csv"))
+```
+
+# In10orless.forGSEA
+```{r}
+In10orless.consolidated.forGSEA <- filtered.custom.data.consolidated.numericL %>%
+  filter(totalSetN <= 10, presentInSet ==1) %>%
+  dplyr::select(genes, set) %>%
+  mutate(id=1:nrow(.)) %>% 
+  pivot_wider(names_from = set, values_from = genes, values_fill = list(genes = NA)) %>%
+  dplyr::select(-id) %>%
+  mutate_all(sort, na.last=TRUE) 
+In10orless.consolidated.forGSEA <- In10orless.consolidated.forGSEA[apply(In10orless.consolidated.forGSEA,1,function(x) !all(is.na(x))),]
+In10orless.consolidated.forGSEA %>% View()
+### for ORA　(copied from AnnotateV3.0_ORA_categories.Rmd)
+# trial
+In10orless.consolidated.forGSEA %>% dplyr::select(1) %>% pivot_longer(1)
+# 
+#In10orless.consolidated.forGSEA %>% map(~pivot_longer(cols=name)) # does not work
+##
+In10orless.consolidated.forGSEA.list <- list()
+for(i in 1:(dim(In10orless.consolidated.forGSEA)[2]-1)) {
+In10orless.consolidated.forGSEA.list[[i]] <- In10orless.consolidated.forGSEA %>% dplyr::select(i) %>% pivot_longer(1) %>% dplyr::rename(category=name)
+}
+#
+In10orless.consolidated.forGSEA.DF <- In10orless.consolidated.forGSEA.list %>% enframe() %>% unnest(value) %>% drop_na(value)# does not work if I did not rename "category" columns
+# convert into list by gene name
+In10orless.consolidated.forORA.list2 <- In10orless.consolidated.forGSEA.DF %>%split(.$value) %>%   map(~dplyr::select(.,category)) %>% map(~as_vector(.))
+save(In10orless.consolidated.forORA.list2,file=file.path("annotation","output","In10orless.consolidated.forORA.list2.Rdata"))
+# ORA
+# all modules
+GOseq.temp <- Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid %>% ungroup() %>% dplyr::select(name,root.voom5.module.signedhybrid,leaf.voom5.module.signedhybrid) %>%
+pivot_longer(cols=-1,names_to = "voom")  %>% drop_na(value) %>% unite(voom.module,c("voom","value")) %>%  split(.$voom.module) %>% map(~GOseq.Brgo.v3.0.Atgoslim.BP.list.ORA2(genelist=.$name,custom.category.list=In10orless.consolidated.forORA.list2,ontology="none")) # ,custom.category.list=GSEA_cust_rootshoot_updown2.list
+GOseq.temp %>% enframe() %>% unnest(value) %>% write_csv(file.path("RNA","output","WGCNA.voom5.signedhybrid.all.modules.customcat.In10orless.consolidated.FDR0.001.GOseq.csv"))
+```
+
+# In20orless.forGSEA
+```{r}
+In20orless.consolidated.forGSEA <- filtered.custom.data.consolidated.numericL %>%
+  filter(totalSetN <= 20, presentInSet ==1) %>%
+  dplyr::select(genes, set) %>%
+  mutate(id=1:nrow(.)) %>% 
+  pivot_wider(names_from = set, values_from = genes, values_fill = list(genes = NA)) %>%
+  dplyr::select(-id) %>%
+  mutate_all(sort, na.last=TRUE) 
+In20orless.consolidated.forGSEA <- In20orless.consolidated.forGSEA[apply(In20orless.consolidated.forGSEA,1,function(x) !all(is.na(x))),]
+In20orless.consolidated.forGSEA %>% View()
+### for ORA　(copied from AnnotateV3.0_ORA_categories.Rmd)
+# trial
+In20orless.consolidated.forGSEA %>% dplyr::select(1) %>% pivot_longer(1)
+# 
+#In20orless.consolidated.forGSEA %>% map(~pivot_longer(cols=name)) # does not work
+##
+In20orless.consolidated.forGSEA.list <- list()
+for(i in 1:(dim(In20orless.consolidated.forGSEA)[2]-1)) {
+In20orless.consolidated.forGSEA.list[[i]] <- In20orless.consolidated.forGSEA %>% dplyr::select(i) %>% pivot_longer(1) %>% dplyr::rename(category=name)
+}
+#
+In20orless.consolidated.forGSEA.DF <- In20orless.consolidated.forGSEA.list %>% enframe() %>% unnest(value) %>% drop_na(value)# does not work if I did not rename "category" columns
+# convert into list by gene name
+In20orless.consolidated.forORA.list2 <- In20orless.consolidated.forGSEA.DF %>%split(.$value) %>%   map(~dplyr::select(.,category)) %>% map(~as_vector(.))
+save(In20orless.consolidated.forORA.list2,file=file.path("annotation","output","In20orless.consolidated.forORA.list2.Rdata"))
+# ORA
+# all modules
+GOseq.temp <- Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid %>% ungroup() %>% dplyr::select(name,root.voom5.module.signedhybrid,leaf.voom5.module.signedhybrid) %>%
+pivot_longer(cols=-1,names_to = "voom")  %>% drop_na(value) %>% unite(voom.module,c("voom","value")) %>%  split(.$voom.module) %>% map(~GOseq.Brgo.v3.0.Atgoslim.BP.list.ORA2(genelist=.$name,custom.category.list=In20orless.consolidated.forORA.list2,ontology="none")) # ,custom.category.list=GSEA_cust_rootshoot_updown2.list
+GOseq.temp %>% enframe() %>% unnest(value) %>% write_csv(file.path("RNA","output","WGCNA.voom5.signedhybrid.all.modules.customcat.In20orless.consolidated.FDR0.001.GOseq.csv"))
+```
+
+# In05ormore.forGSEA (new, 061320)
+```{r}
+In05orMore.consolidated.forGSEA <- filtered.custom.data.consolidated.numericL %>%
+  filter(totalSetN >= 5, presentInSet ==1) %>%
+  dplyr::select(genes, set) %>%
+  mutate(id=1:nrow(.)) %>% 
+  pivot_wider(names_from = set, values_from = genes, values_fill = list(genes = NA)) %>%
+  dplyr::select(-id) %>%
+  mutate_all(sort, na.last=TRUE) 
+In05orMore.consolidated.forGSEA <- In05orMore.consolidated.forGSEA[apply(In05orMore.consolidated.forGSEA,1,function(x) !all(is.na(x))),]
+In05orMore.consolidated.forGSEA %>% View()
+### for ORA　(copied from AnnotateV3.0_ORA_categories.Rmd)
+# trial
+In05orMore.consolidated.forGSEA %>% dplyr::select(1) %>% pivot_longer(1)
+##
+In05orMore.consolidated.forGSEA.list <- list()
+for(i in 1:(dim(In05orMore.consolidated.forGSEA)[2]-1)) {
+In05orMore.consolidated.forGSEA.list[[i]] <- In05orMore.consolidated.forGSEA %>% dplyr::select(i) %>% pivot_longer(1) %>% dplyr::rename(category=name)
+}
+#
+In05orMore.consolidated.forGSEA.DF <- In05orMore.consolidated.forGSEA.list %>% enframe() %>% unnest(value) %>% drop_na(value)# does not work if I did not rename "category" columns
+# convert into list by gene name
+In05orMore.consolidated.forORA.list2 <- In05orMore.consolidated.forGSEA.DF %>%split(.$value) %>%   map(~dplyr::select(.,category)) %>% map(~as_vector(.))
+save(In05orMore.consolidated.forORA.list2,file=file.path("annotation","output","In05orMore.consolidated.forORA.list2.Rdata"))
+# ORA
+# all modules
+GOseq.temp <- Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid %>% ungroup() %>% dplyr::select(name,root.voom5.module.signedhybrid,leaf.voom5.module.signedhybrid) %>%
+pivot_longer(cols=-1,names_to = "voom")  %>% drop_na(value) %>% unite(voom.module,c("voom","value")) %>%  split(.$voom.module) %>% map(~GOseq.Brgo.v3.0.Atgoslim.BP.list.ORA2(genelist=.$name,custom.category.list=In05orMore.consolidated.forORA.list2,ontology="none")) # ,custom.category.list=GSEA_cust_rootshoot_updown2.list
+GOseq.temp %>% enframe() %>% unnest(value) %>% write_csv(file.path("RNA","output","WGCNA.voom5.signedhybrid.all.modules.customcat.In05orMore.consolidated.FDR0.001.GOseq.csv"))
+```
+
+# In10ormore.forGSEA (new, 061320)
+```{r}
+In10orMore.consolidated.forGSEA <- filtered.custom.data.consolidated.numericL %>%
+  filter(totalSetN >= 10, presentInSet ==1) %>%
+  dplyr::select(genes, set) %>%
+  mutate(id=1:nrow(.)) %>% 
+  pivot_wider(names_from = set, values_from = genes, values_fill = list(genes = NA)) %>%
+  dplyr::select(-id) %>%
+  mutate_all(sort, na.last=TRUE) 
+In10orMore.consolidated.forGSEA <- In10orMore.consolidated.forGSEA[apply(In10orMore.consolidated.forGSEA,1,function(x) !all(is.na(x))),]
+In10orMore.consolidated.forGSEA %>% View()
+### for ORA　(copied from AnnotateV3.0_ORA_categories.Rmd)
+# trial
+In10orMore.consolidated.forGSEA %>% dplyr::select(1) %>% pivot_longer(1)
+##
+In10orMore.consolidated.forGSEA.list <- list()
+for(i in 1:(dim(In10orMore.consolidated.forGSEA)[2]-1)) {
+In10orMore.consolidated.forGSEA.list[[i]] <- In10orMore.consolidated.forGSEA %>% dplyr::select(i) %>% pivot_longer(1) %>% dplyr::rename(category=name)
+}
+#
+In10orMore.consolidated.forGSEA.DF <- In10orMore.consolidated.forGSEA.list %>% enframe() %>% unnest(value) %>% drop_na(value)# does not work if I did not rename "category" columns
+# convert into list by gene name
+In10orMore.consolidated.forORA.list2 <- In10orMore.consolidated.forGSEA.DF %>%split(.$value) %>%   map(~dplyr::select(.,category)) %>% map(~as_vector(.))
+save(In10orMore.consolidated.forORA.list2,file=file.path("annotation","output","In10orMore.consolidated.forORA.list2.Rdata"))
+# ORA
+# all modules
+GOseq.temp <- Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid %>% ungroup() %>% dplyr::select(name,root.voom5.module.signedhybrid,leaf.voom5.module.signedhybrid) %>%
+pivot_longer(cols=-1,names_to = "voom")  %>% drop_na(value) %>% unite(voom.module,c("voom","value")) %>%  split(.$voom.module) %>% map(~GOseq.Brgo.v3.0.Atgoslim.BP.list.ORA2(genelist=.$name,custom.category.list=In10orMore.consolidated.forORA.list2,ontology="none")) # ,custom.category.list=GSEA_cust_rootshoot_updown2.list
+GOseq.temp %>% enframe() %>% unnest(value) %>% write_csv(file.path("RNA","output","WGCNA.voom5.signedhybrid.all.modules.customcat.In10orMore.consolidated.FDR0.001.GOseq.csv"))
+```
+
+
+
+# In20ormore.forGSEA (new, 061320) (zero)
+```{r eval=FALSE}
+In20orMore.consolidated.forGSEA <- filtered.custom.data.consolidated.numericL %>%
+  filter(totalSetN >= 20, presentInSet ==1) %>%
+  dplyr::select(genes, set) %>%
+  mutate(id=1:nrow(.)) %>% 
+  pivot_wider(names_from = set, values_from = genes, values_fill = list(genes = NA)) %>%
+  dplyr::select(-id) %>%
+  mutate_all(sort, na.last=TRUE) 
+# In20orMore.consolidated.forGSEA <- In20orMore.consolidated.forGSEA[apply(In20orMore.consolidated.forGSEA,1,function(x) !all(is.na(x))),]
+# In20orMore.consolidated.forGSEA %>% View()
+# ### for ORA　(copied from AnnotateV3.0_ORA_categories.Rmd)
+# # trial
+# In20orMore.consolidated.forGSEA %>% dplyr::select(1) %>% pivot_longer(1)
+# # 
+# #In20orMore.consolidated.forGSEA %>% map(~pivot_longer(cols=name)) # does not work
+# ##
+# In20orMore.consolidated.forGSEA.list <- list()
+# for(i in 1:(dim(In20orMore.consolidated.forGSEA)[2]-1)) {
+# In20orMore.consolidated.forGSEA.list[[i]] <- In20orMore.consolidated.forGSEA %>% dplyr::select(i) %>% pivot_longer(1) %>% dplyr::rename(category=name)
+# }
+# #
+# In20orMore.consolidated.forGSEA.DF <- In20orMore.consolidated.forGSEA.list %>% enframe() %>% unnest(value) %>% drop_na(value)# does not work if I did not rename "category" columns
+# # convert into list by gene name
+# In20orMore.consolidated.forORA.list2 <- In20orMore.consolidated.forGSEA.DF %>%split(.$value) %>%   map(~dplyr::select(.,category)) %>% map(~as_vector(.))
+# save(In20orMore.consolidated.forORA.list2,file=file.path("annotation","output","In20orMore.consolidated.forORA.list2.Rdata"))
+# # ORA
+# # all modules
+# GOseq.temp <- Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid %>% ungroup() %>% dplyr::select(name,root.voom5.module.signedhybrid,leaf.voom5.module.signedhybrid) %>%
+# pivot_longer(cols=-1,names_to = "voom")  %>% drop_na(value) %>% unite(voom.module,c("voom","value")) %>%  split(.$voom.module) %>% map(~GOseq.Brgo.v3.0.Atgoslim.BP.list.ORA2(genelist=.$name,custom.category.list=In20orMore.consolidated.forORA.list2,ontology="none")) # ,custom.category.list=GSEA_cust_rootshoot_updown2.list
+# GOseq.temp %>% enframe() %>% unnest(value) %>% write_csv(file.path("RNA","output","WGCNA.voom5.signedhybrid.all.modules.customcat.In20orMore.consolidated.FDR0.001.GOseq.csv"))
+```
+
+# total
+```{r eval=FALSE}
+Total.forGSEA <- filtered.custom.data.consolidated.numericL %>%
+  filter(presentInSet ==1) %>%
+  dplyr::select(genes, set) %>%
+  mutate(id=1:nrow(.)) %>%
+  pivot_wider(names_from = set, values_from = genes, values_fill = list(genes = NA)) %>%
+  dplyr::select(-id) %>%
+  mutate_all(sort, na.last=TRUE)
+Total.forGSEA <- Total.forGSEA[apply(Total.forGSEA,1,function(x) !all(is.na(x))),]
+Total.forGSEA %>% View()
+# ORA
+# all modules using filtered.custom.data.consolidated.list
+GOseq.temp <- Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid %>% ungroup() %>% dplyr::select(name,root.voom5.module.signedhybrid,leaf.voom5.module.signedhybrid) %>%
+pivot_longer(cols=-1,names_to = "voom")  %>% drop_na(value) %>% unite(voom.module,c("voom","value")) %>%  split(.$voom.module) %>% map(~GOseq.Brgo.v3.0.Atgoslim.BP.list.ORA2(genelist=.$name,custom.category.list=filtered.custom.data.consolidated.list,ontology="none")) # ,custom.category.list=GSEA_cust_rootshoot_updown2.list
+GOseq.temp %>% enframe() %>% unnest(value) %>% write_csv(file.path("RNA","output","WGCNA.voom5.signedhybrid.all.modules.customcat.Total.consolidated.FDR0.001.GOseq.csv"))
+```
+
+
+OK to write it out in gmx format need a first row that is "na"
+
+```{r}
+# In01.forGSEA
+In01.consolidated.forGSEA <- rbind(rep("na", ncol(In01.consolidated.forGSEA)), In01.consolidated.forGSEA)
+In01.consolidated.forGSEA
+write_tsv(In01.consolidated.forGSEA, "annotation/output/filtered.custom.data.In01.consolidated.rootshoot.v3.FDR0.001.gmx") 
+# In02orless.forGSEA
+In02orless.consolidated.forGSEA <- rbind(rep("na", ncol(In02orless.consolidated.forGSEA)), In02orless.consolidated.forGSEA)
+In02orless.consolidated.forGSEA
+write_tsv(In02orless.consolidated.forGSEA, "annotation/output/filtered.custom.data.In02orless.consolidated.rootshoot.v3.FDR0.001.gmx") 
+
+# In03orLess.forGSEA
+In03orless.consolidated.forGSEA <- rbind(rep("na", ncol(In03orless.consolidated.forGSEA)), In03orless.consolidated.forGSEA)
+In03orless.consolidated.forGSEA
+write_tsv(In03orless.consolidated.forGSEA, "annotation/output/filtered.custom.data.In03orless.consolidated.rootshoot.v3.FDR0.001.gmx") 
+
+# In05orless.forGSEA
+In05orless.consolidated.forGSEA <- rbind(rep("na", ncol(In05orless.consolidated.forGSEA)), In05orless.consolidated.forGSEA)
+In05orless.consolidated.forGSEA
+write_tsv(In05orless.consolidated.forGSEA, "annotation/output/filtered.custom.data.In05orless.consolidated.rootshoot.v3.FDR0.001.gmx") 
+
+# In10orless.forGSEA
+In10orless.consolidated.forGSEA <- rbind(rep("na", ncol(In10orless.consolidated.forGSEA)), In10orless.consolidated.forGSEA)
+In10orless.consolidated.forGSEA
+write_tsv(In10orless.consolidated.forGSEA, "annotation/output/filtered.custom.data.In10orless.consolidated.rootshoot.v3.FDR0.001.gmx") 
+
+
+
+# In20orless.forGSEA
+In20orless.consolidated.forGSEA <- rbind(rep("na", ncol(In20orless.consolidated.forGSEA)), In20orless.consolidated.forGSEA)
+In20orless.consolidated.forGSEA
+write_tsv(In20orless.consolidated.forGSEA, "annotation/output/filtered.custom.data.In20orless.consolidated.rootshoot.v3.FDR0.001.gmx") 
+
+# Total.forGSEA
+Total.forGSEA <- rbind(rep("na", ncol(Total.forGSEA)), Total.forGSEA)
+Total.forGSEA
+write_tsv(Total.forGSEA, "annotation/output/filtered.custom.data.Total.rootshoot.v3.FDR0.001.gmx") 
+
+# In05orMore.forGSEA
+In05orMore.consolidated.forGSEA <- rbind(rep("na", ncol(In05orMore.consolidated.forGSEA)), In05orMore.consolidated.forGSEA)
+In05orMore.consolidated.forGSEA
+write_tsv(In05orMore.consolidated.forGSEA, "annotation/output/filtered.custom.data.In05orMore.consolidated.rootshoot.v3.FDR0.001.gmx") 
+
+# In10orMore.forGSEA
+In10orMore.consolidated.forGSEA <- rbind(rep("na", ncol(In10orMore.consolidated.forGSEA)), In10orMore.consolidated.forGSEA)
+In10orMore.consolidated.forGSEA
+write_tsv(In10orMore.consolidated.forGSEA, "annotation/output/filtered.custom.data.In10orMore.consolidated.rootshoot.v3.FDR0.001.gmx") 
+```
+
+# Function to filter by number of sets that a gene is in, and create equal sized sets (when possible)
+* error in reading csv file (050921)
+* The error is becasue FDR is all 1, which is interpretted as True/False.
+* 
+
+```{r}
+topXgenesInYsets <- function(geneCutoff, setCutoff,filtered.custom.data=custom.data,filtered.custom.data.numericL=filtered.custom.data.consolidated.numericL) {
+# filtered.custom.data <- read_csv(file.path("..","output","filtered.custom.data.rootshoot.csv.gz"),guess_max = 17000)
+# howmany genes in the list?
+summary(!is.na(filtered.custom.data))
+# genes + genest combination in in01
+temp <- filtered.custom.data.numericL %>%
+  filter(totalSetN <= setCutoff, presentInSet ==1) %>%
+  select(genes, set) %>%
+  unite(genes.geneset,genes,set) %>%
+  mutate(genes.geneset=str_remove_all(genes.geneset,"_FC_up")) %>%
+  mutate(genes.geneset=str_remove_all(genes.geneset,"_FC_down")) 
+
+# top 20 selection
+ GSEA_cust_rootshoot_equal.updown <- filtered.custom.data %>%
+  dplyr::select(genes, ends_with("up"), ends_with("down"), -starts_with("exp")) %>%
+  pivot_longer(-genes, names_to = c("geneset", ".value"), names_pattern = "(^.*_shoot|^.*_root|^.*_seedlings|^.*_whole)_(.*)") %>%
+  unite(genes.geneset,genes,geneset) %>% inner_join(temp,by="genes.geneset") %>% # extract in in01
+    mutate(genes.geneset=str_replace_all(genes.geneset,"coldKilian","cold_Kilian")) %>% # fix coldKilian
+#  separate(genes.geneset,into=c("genes", "geneset"),sep="_minus|_plus|_cold|_heat",extra="merge") %>% View()
+  separate(genes.geneset,into=c("genes", "geneset"),sep=".3C_",extra="merge") %>% 
+#  mutate(genes=paste(genes,".3C")) %>% #View()
+  mutate(genes=paste(genes,".3C",sep="")) %>% # pointed out by Julin (061020)
+  group_by(geneset) %>%
+  mutate(rankfdr_up=rank(FDR_up, ties.method = "first", na.last = "keep"),
+         rankfdr_down=rank(FDR_down, ties.method = "first", na.last = "keep"),
+         rankfc_up=rank(-abs(FC_up), ties.method = "first", na.last = "keep"),
+         rankfc_down=rank(-abs(FC_down), ties.method = "first", na.last = "keep")
+         ) %>% 
+  mutate(finalrank_up=ifelse(is.na(FDR_up)|FDR_up==0, rankfc_up, rankfdr_up),
+         finalrank_down=ifelse(is.na(FDR_down)|FDR_down==0, rankfc_down, rankfdr_down),
+         finalrank_up=rank(finalrank_up, ties.method = "first", na.last = "keep"),
+         finalrank_down=rank(finalrank_down, ties.method = "first", na.last = "keep")) %>% #needed because we are combing different rank lists
+  filter(finalrank_up <= geneCutoff | finalrank_down <=geneCutoff )  %>% 
+   ungroup() %>% 
+   filter(FC_up>0|FC_down<0)  %>% 
+   mutate(FC_up2=ifelse(is.na(FC_up),"",FC_up)) %>% 
+   mutate(FC_down2=ifelse(is.na(FC_down),"",FC_down)) %>%   
+   unite(FC,FC_up2,FC_down2,sep="") %>% 
+   mutate(FC = as.numeric(FC)) %>%
+   mutate(geneset2=ifelse(FC>0,str_c(geneset,"_up"),str_c(geneset,"_down"))) %>% 
+   select(-FC, -geneset,-FDR_up, -FDR_down, -FC_up, -FC_down, -rankfdr_up, -rankfdr_down, -rankfc_up, -rankfc_down ) %>% 
+   group_by(geneset2) %>%
+   pivot_wider(names_from = geneset2, values_from = genes) %>%
+  arrange(finalrank_up) 
+# 
+colnames(GSEA_cust_rootshoot_equal.updown) # 
+# 
+summary(is.na(GSEA_cust_rootshoot_equal.updown)) # 
+
+
+GSEA_cust_rootshoot_equal.updown <- GSEA_cust_rootshoot_equal.updown %>% dplyr::select(-finalrank_up, -finalrank_down) %>% mutate_all(sort, na.last=TRUE) 
+#
+GSEA_cust_rootshoot_equal.updown <- GSEA_cust_rootshoot_equal.updown[apply(GSEA_cust_rootshoot_equal.updown,1,function(x) !all(is.na(x))),]
+#
+summary(is.na(GSEA_cust_rootshoot_equal.updown)) # 
+
+forGSEA.updown <- rbind(rep("na", ncol(GSEA_cust_rootshoot_equal.updown)), GSEA_cust_rootshoot_equal.updown)
+
+#convert NA to ""
+forGSEA.updown <- forGSEA.updown %>% 
+  mutate_all(str_replace_na) %>%
+  mutate_all(str_replace, pattern="NA", replacement="")
+
+# forGSEA.updown
+write_tsv(forGSEA.updown, str_c("annotation/output/GSEA_cust_rootshoot_In",setCutoff, ".equal.", geneCutoff, ".updown.v4.consolidated.gmx") )
+return(forGSEA.updown)
+}
+```
+
+```{r}
+custom.data=read_csv(file.path("annotation","output","filtered.custom.data.rootshoot.csv.gz"),guess_max = 17000)
+# top20
+topXgenesInYsets(20, 1) %>% View()
+topXgenesInYsets(20, 2) %>% View()
+topXgenesInYsets(20, 3) %>% View()
+topXgenesInYsets(20, 5) %>% View()
+topXgenesInYsets(20, 10) %>% View()
+topXgenesInYsets(20, 20) %>% View()
+
+# top50
+topXgenesInYsets(50, 1) %>% View()
+topXgenesInYsets(50, 2) %>% View()
+topXgenesInYsets(50, 3) %>% View()
+topXgenesInYsets(50, 5) %>% View()
+topXgenesInYsets(50, 10) %>% View()
+topXgenesInYsets(50, 20) %>% View()
+
+# top100
+topXgenesInYsets(100, 1) %>% View()
+topXgenesInYsets(100, 2) %>% View()
+topXgenesInYsets(100, 3) %>% View()
+topXgenesInYsets(100, 5) %>% View()
+topXgenesInYsets(100, 10) %>% View()
+topXgenesInYsets(100, 20) %>% View()
+
+```
+
+
+# annotate filtered.custom.data.numericL
+
+```{r}
+# annotation file for v3.0annotation
+Br.v3.0.At.BLAST <- read_csv(file.path("annotation","output","Brapa_v3.0_annotated.csv")) 
+# This annotation is redundant with name (Br grene). Eg 
+Br.v3.0.At.BLAST %>% filter(name=="BraA01g040570.3C")
+# reduce the redundancy (112418)
+Br.v3.0anno.At.BLAST.highscore <- Br.v3.0.At.BLAST %>% group_by(name) %>% arrange(desc(score)) %>% dplyr::slice(1)
+# reduce the redundancy for Br (051120) (do not use)
+#Br.v3.0anno.At.BLAST.highscore.Br <- Br.v3.0.At.BLAST %>% group_by(AGI) %>% arrange(desc(score)) %>% slice(1) #%>% View()
+```
+
+```{r}
+# bHLH039 ("") as an minusFe up marker
+filtered.custom.data.consolidated.numericL %>% left_join(Br.v3.0anno.At.BLAST.highscore, by=c("genes"="name")) %>% filter(genes=="BraA04g003660.3C") %>% View() # not in In01. Found in In02 because minusFe has two datasets (minusFe_Kim2019_root_FC_up and minusFe_Kailasam2019_root_FC_up), so that In01 is not good.
+```
+
+# In onlyX strategy effects (052521)
+## Combine all custom category ORA with WGCNA modules
+```{r}
+filenames.csv <- list.files(path=file.path("RNA","output"),pattern="consolidated.FDR0.001.GOseq.csv",full.names=TRUE,recursive=TRUE)
+# only containing FDR0.001.GOseq.csv
+#filenames.csv <- tibble(filenames=filenames.csv) %>% filter(str_detect(filenames,"FDR0.001.GOseq.csv")) %>% as_vector()
+filenames.csv2 <- list.files(path=file.path("RNA","output"),pattern="consolidated.FDR0.001.GOseq.csv",full.names=FALSE,recursive=FALSE)
+# read xls file (file name is "xls", actually tsv. That is why read_xls did not work)
+customcat.consolidated.InX.FDR0.001.ORA <- lapply(filenames.csv, function(x) read_csv(file=file.path(x)))
+# name
+names(customcat.consolidated.InX.FDR0.001.ORA) <- filenames.csv2
+# convert list into one data.frame
+customcat.consolidated.InX.FDR0.001.ORA.DF <- customcat.consolidated.InX.FDR0.001.ORA %>% enframe(name="InX.FDR0.001") %>% unnest(value)
+```
+
+## focus on root.ivory module which is associated with leaf length as well as soil treatment. Stack heatmaps, i.e. y-axis is In X (1, 02orless, 03orless, etc)
+```{r}
+data <- customcat.consolidated.InX.FDR0.001.ORA.DF %>% as_data_frame()
+# Scale each measurement (independently) to have a mean of 0 and variance of 1
+#customcat.InX.FDR0.001.ORA.DF.formatted <- data %>% ifelse(value=="no enriched GO",over_represented_padjust <- 1) %>% View() # error
+#ifelse(data$value=="no enriched GO",print("yes"),print("no")) # ???
+# traditional if/else loop
+for(i in 1:dim(data)[1]) {
+  if(is.na(data[i,3])==FALSE) {data[i,"over_represented_padjust"] <- 1 } else if(is.na(data[i,3])){data[i,"over_represented_padjust"] <- data[i,"over_represented_padjust"]}
+}
+```
+
+# Signature of WGCNA modules by looking enrichement of custom categories
+```{r}
+data2 <- data %>% mutate(name=str_replace(name,"_",".")) %>% dplyr::rename(NAME=name)  %>% 
+  separate(category,into=c("category3","tissue3","FC","up_down"),sep="_") %>% # View()
+  mutate(category3=category3 %>% 
+           str_replace_all("MINUSMG","MG-") %>%
+           str_replace_all("PLUSMG","MG+") %>%
+           str_replace_all("MINUSFE","FE-") %>%
+    str_replace_all("PLUSFE","FE_PLUS") %>%
+  str_replace_all("MINUSPI-1D","PI-1D-") %>%
+    str_replace_all("PLUSPI-1D","PI-1D+") %>%
+  str_replace_all("MINUSPI-3D","PI-3D+") %>%
+    str_replace_all("PLUSPI-3D","PI-3D+") %>%
+  str_replace_all("MINUSN","N-") %>%
+  str_replace_all("PLUSN","N+") %>%
+  str_replace_all("MINUSMN","MN-") %>%
+  str_replace_all("PLUSMN","MN+") %>% 
+  str_replace_all("MINUSP","P-") %>% 
+    str_replace_all("PLUSP","P+") %>% 
+    str_replace_all("PLUSIAA","IAA+") %>% 
+    str_replace_all("PLUSAL","AL+") %>%
+    str_replace_all("MINUSCA","CA-") %>% 
+      str_replace_all("PLUSCA","CA+") %>%
+    str_replace_all("MINUSK","K-") %>% 
+    str_replace_all("PLUSK","K+") %>% 
+    str_replace_all("MINUSS","S-") %>% 
+    str_replace_all("PLUSS","S+")) %>%
+  drop_na(category3) %>%
+  unite(category3.up_down,category3, up_down)# check
+data2 %>% View()
+
+# arbitrally convert value of 0 into 10^-10 for scale visualization
+data2[data2$over_represented_padjust < 10^-10,"over_represented_padjust"] <- 10^-10
+# clean up and sort "InX.FDR0.001" column
+data3 <- data2 %>% mutate(InX=str_replace(InX.FDR0.001,"WGCNA.voom5.signedhybrid.all.modules.customcat.Total.consolidated.FDR0.001.GOseq.csv","total")) %>% mutate(InX=str_remove_all(InX,"WGCNA.voom5.signedhybrid.all.modules.customcat.")) %>% mutate(InX=str_remove_all(InX,"\\.consolidated.FDR0.001.GOseq.csv")) #%>% View() # does not work
+
+data3 <- data3 %>% mutate(InX=factor(InX,levels=c("In10orMore","In05orMore","total","In20orless","In10orless","In05orless","In03orless","In02orless","In01")))
+```
+
+
+# plot root.ivory module
+```{r}
+# data3.root.ivory <- data3 %>% filter(NAME=="root.voom5.module.signedhybrid.ivory")
+# data3.root.ivory %>% View()
+# unique(data3$InX) # error in In03orless
+# # plot 
+# WGCNA.voom5.signedhybrid.root.ivory.customcat.GOseq.plot.InXcomparison <- ggplot(data3.root.ivory, aes(x=category3.up_down,y=InX)) + geom_tile(aes(fill=-log10(over_represented_padjust)),colour="white") + scale_fill_gradient2(limit=c(0,10), high=muted("magenta")) + facet_grid(.~tissue3,scales="free_x",space="free")
+# 
+# WGCNA.voom5.signedhybrid.root.ivory.customcat.GOseq.plot.InXcomparison <- WGCNA.voom5.signedhybrid.root.ivory.customcat.GOseq.plot.InXcomparison + theme(axis.text.x=element_text(size=8,angle=90,hjust=1,vjust=0.3),
+#                                       axis.text.y=element_text(size=8),
+#                                       axis.title=element_text(size=8),
+#                                       axis.ticks = element_blank(),
+#                                       strip.text.y = element_text(angle=0),
+#                                       strip.text.x = element_text(size=8,angle=90),
+#                                       panel.background = element_rect(fill = "white",colour="black"),
+#                                       plot.title=element_text(size=14),
+#                                       axis.line=element_blank()) + 
+#       labs(x="",y="",fill="-log10\n FDR",title=" ")
+# WGCNA.voom5.signedhybrid.root.ivory.customcat.GOseq.plot.InXcomparison
+# ggsave(path=file.path("RNA","output"),filename="WGCNA.voom5.signedhybrid.root.ivory.customcat.consolidated.GOseq.plot.InXcomparison.png",height=8,width=11) 
+```
+
+# plot each module, making  function
+```{r}
+InX.comparison.plot <- function(data=data3,target.module="root.voom5.module.signedhybrid.darkred") {# data3.root.darkred <- data3 %>% filter(NAME=="root.voom5.module.signedhybrid.darkred")
+data.target <- data %>% filter(NAME==target.module)
+data.target %>% View()
+# plot 
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- ggplot(data.target, aes(x=category3.up_down,y=InX)) + geom_tile(aes(fill=-log10(over_represented_padjust)),colour="white") + scale_fill_gradient2(limit=c(0,10), high=muted("magenta")) + facet_grid(.~tissue3,scales="free_x",space="free")
+
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison + theme(axis.text.x=element_text(size=12,angle=90,hjust=1,vjust=0.3),
+                                      axis.text.y=element_text(size=12),
+                                      axis.title=element_text(size=10),
+                                      axis.ticks = element_blank(),
+                                      strip.text.y = element_text(angle=0),
+                                      strip.text.x = element_text(size=8,angle=90),
+                                      panel.background = element_rect(fill = "white",colour="black"),
+                                      plot.title=element_text(size=14),
+                                      axis.line=element_blank()) + 
+      labs(x="",y="",fill="-log10\n FDR",title=str_remove(target.module,"voom5.module.signedhybrid."))
+# adding overlap numbers
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison + geom_text(aes(label=numDEInCat))
+
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison
+ggsave(path=file.path("RNA","output"),filename=str_c("WGCNA.",target.module,".customcat.consolidated.GOseq.plot.InXcomparison.png"),height=8,width=11) 
+}
+# test
+InX.comparison.plot(data=data3,target.module="root.voom5.module.signedhybrid.darkred")
+# how many mnodules we have?
+data3 %>% distinct(NAME) 
+# 
+#data3 %>% distinct(NAME)  %>% map(~InX.comparison.plot(target.module=.$NAME)) # does not owrk
+# plot for all WGCNA modules
+data3 %>% distinct(NAME) %>% apply(.,1,function(x) InX.comparison.plot(target.module=x))
+```
+
+
+# troubleshooting (June 2021) -> solved (June 13, 2021)
+```{r eval=FALSE}
+# duplicated genes in 
+root.all4 %>% filter(duplicated(genes)) %>% View() # none
+#
+root.all3 %>% filter(duplicated(genes)) %>% View() # one
+
+root.all3 %>% semi_join(root.all3[duplicated(root.all3$genes),"genes"],by="genes") %>% View()
+root.all3 %>% semi_join(root.all3[duplicated(root.all3$genes),"genes"],by="genes") %>% dplyr::select(matches("minusN_\nPeng")) # this has different values in the same gene.
+# multiple!
+N_Peng_2007_ST1and2 %>% filter(genes=="BraA04g024020.3C")
+# due to AGI -> Br conversion? -> No. Only one...
+Br.v3.0anno.At.BLAST.highscore %>% filter(name=="BraA04g024020.3C")
+# 
+Br.v3.0anno.At.BLAST.highscore.Br %>% filter(name=="BraA04g024020.3C")
+#
+N_Peng_2007_ST1_down <- read_xls(file.path("intermediate","N_Peng_2007","11103_2007_9241_MOESM1_ESM.xls"),skip=9, col_names=TRUE)
+N_Peng_2007_ST1_down %>% View()
+N_Peng_2007_ST1_down %>% dplyr::select(`AGI ID`,bRatio) %>% dplyr::rename(AGI=`AGI ID`) %>% mutate(AGI=str_to_upper(AGI)) %>% left_join(Br.v3.0anno.At.BLAST.highscore,by="AGI") %>% filter(name=="BraA04g024020.3C") %>% View() # the original data has duplicated data for one gene! or due to AGI -> Br conversion?
+
+# AT2G33450
+N_Peng_2007_ST1_down %>% dplyr::select(`AGI ID`,bRatio) %>% dplyr::rename(AGI=`AGI ID`) %>% mutate(AGI=str_to_upper(AGI))
+
+# original table 
+temp <- N_Peng_2007_ST1_down %>% dplyr::select(`AGI ID`,bRatio) %>% dplyr::rename(AGI=`AGI ID`) %>% mutate(AGI=str_to_upper(AGI)) %>% left_join(Br.v3.0anno.At.BLAST.highscore,by="AGI")
+# 
+dim(temp)
+temp[duplicated(temp$AGI),] %>% View()
+temp[temp$AGI=="AT2G33450",] # two
+#
+N_Peng_2007_ST1_down %>% dplyr::select(`AGI ID`,bRatio) %>% dplyr::rename(AGI=`AGI ID`) %>% mutate(AGI=str_to_upper(AGI)) %>% filter(AGI=="AT2G33450") # two. I looked up the original xls file and there are two "AT2G33450"! So use higher bRatio for this.
+
+```
+
+# Does shoot.all have duplicated genes?
+```{r}
+shoot.all %>% filter(duplicated(genes)) %>% View() #none. No need to change.
+```
+
+# Overlap between "minusN_root_FC_down","plusMg_root_FC_down" in In02orLess (found in root.ivory)? (061521)
+```{r}
+target.module="root.voom5.module.signedhybrid.ivory"
+data <- data3
+data.target <- data %>% filter(NAME==target.module) %>% filter(str_detect(InX.FDR0.001,"In02orless")) 
+# load
+load(file.path("annotation","output","In02orless.consolidated.forORA.list2.Rdata"))
+In02orless.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # 6 overlap
+# 
+load(file.path("annotation","output","In03orless.consolidated.forORA.list2.Rdata"))
+In03orless.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # 17 overlap
+# 
+load(file.path("annotation","output","In05orless.consolidated.forORA.list2.Rdata"))
+In05orless.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # 39 overlap
+# 
+load(file.path("annotation","output","In10orless.consolidated.forORA.list2.Rdata"))
+In10orless.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # 92 overlap
+# 
+load(file.path("annotation","output","In20orless.consolidated.forORA.list2.Rdata"))
+In20orless.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # 96 overlap
+# 
+load(file.path("annotation","output","Total.consolidated.forORA.list2.Rdata"))
+In05orMore.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # 67 overlap
+#
+load(file.path("annotation","output","In05orMore.consolidated.forORA.list2.Rdata"))
+In05orMore.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # 67 overlap
+```
+
+
+```{r}
+# 
+load(file.path("annotation","output","In02orless.consolidated.forORA.list2.Rdata"))
+In02orless.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_up","minusPi_root_FC_up")) %>% count(name) %>% count(n,name="n of n") # 112 overlap
+
+```
+
+# better to use UpSet plot (by Scott and Julin at Br. meeting June 15 2021)
+```{r}
+library(UpSetR)
+filtered.custom.data.consolidated.numericLL %>% filter(set %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% filter(group=="In02orLess") %>% 
+  upset()
+# does not work
+filtered.custom.data.consolidated.numeric %>%
+  filter(totalSetN <= 2) %>% dplyr::select(genes,minusN_root_FC_down,plusMg_root_FC_down) %>% upset(nsets=2) 
+
+```
+
+
+
+# which genes found in root.ivory module?
+```{r}
+load(file.path("RNA","output","filtered.custom.data.consolidated.numericL.Rdata"))
+filtered.custom.data.consolidated.numericLL <- filtered.custom.data.consolidated.numericL %>%
+  pivot_longer(c(starts_with("In"),starts_with("Total", ignore.case = FALSE)), names_to = "group", values_to = "group_summary")
+head(filtered.custom.data.consolidated.numericLL,20)
+
+filtered.custom.data.consolidated.numericLL
+Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid
+#
+temp <- filtered.custom.data.consolidated.numericLL %>% filter(set %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% filter(totalSetN <=20, group_summary=="1") %>% filter(presentInSet==1) %>% inner_join(Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid %>% filter(root.voom5.module.signedhybrid=="ivory"), by=c("genes"="name")) %>% arrange(totalSetN) %>% dplyr::select("genes","totalSetN","set","AGI","At_symbol","At_short_description","root.voom5.module.signedhybrid","leaf.voom5.module.signedhybrid","presentInSet") %>% distinct()
+# count
+temp.count <- temp %>% count(genes) #%>% View()
+temp %>% pivot_wider(names_from="set",values_from="presentInSet") %>% left_join(temp.count,by="genes") %>% group_by(plusMg_root_FC_down) %>% arrange(n,.group_by=TRUE) %>% write_csv(file.path("RNA","output","root.ivory.specific.genelist.csv")) #View()
+```
+
+# all in one plot (June 29, 2021)
+```{r}
+InX.comparison.plot3 <- function(data=data3) {
+  
+  # plot 
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- ggplot(data, aes(x=category3.up_down,y=InX)) + geom_tile(aes(fill=-log10(over_represented_padjust)),colour="white") + scale_fill_gradient2(limit=c(0,10), high=muted("magenta")) + facet_grid(NAME~tissue3,scales="free_x",space="free")
+
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison + theme(axis.text.x=element_text(size=12,angle=90,hjust=1,vjust=0.3),
+                                      axis.text.y=element_text(size=12),
+                                      axis.title=element_text(size=10),
+                                      axis.ticks = element_blank(),
+                                      strip.text.y = element_text(size=16,angle=0),
+                                      strip.text.x = element_text(size=8,angle=90),
+                                      panel.background = element_rect(fill = "white",colour="black"),
+                                      plot.title=element_text(size=14),
+                                      axis.line=element_blank()) + 
+      labs(x="",y="",fill="-log10\n FDR",title="WGCNA.customcat.consolidated.GOseq.plot.InXcomparison.allv2")
+# adding overlap numbers
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison + geom_text(aes(label=numDEInCat))
+
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison
+ggsave(path=file.path("RNA","output"),filename=str_c("WGCNA.customcat.consolidated.GOseq.plot.InXcomparison.allv2.pdf"),height=200,width=20,limitsize=FALSE) 
+}
+# test
+InX.comparison.plot3()
+
+```

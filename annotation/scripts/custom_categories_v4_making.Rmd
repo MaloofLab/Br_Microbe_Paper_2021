@@ -16,7 +16,7 @@ Summary
 History
 * copied from "06_f_cor_table.Rmd"
 * Use modified N_Peng_2007 to eliminate duplicated gene from root
-* 
+* Use updated plusN_Wang2003 (080621)
 
 To Do
 *  Expand DEGs with FC threshold for all custom categoreis
