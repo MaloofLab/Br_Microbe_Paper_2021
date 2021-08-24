@@ -433,214 +433,35 @@ GSEA_cust_rootshoot_updown2.list <- GSEA_cust_rootshoot_updown2 %>% drop_na(valu
 save(GSEA_cust_rootshoot_updown2.list,file=file.path("annotation","output","GSEA_cust_rootshoot_updown2.list.Rdata"))
 ```
 
-# GOseq with custom categories (Sep 30, 2020; Oct 28, 2020) -> WGCNA.signedhybrid.moduleColors.voom5.csv.gz (071921)
+# using consolidatd custom categories
+```{r}
+load(file.path("annotation","output","cust_rootshoot_updown5.consolidated.FDR0.001.list.Rdata"))
+cust_rootshoot_updown5.consolidated.FDR0.001.list
+```
+
+
+# GOseq with custom categories (Sep 30, 2020; Oct 28, 2020) -> WGCNA.signedhybrid.moduleColors.voom5.csv.gz (071921) -> cust_rootshoot_updown5.consolidated.FDR0.001.list (081721)
 ```{r}
 # custom categories list
-load(file.path("annotation","output","GSEA_cust_rootshoot_updown2.list.Rdata")) # GSEA_cust_rootshoot_updown2.list
+#load(file.path("annotation","output","GSEA_cust_rootshoot_updown2.list.Rdata")) # GSEA_cust_rootshoot_updown2.list
+load(file.path("annotation","output","cust_rootshoot_updown5.consolidated.FDR0.001.list.Rdata"))
+cust_rootshoot_updown5.consolidated.FDR0.001.list
 # all modules
 GOseq.temp <- Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid %>% ungroup() %>% dplyr::select(name,root.voom5.module.signedhybrid,leaf.voom5.module.signedhybrid) %>%
-pivot_longer(cols=-1,names_to = "voom")  %>% drop_na(value) %>% unite(voom.module,c("voom","value")) %>%  split(.$voom.module) %>% map(~GOseq.Brgo.v3.0.Atgoslim.BP.list.ORA2(genelist=.$name,custom.category.list=GSEA_cust_rootshoot_updown2.list,ontology="none")) # ,custom.category.list=GSEA_cust_rootshoot_updown2.list
-GOseq.temp %>% enframe() %>% unnest(value) %>% write_csv(file.path("RNA","output","WGCNA.voom5.signedhybrid.all.moduleColors.customcat.GOseq.csv"))
-
-# FDR0.3 (use GOseq.temp results above; revise below)
-# GOseq.temp <- Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid.voom5.FDR0.3 %>% ungroup() %>% dplyr::select(name,voom.module) %>%
-#   split(.$voom.module) %>% map(~GOseq.Brgo.v3.0.Atgoslim.BP.list.ORA2(genelist=.$name,custom.category.list=GSEA_cust_rootshoot_updown2.list,ontology="none")) # ,custom.category.list=GSEA_cust_rootshoot_updown2.list
-# GOseq.temp %>% enframe() %>% unnest(value) %>% write_csv(file.path("annotation","output","WGCNA.voom5.modules.customcat.GOseq.csv"))
+pivot_longer(cols=-1,names_to = "voom")  %>% drop_na(value) %>% unite(voom.module,c("voom","value")) %>%  split(.$voom.module) %>% map(~GOseq.Brgo.v3.0.Atgoslim.BP.list.ORA2(genelist=.$name,custom.category.list=cust_rootshoot_updown5.consolidated.FDR0.001.list,ontology="none")) # ,custom.category.list=cust_rootshoot_updown5.consolidated.FDR0.001.list
+GOseq.temp %>% enframe() %>% unnest(value) %>% write_csv(file.path("RNA","output","WGCNA.voom5.signedhybrid.all.moduleColors.customcat.consolidated1.GOseq.csv"))
 
 # check results on "root.voom5.module.signedhybrid_lightcyan1", which has "iron" in GO ORA which modules?
-
+### under construction ####
 GOseq.temp2 <- Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid %>% ungroup() %>% dplyr::select(name,root.voom5.module.signedhybrid,leaf.voom5.module.signedhybrid) %>%
 pivot_longer(cols=-1,names_to = "voom")  %>% drop_na(value) %>% unite(voom.module,c("voom","value")) %>% filter(voom.module=="root.voom5.module.signedhybrid_lightcyan1") %>% 
   split(.$voom.module) %>% map(~GOseq.Brgo.v3.0.Atgoslim.BP.list.ORA2(genelist=.$name,custom.category.list=GSEA_cust_rootshoot_updown2.list,ontology="none")) # OK. Good. Fe categoreis enriched
 ```
 
-<!-- # GOseq of all WGCNA modules (leaf.voom5, root.voom5 version) with custom categories  -->
-<!-- ```{r} -->
-<!-- Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid <- read_csv(file.path("RNA","output","WGCNA.signedhybrid.modules.voom5.csv.gz")) -->
-
-<!-- GOseq.temp <- Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid %>% ungroup() %>% dplyr::select(name,root.voom5.module.signedhybrid,leaf.voom5.module.signedhybrid) %>% -->
-<!-- pivot_longer(cols=-1,names_to = "voom") %>% drop_na(value) %>% unite(voom.module,c("voom","value")) %>% split(.$voom.module) %>% map(~GOseq.Brgo.v3.0.Atgoslim.BP.list.ORA2(genelist=.$name,custom.category.list=GSEA_cust_rootshoot_updown2.list,ontology="none")) # ,custom.category.list=GSEA_cust_rootshoot_updown2.list -->
-<!-- GOseq.temp %>% enframe() %>% unnest(value) %>% write_csv(file.path("..","output","WGCNA.voom5.all.modules.customcat.GOseq.csv")) -->
-
-<!-- ``` -->
 
 
 
-# making gmx file for GSEA with WGCNA modules -> WGCNA.signedhybrid.moduleColors.voom5.csv.gz (072021)
-# no need to make because GSEA is not used any more.
-```{r}
-#WGCNA.modules2 
-Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid <- read_csv(file.path("RNA","output","WGCNA.signedhybrid.moduleColors.voom5.csv.gz")) # change object name
 
-Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid.list <- Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid %>% dplyr::select(name,contains("voom")) %>% 
-  pivot_longer(cols=-1,names_to="voom",values_to="module") %>%
-  split(.$voom) %>%   map(~dplyr::select(.,c(name,module))) # !!!
-
-#write_tsv(test, "../output/test.gmx") 
-
-making.gmx <- function(x,data.list=Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid.list) {
-  load("n.Rdata")
-  n <- n + 1
-  print("n is")
-  print(n)
-  save(n,file="n.Rdata")
-  print(paste("head(x) is ",head(x)))
-  test <- x %>% drop_na() %>% mutate(id=1:nrow(.)) %>% 
-  pivot_wider(names_from = module, values_from = name,values_fill = list(name = NA)) %>% 
-  dplyr::select(-id) %>% mutate_all(sort, na.last=TRUE)
-test <- test[apply(test,1,function(x) !all(is.na(x))),]
-#test %>% View()
-test <- rbind(rep("na", ncol(test)), test)
-print(str_c(names(data.list)[n],colnames(test),sep=".")) 
-colnames(test) <- str_c(names(data.list)[n],colnames(test),sep=".") 
-return(test)
-} # bug fixed (111020)
-# run
-n <- 0
-save(n,file="n.Rdata")
-Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid.list.gmx <- Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid.list %>% map(~making.gmx(.))
-rm("n.Rdata") # not found... why?
-
-#WGCNA.modules2.gmx <- WGCNA.modules2.list.gmx %>% bind_cols() # error due to different length of rows
-# write csv
-#WGCNA.modules2.list.gmx %>% map(.,write_csv(., path=file.path("..","output",str_c(names))))
-for(x in names(Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid.list.gmx)) {
-  write_tsv(Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid.list.gmx[[x]],file=file.path("annotation","output",str_c(x,".gmx",sep="")))
-}
-```
-
-
-# GSEA analysis with WGCNA modules
-## read reports
-## function
-```{r}
-read.gsea_report_files_WGCNA <- function(gsea_report_path,GSEA.FDR.cutoff,tp=c("resid","removeblock"),data="exp_gt_block") {
-# open xsl files and save as csvs
-# gsea_report
-gsea_report_files <- list.files(path=gsea_report_path,full.names=FALSE,include.dirs = FALSE,recursive=TRUE, pattern="(gsea_report_for)([[:print:]]+)(\\.xls)")
-# ifelse(setCutoff=="Total", x <- "Total",if(setCutoff<10) {x <-  str_c("In0",setCutoff)} else {x <- str_c("In",setCutoff)})
-
-# gsea_report_files <- gsea_report_files[str_detect(gsea_report_files,x)]
-# print(str_c(x,"orless"))
-
-gsea_report_files
-# gsea_report (full name)
-gsea_report_files2 <- list.files(path=gsea_report_path,full.names=TRUE,recursive=TRUE, pattern="(gsea_report_for)([[:print:]]+)(\\.xls)")
-#gsea_report_files2 <- gsea_report_files2[str_detect(gsea_report_files2,x)] 
-#gsea_report_files2
-# read xls file (file name is "xls", actually tsv. That is why read_xls did not work)
-GSEA_reports<-lapply(gsea_report_files2, function(x) read_tsv(file=file.path(x)))
-# name
-names(GSEA_reports) <- gsea_report_files
-  gsub(".xls","",gsub("([[:print:]]+)(/)([[:print:]]+)","\\3",gsea_report_files))
-# convert list into one data.frame
-GSEA_reports.DF <- GSEA_reports %>% enframe(name="report") %>% unnest(value)
-#GSEA_reports.DF %>% View()
-# filter only significnt `FDR q-val` (GSEA.FDR.cutoff)
-GSEA_reports.DF <- GSEA_reports.DF %>% filter(`FDR q-val`< GSEA.FDR.cutoff)
-# 
-GSEA_reports.DF <- GSEA_reports.DF %>% separate(report,into=c("report2","report3"),sep="/") %>% mutate(report2=str_replace(report2,"remove.block","removeblock")) %>% separate(report2,into=c("exp","type","type2","tissue","categories"),sep="\\.",fill="left",extra="drop") 
-#
-GSEA_reports.DF <- GSEA_reports.DF %>% filter(type2==data) # works?
-#GSEA_reports.DF$LorD <- gsub("(gsea_report_for_)(0|1)([[:print:]]+)","\\2",GSEA_reports.DF$report3)
-#GSEA_reports.DF <- GSEA_reports.DF %>% mutate(LorD=ifelse(LorD==0,"Live","Dead"))
-GSEA_reports.DF %>% View()
-ifelse(dim(GSEA_reports.DF)[1]==0,print("no significnat categories"),return(GSEA_reports.DF))
-}
-```
-
-# 
-```{r}
-type="resid";cutoff <- 1;
-gsea_report_path=file.path("~","Box","gsea_home","output","oct30")
-GSEA_reports.DF <- read.gsea_report_files_WGCNA(gsea_report_path,GSEA.FDR.cutoff=cutoff) # 
-
-# select root.voom5 and leaf.voom5 data for categories
-GSEA_reports.DF <- GSEA_reports.DF %>% filter(str_detect(categories,"voom5")) #%>% View()
-
-# rename "NAME" column
-GSEA_reports.DF <- 
-GSEA_reports.DF %>% mutate(NAME= str_remove(NAME,"MODULE.") %>%
- str_replace("ROOT.VOOM1","voom_expression.e1and3.resid.exp_only.root") %>%
-  str_replace("ROOT.VOOM2","voom_expression.e1and3.resid.exp_only.root.plusR50") %>%
-  str_replace("ROOT.VOOM3","voom_expression.e1and3.uncorrected.root") %>%
-  str_replace("ROOT.VOOM4","voom_expression.e1and3.uncorrected.root.plusR500") %>%
-  str_replace("ROOT.VOOM5","voom_expression.e1and3.resid.exp_gt.root.plusR500") %>%
-  str_replace("LEAF.VOOM1","voom_expression.e1and3.resid.exp_only.leaf") %>%
-  str_replace("LEAF.VOOM2","voom_expression.e1and3.resid.exp_only.leaf.plusR50") %>%
-  str_replace("LEAF.VOOM3","voom_expression.e1and3.uncorrected.leaf") %>%   str_replace("LEAF.VOOM4","voom_expression.e1and3.uncorrected.leaf.plusR500") %>% 
-  str_replace("LEAF.VOOM5","voom_expression.e1and3.resid.exp_gt.leaf.plusR500")) # %>% View()
-
-```
-
-
-# leaf_avg_std, combine P (FDR < 0.3) and R and GSEA report results (`FDR q-value` < 0.3) and GO ORA
-```{r eval=FALSE}
-# modTrait.leaf_avg_std.P2.cor.summary.voom5 <- read_csv(file.path("..","output","modTrait.leaf_avg_std.P.cor.summary.voom5.csv"))
-# modTrait.leaf_avg_std.R2.cor.summary.voom5 <- read_csv(file.path("..","output","modTrait.leaf_avg_std.R.cor.summary.voom5.csv"))
-# # combine P and R for modTrait
-# modTrait.leaf_avg_std.RP2.cor.summary.voom5 <- modTrait.leaf_avg_std.P2.cor.summary.voom5 %>% unite(voom.module,c("voom","module"),remove=FALSE) %>% inner_join(modTrait.leaf_avg_std.R2.cor.summary.voom5 %>% unite(voom.module,c("voom","module"),remove=TRUE),by="voom.module") %>% dplyr::select(!voom.module)
-# # write csv
-# #modTrait.leaf_avg.RP2.cor.summary %>% #write_csv(file.path("..","output","modTrait.leaf_avg.RP.cor.summary.voom5.csv"))
-# # summary for slide 
-# FDR0.01 <- modTrait.leaf_avg_std.RP2.cor.summary.voom5 %>% filter(FDR < 0.01) %>% group_by(voom) %>% summarize(FDR0.01=n())
-# FDR0.3 <- modTrait.leaf_avg_std.RP2.cor.summary.voom5 %>% filter(FDR < 0.3) %>% group_by(voom) %>% summarize(FDR0.3=n())
-# total <- modTrait.leaf_avg_std.RP2.cor.summary.voom5 %>% filter(FDR < 2) %>% group_by(voom) %>% summarize(total=n(),minpvalue=min(pvalue)) # all modules. both leaf and root
-# total %>% left_join(FDR0.3,by="voom") %>% left_join(FDR0.01,by="voom") %>%  write_csv(file.path("..","output","modTrait.leaf_avg_std.RP.cor.signif.table.voom5.csv"
-# ))
-# # 
-# modTrait.leaf_avg_std.RP2.cor.summary.voom5 %>% mutate(module= str_to_upper(module)) %>% unite(voom.module, c(voom,module),sep=".") %>% left_join(GSEA_reports.DF,by=c("voom.module"="NAME"))  %>% write_csv(file.path("..","output","voom5.WGCNA.leaf_avg_std.GSEA.combined.exp_gt_block.csv")) # 
-# #### too bad! No overlap between leaf_avg_std correlated (FDR < 0.25) and GSEA significant (FDR < 0.25) modules (102820)
-# #### how about leaf_avg_std correlated (FDR < 0.3) and GSEA significant (FDR < 0.25) modules
-# modTrait.leaf_avg_std.RP2.cor.summary.voom5 %>% mutate(module= str_to_upper(module)) %>% unite(voom.module, c(voom,module),sep=".") %>% left_join(GSEA_reports.DF,by=c("voom.module"="NAME")) %>% filter(FDR<0.3, `FDR q-val` < 0.3) %>% #View()
-# write_csv(file.path("..","output","voom5.WGCNA.leaf_avg_std.GSEA.combined.exp_gt_block.FDR0.3.csv")) 
-# 
-# # numbers of modules 
-# ## FDR < 0.3 (leaf_avg)
-# modTrait.leaf_avg_std.RP2.cor.summary.voom5 %>% mutate(module= str_to_upper(module)) %>% unite(voom.module, c(voom,module),sep=".",remove=FALSE) %>% left_join(GSEA_reports.DF,by=c("voom.module"="NAME")) %>% filter(FDR<0.3) %>% group_by(voom,tissue) %>% summarize(both=n())
-# 
-# ## `FDR q-val` < 0.3
-# modTrait.leaf_avg_std.RP2.cor.summary.voom5 %>% mutate(module= str_to_upper(module)) %>% unite(voom.module, c(voom,module),sep=".",remove=FALSE) %>% left_join(GSEA_reports.DF,by=c("voom.module"="NAME")) %>% filter(`FDR q-val` < 0.3) %>% group_by(voom,tissue) %>% summarize(both=n())
-# 
-# # FDR < 0.3 and `FDR q-val` < 0.3
-# modTrait.leaf_avg_std.RP2.cor.summary.voom5 %>% mutate(module= str_to_upper(module)) %>% unite(voom.module, c(voom,module),sep=".",remove=FALSE) %>% left_join(GSEA_reports.DF,by=c("voom.module"="NAME")) %>% filter(FDR<0.3, `FDR q-val` < 0.3) %>% group_by(voom,tissue) %>% summarize(both=n())
-
-############## under construction #########
-# add GO ORA
-# ## read GOseq ORA results
-# WGCNA.leaf.uncorrected.modules.GOseq <- read_csv(file.path("..","output","WGCNA.leaf.uncorrected.modules.GOseq.csv"))
-# # correct format in "name" to match "voom.module" in modTraitP2.cor.GSEA.summary (under construction)
-# WGCNA.leaf.uncorrected.modules.GOseq <- WGCNA.leaf.uncorrected.modules.GOseq %>% mutate(name=str_replace(name,"exp_only","exponly")) %>% separate(name,c("voom","voom2","module"),sep="_") %>%  mutate(module=str_to_upper(module)) %>% unite(vooms,c("voom","voom2"), sep="_") %>% unite(name2,vooms,module,sep=".") %>% mutate(name2=str_replace(name2,"exponly","exp_only"))
-# WGCNA.leaf.uncorrected.modules.GOseq %>% View()
-# # combine
-# modTraitRP2.leaf_avg.RP2.cor.GSEA.summary.FDR0.25 <- modTrait.leaf_avg.RP2.cor.GSEA.summary %>% filter(FDR < 0.25 & `FDR q-val`< 0.25) %>% #View()
-# left_join(WGCNA.leaf.uncorrected.modules.GOseq,by=c("voom.module"="name2")) #%>% View()
-# # write csv
-# modTraitRP2.leaf_avg.RP2.cor.GSEA.summary.FDR0.25 %>% write_csv(file.path("..","output","WGCNA.leaf.uncorrected.soilGSEA.summary.FDR0.25.csv"))
-```
-
-# GSEA with resid data set (), which has overlap with leaf_length_ave & soil correlated modules (slide 166). How about voom5 modules?
-```{r}
-type="resid";cutoff <- 1;data=""
-gsea_report_path=file.path("~","Box","gsea_home","output","oct28")
-GSEA_reports.DF <- read.gsea_report_files_WGCNA(gsea_report_path,GSEA.FDR.cutoff=cutoff) # 
-
-# rename "NAME" column
-GSEA_reports.DF <- 
-GSEA_reports.DF %>% mutate(NAME= str_remove(NAME,"MODULE.") %>%
- str_replace("ROOT.VOOM1","voom_expression.e1and3.resid.exp_only.root") %>%
-  str_replace("ROOT.VOOM2","voom_expression.e1and3.resid.exp_only.root.plusR50") %>%
-  str_replace("ROOT.VOOM3","voom_expression.e1and3.uncorrected.root") %>%
-  str_replace("ROOT.VOOM4","voom_expression.e1and3.uncorrected.root.plusR500") %>%
-  str_replace("ROOT.VOOM5","voom_expression.e1and3.resid.exp_gt.root.plusR500") %>%
-  str_replace("LEAF.VOOM1","voom_expression.e1and3.resid.exp_only.leaf") %>%
-  str_replace("LEAF.VOOM2","voom_expression.e1and3.resid.exp_only.leaf.plusR50") %>%
-  str_replace("LEAF.VOOM3","voom_expression.e1and3.uncorrected.leaf") %>%   str_replace("LEAF.VOOM4","voom_expression.e1and3.uncorrected.leaf.plusR500") %>% 
-  str_replace("LEAF.VOOM5","voom_expression.e1and3.resid.exp_gt.leaf.plusR500")) # %>% View()
-
-```
-
-# 
 
 
 

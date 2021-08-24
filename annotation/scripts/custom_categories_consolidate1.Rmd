@@ -667,6 +667,7 @@ Total.forGSEA <- filtered.custom.data.consolidated.numericL %>%
   mutate_all(sort, na.last=TRUE)
 Total.forGSEA <- Total.forGSEA[apply(Total.forGSEA,1,function(x) !all(is.na(x))),]
 Total.forGSEA %>% View()
+
 # ORA
 # all modules using filtered.custom.data.consolidated.list
 GOseq.temp <- Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid %>% ungroup() %>% dplyr::select(name,root.voom5.module.signedhybrid,leaf.voom5.module.signedhybrid) %>%
@@ -1014,7 +1015,7 @@ N_Peng_2007_ST1_down %>% dplyr::select(`AGI ID`,bRatio) %>% dplyr::rename(AGI=`A
 shoot.all %>% filter(duplicated(genes)) %>% View() #none. No need to change.
 ```
 
-# Overlap between "minusN_root_FC_down","plusMg_root_FC_down" in In02orLess (found in root.ivory)? (061521)
+# Overlap between "minusN_root_FC_down","plusMg_root_FC_down" in in root.ivory? (061521)
 ```{r}
 target.module="root.voom5.module.signedhybrid.ivory"
 data <- data3

@@ -1,5 +1,5 @@
 ---
-title: "custom_categories_consolidate1"
+title: "custom_categories_consolidate1_forV5"
 author: "Kazu"
 date: "5/9/2021"
 output: html_document
@@ -27,6 +27,7 @@ To Do
 * and more modules.
 * Making v4 custom categories and use it for this script
 * Modify for updated plusN_Wang2003 using v5 (080621-081021)
+* Save as "custom_categories_consolidate1_forV5"
 
 #### making root + shoot category with up and down and
 # prep
@@ -76,7 +77,7 @@ shoot.all.fix.names
 # FDR_cutoff <- 0.001 (053021)
 # bug fixed by removng duplicated gene. 
 ```{r}
-shoot.all.fix.names <- shoot.all.fix.names %>% dplyr::select(-AGI, -exp1,-exp1_FDR,-exp3cr,-exp3cr_FDR, -At_symbol, -At_short_description)  
+shoot.all.fix.names <- shoot.all.fix.names %>% dplyr::select(-AGI, -At_symbol, -At_short_description)  
 colnames(shoot.all.fix.names)
 # combine two columns (At_symbol from root and shoot) (work later)
 custom.data <- root.all.fix.names %>% full_join(shoot.all.fix.names,by="genes")
@@ -373,7 +374,7 @@ head(Bra.v3.0_cdna)
 ```{r}
 # gene list
 Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid <- read_csv(file.path("RNA","output","WGCNA.signedhybrid.moduleColors.voom5.csv.gz"))
-
+load(file.path("RNA","output","filtered.custom.v5.data.consolidated.numericL.Rdata"))
 In01.consolidated.forGSEA <- filtered.custom.data.consolidated.numericL %>%
   filter(totalSetN <= 1, presentInSet ==1) %>%
   dplyr::select(genes, set) %>%
@@ -666,6 +667,15 @@ Total.forGSEA <- filtered.custom.data.consolidated.numericL %>%
   mutate_all(sort, na.last=TRUE)
 Total.forGSEA <- Total.forGSEA[apply(Total.forGSEA,1,function(x) !all(is.na(x))),]
 Total.forGSEA %>% View()
+# 
+Total.consolidated.forGSEA.list <- list()
+for(i in 1:(dim(Total.forGSEA)[2]-1)) {
+Total.consolidated.forGSEA.list[[i]] <- Total.forGSEA %>% dplyr::select(i) %>% pivot_longer(1) %>% dplyr::rename(category=name)
+}
+#
+Total.consolidated.forGSEA.DF <- Total.consolidated.forGSEA.list %>% enframe() %>% unnest(value) %>% drop_na(value)# does not work if I did not rename "category" columns
+# use Total.consolidated.forGSEA.DF for later
+
 # ORA
 # all modules using filtered.custom.data.consolidated.list
 GOseq.temp <- Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid %>% ungroup() %>% dplyr::select(name,root.voom5.module.signedhybrid,leaf.voom5.module.signedhybrid) %>%
@@ -966,7 +976,7 @@ ggsave(path=file.path("RNA","output"),filename=str_c("WGCNA.",target.module,".cu
 # test
 InX.comparison.plot(data=data3,target.module="root.voom5.module.signedhybrid.darkred")
 # how many mnodules we have?
-data3 %>% distinct(NAME) 
+data3 %>% distinct(NAME) # 53 modules
 # 
 #data3 %>% distinct(NAME)  %>% map(~InX.comparison.plot(target.module=.$NAME)) # does not owrk
 # plot for all WGCNA modules
@@ -1013,22 +1023,31 @@ N_Peng_2007_ST1_down %>% dplyr::select(`AGI ID`,bRatio) %>% dplyr::rename(AGI=`A
 shoot.all %>% filter(duplicated(genes)) %>% View() #none. No need to change.
 ```
 
-# Overlap between "minusN_root_FC_down","plusMg_root_FC_down" in In02orLess (found in root.ivory)? (061521)
+# Overlap between "minusN_root_FC_down","plusMg_root_FC_down" in In02orLess (found in root.ivory)? (061521) -> v5 version (082021)
 ```{r}
 target.module="root.voom5.module.signedhybrid.ivory"
 data <- data3
 data.target <- data %>% filter(NAME==target.module) %>% filter(str_detect(InX.FDR0.001,"In02orless")) 
 # load
-load(file.path("annotation","output","In02orless.consolidated.forORA.list2.Rdata"))
+load(file.path("annotation","output","In02orless.consolidated.forORA.list2.v5.Rdata"))
+# load(file.path("annotation","output","In02orless.consolidated.forORA.list2.Rdata"))
 In02orless.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # 6 overlap
+#### under construction ####
+
+
+
 # 
 load(file.path("annotation","output","In03orless.consolidated.forORA.list2.Rdata"))
 In03orless.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # 17 overlap
 # 
-load(file.path("annotation","output","In05orless.consolidated.forORA.list2.Rdata"))
+#load(file.path("annotation","output","In05orless.consolidated.forORA.list2.Rdata"))
+load(file=file.path("annotation","output","In05orless.consolidated.forORA.list2.v5.Rdata"))
+
 In05orless.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # 39 overlap
-# 
-load(file.path("annotation","output","In10orless.consolidated.forORA.list2.Rdata"))
+
+# updated for v5
+#load(file.path("annotation","output","In10orless.consolidated.forORA.list2.Rdata"))
+load(file=file.path("annotation","output","In10orless.consolidated.forORA.list2.v5.Rdata"))
 In10orless.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # 92 overlap
 # 
 load(file.path("annotation","output","In20orless.consolidated.forORA.list2.Rdata"))
@@ -1049,7 +1068,7 @@ In02orless.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(
 
 ```
 
-# better to use UpSet plot (by Scott and Julin at Br. meeting June 15 2021)
+# better to use UpSet plot (by Scott and Julin at Br. meeting June 15 2021) -> does not work well for some reasons...
 ```{r}
 library(UpSetR)
 filtered.custom.data.consolidated.numericLL %>% filter(set %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% filter(group=="In02orLess") %>% 
@@ -1078,10 +1097,10 @@ temp.count <- temp %>% count(genes) #%>% View()
 temp %>% pivot_wider(names_from="set",values_from="presentInSet") %>% left_join(temp.count,by="genes") %>% group_by(plusMg_root_FC_down) %>% arrange(n,.group_by=TRUE) %>% write_csv(file.path("RNA","output","root.ivory.specific.genelist.csv")) #View()
 ```
 
-# all in one plot (June 29, 2021)
+# all in one plot (June 29, 2021) -> updated version (Aug 17, 2021, under construction)
 ```{r}
 InX.comparison.plot3 <- function(data=data3) {
-  
+  #data <- data %>% filter(NAME==target.module)
   # plot 
 WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- ggplot(data, aes(x=category3.up_down,y=InX)) + geom_tile(aes(fill=-log10(over_represented_padjust)),colour="white") + scale_fill_gradient2(limit=c(0,10), high=muted("magenta")) + facet_grid(NAME~tissue3,scales="free_x",space="free")
 
@@ -1094,14 +1113,54 @@ WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- WGCNA.voom
                                       panel.background = element_rect(fill = "white",colour="black"),
                                       plot.title=element_text(size=14),
                                       axis.line=element_blank()) + 
-      labs(x="",y="",fill="-log10\n FDR",title="WGCNA.customcat.consolidated.GOseq.plot.InXcomparison.allv2")
+      labs(x="",y="",fill="-log10\n FDR",title=str_c("WGCNA.customcatv5.consolidated1.GOseq.plot.InXcomparison."))
 # adding overlap numbers
 WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison + geom_text(aes(label=numDEInCat))
 
 WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison
-ggsave(path=file.path("RNA","output"),filename=str_c("WGCNA.customcat.consolidated.GOseq.plot.InXcomparison.allv2.pdf"),height=200,width=20,limitsize=FALSE) 
+ggsave(path=file.path("RNA","output"),filename="WGCNA.customcatv5.consolidated1.GOseq.plot.InXcomparison.allmodules.pdf",height=200,width=20,limitsize=FALSE) 
 }
+
 # test
 InX.comparison.plot3()
 
 ```
+
+# new InX.comparion.plot4() for color coding FDR by microbiome FC (Aug 23, 2021)
+```{r}
+# WGCNA module info + In01.consolidated.forGSEA.DF 
+consolidated.InX.table <- Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid %>% ungroup() %>% dplyr::select(name,root.voom5.module.signedhybrid,leaf.voom5.module.signedhybrid) %>% left_join(In01.consolidated.forGSEA.DF[,c("value","category")],by=c("name"="value")) %>% dplyr::rename(In01=category) %>% # In01
+  left_join(In02orless.consolidated.forGSEA.DF[,c("value","category")],by=c("name"="value")) %>% dplyr::rename(In02orless=category) %>% # In02orless
+  left_join(In03orless.consolidated.forGSEA.DF[,c("value","category")],by=c("name"="value")) %>% dplyr::rename(In03orless=category) %>% # In03orless
+  left_join(In05orless.consolidated.forGSEA.DF[,c("value","category")],by=c("name"="value")) %>% dplyr::rename(In05orless=category) %>% # In05orless
+  left_join(In10orless.consolidated.forGSEA.DF[,c("value","category")],by=c("name"="value")) %>% dplyr::rename(In10orless=category) %>% # In10orless
+  left_join(In20orless.consolidated.forGSEA.DF[,c("value","category")],by=c("name"="value")) %>% dplyr::rename(In20orless=category) %>% # In20orless
+  left_join(Total.consolidated.forGSEA.DF[,c("value","category")],by=c("name"="value")) %>% dplyr::rename(Total=category) %>% # Total
+  left_join(In05orMore.consolidated.forGSEA.DF[,c("value","category")],by=c("name"="value")) %>% dplyr::rename(In05orMore=category) %>% # In05orMore
+  left_join(In10orMore.consolidated.forGSEA.DF[,c("value","category")],by=c("name"="value")) %>% dplyr::rename(In10orMore=category)
+# write csv
+write_csv(consolidated.InX.table,file=file.path("RNA","output","consolidated.InX.table.csv.gz"))
+# read
+consolidated.InX.table <- read_csv(file.path("RNA","output","consolidated.InX.table.csv.gz"))
+# a function to spit out overlapped gene names 
+overlap.genes.WGCNAmodule.category <- function(raw.table=consolidated.InX.table,module,category,InX=c("In01","In02orless","In03orless","In05orless","In10orless","In20orless","Total","In05orMore","In10orMore"),tissue=c("root","leaf")) {
+  if(tissue=="root") {
+temp <- raw.table %>% filter(root.voom5.module.signedhybrid==module) #%>% filter(!!enquo(InX)==category) # this does not work
+print("print temp")
+print(temp)
+return(temp)
+  } else if(tissue=="leaf") {
+    
+  } else {print("Please specify tissue")}
+  }
+# test
+module <- "ivory";raw.table <- consolidated.InX.table
+raw.table %>% filter(root.voom5.module.signedhybrid==module) %>% count(In01)
+raw.table %>% filter(root.voom5.module.signedhybrid==module) %>% filter(In01=="heat_root_FC_down") # works. Only one gene
+
+# test function
+overlap.genes.WGCNAmodule.category(category="heat_root_FC_down",tissue="root",InX="In01",module="ivory")
+
+```
+
+
