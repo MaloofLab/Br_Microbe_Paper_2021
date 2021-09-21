@@ -212,14 +212,26 @@ Br.v3.0.At.BLAST %>% filter(name=="BraA01g040570.3C")
 # reduce the redundancy (112418)
 Br.v3.0anno.At.BLAST.highscore <- Br.v3.0.At.BLAST %>% group_by(name) %>% arrange(desc(score)) %>% dplyr::slice(1)
 ```
-# calculate microbe FC
+# calculate microbe FC (root)
 ```{r}
-root.voom5.trt.mean <- root.voom5 %>% pivot_longer(col=-1) %>% inner_join(root.voom5.sample,by=c("name"="root.voom5")) %>% group_by(genes,genotype,trt) %>% summarize(mean=mean(value))
-root.voom5.trt.mean # scaled to zero
+root.voom5.trt.mean <- root.voom5 %>% pivot_longer(col=-1) %>% inner_join(root.voom5.sample,by=c("name"="root.voom5")) %>% group_by(genes,genotype,trt) %>% summarize(mean.soilFC=mean(value))
+root.voom5.trt.mean # scaled to zero, i.e., value in "dead" and one in "live" are the same absolute value.
 root.voom5.trt.mean.FPsc.live <- root.voom5.trt.mean %>% filter(trt=="live",genotype=="FPsc")
 # add ATG
 root.voom5.trt.mean.FPsc.live.ATG.moduleColors.signedhybrid <- root.voom5.trt.mean.FPsc.live %>% inner_join(Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid,by=c("genes"="name"))
 ```
+
+# calculate microbe FC (leaf)
+```{r}
+leaf.voom5.trt.mean <- leaf.voom5 %>% pivot_longer(col=-1) %>% inner_join(leaf.voom5.sample,by=c("name"="leaf.voom5")) %>% group_by(genes,genotype,trt) %>% summarize(mean.soilFC=mean(value))
+leaf.voom5.trt.mean # scaled to zero, i.e., value in "dead" and one in "live" are the same absolute value.
+leaf.voom5.trt.mean.FPsc.live <- leaf.voom5.trt.mean %>% filter(trt=="live",genotype=="FPsc")
+# add ATG
+leaf.voom5.trt.mean.FPsc.live.ATG.moduleColors.signedhybrid <- leaf.voom5.trt.mean.FPsc.live %>% inner_join(Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid,by=c("genes"="name"))
+```
+
+
+
 
 ```{r}
 mod <- "root.ivory"
@@ -255,7 +267,7 @@ minusP_Nishida_2017_root.DEGs <- read_csv(file.path("annotation","input","custom
 
 # plot (root.ivory module, minusN_Peng2007)
 ```{r}
-  p <- root.voom5.trt.mean.FPsc.live.ATG.moduleColors.signedhybrid %>% filter(root.voom5.module.signedhybrid=="ivory") %>% inner_join(N_Peng_2007_ST1and2.AGI,by="AGI") %>% dplyr::rename(minusN_Peng2007.root.log2=logFC) %>% dplyr::rename(microbeFC.live.log2=mean) %>% ggplot(aes(x=microbeFC.live.log2,y=minusN_Peng2007.root.log2)) + geom_point() + labs(title="root.ivory")
+  p <- root.voom5.trt.mean.FPsc.live.ATG.moduleColors.signedhybrid %>% filter(root.voom5.module.signedhybrid=="ivory") %>% inner_join(N_Peng_2007_ST1and2.AGI,by="AGI") %>% dplyr::rename(minusN_Peng2007.root.log2=logFC) %>% dplyr::rename(microbeFC.live.log2=mean.soilFC) %>% ggplot(aes(x=microbeFC.live.log2,y=minusN_Peng2007.root.log2)) + geom_point() + labs(title="root.ivory")
 ggsave(p,file=file.path("RNA","output","root.ivory.microbe.VS.minusN_Peng2007_root.png"))
 ```
 
@@ -263,7 +275,7 @@ ggsave(p,file=file.path("RNA","output","root.ivory.microbe.VS.minusN_Peng2007_ro
 # plot (root.ivory module, plusN_Wang2003)
 ```{r}
 p <- root.voom5.trt.mean.FPsc.live.ATG.moduleColors.signedhybrid %>% filter(root.voom5.module.signedhybrid=="ivory") %>% inner_join(fits.summary.AGI.FC[,c("AGI","mean.FC.AGI")],by="AGI") %>% dplyr::rename(plusN_Wang2003.root.log2=mean.FC.AGI) %>%
-  dplyr::rename(microbeFC.live.log2=mean) %>%
+  dplyr::rename(microbeFC.live.log2=mean.soilFC) %>%
   ggplot(aes(x=microbeFC.live.log2,y=plusN_Wang2003.root.log2)) + geom_point() + labs(title="root.ivory")
 ggsave(p,file=file.path("RNA","output","root.ivory.microbe.VS.plusN_Wang2003_root.png"))
 ```
@@ -271,7 +283,7 @@ ggsave(p,file=file.path("RNA","output","root.ivory.microbe.VS.plusN_Wang2003_roo
 # plot (root.ivory module, plusMg_Niu_2016_root)
 ```{r}
 p <- root.voom5.trt.mean.FPsc.live.ATG.moduleColors.signedhybrid %>% filter(root.voom5.module.signedhybrid=="ivory") %>% inner_join(plusMg_Niu_2016_root.DEGs[,c("AGI","logFC")],by="AGI") %>% dplyr::rename(plusMg_Niu_2016_root.DEGs.log2=logFC) %>%
-  dplyr::rename(microbeFC.live.log2=mean) %>%
+  dplyr::rename(microbeFC.live.log2=mean.soilFC) %>%
   ggplot(aes(x=microbeFC.live.log2,y=plusMg_Niu_2016_root.DEGs.log2)) + geom_point() + labs(title="root.ivory")
 ggsave(p,file=file.path("RNA","output","root.ivory.microbe.VS.plusMg_Niu_2016_root.png"))
 ```
@@ -280,52 +292,52 @@ ggsave(p,file=file.path("RNA","output","root.ivory.microbe.VS.plusMg_Niu_2016_ro
 # plot (mod <- "root.bisque4", iron, nitrogen, phosphorus)
 ## iron (Kim 2019)
 ```{r}
-p <- root.voom5.trt.mean.FPsc.live.ATG.moduleColors.signedhybrid %>% filter(root.voom5.module.signedhybrid=="bisque4") %>% inner_join(Fe.Kim2019.fits.summary.FC,by="AGI") %>% dplyr::rename(minusFe_Kim2019.root.log2=mean.FC.AGI) %>% dplyr::rename(microbeFC.live.log2=mean) %>% ggplot(aes(x=microbeFC.live.log2,y=minusFe_Kim2019.root.log2)) + geom_point() + labs(title="root.bisque4")
+p <- root.voom5.trt.mean.FPsc.live.ATG.moduleColors.signedhybrid %>% filter(root.voom5.module.signedhybrid=="bisque4") %>% inner_join(Fe.Kim2019.fits.summary.FC,by="AGI") %>% dplyr::rename(minusFe_Kim2019.root.log2=mean.FC.AGI) %>% dplyr::rename(microbeFC.live.log2=mean.soilFC) %>% ggplot(aes(x=microbeFC.live.log2,y=minusFe_Kim2019.root.log2)) + geom_point() + labs(title="root.bisque4")
 ggsave(p,file=file.path("RNA","output","root.bisque4.microbe.VS.minusFe_Kim2019_root.png"))
 
 ```
 ## iron (Kailasam2019)
 ```{r}
-p <- root.voom5.trt.mean.FPsc.live.ATG.moduleColors.signedhybrid %>% filter(root.voom5.module.signedhybrid=="bisque4") %>% inner_join(Fe_deficiency.Kailasam2019.DEGs.all.anno,by="AGI") %>% dplyr::rename(minusFe_Kailasam019.root.log2=logFC) %>% dplyr::rename(microbeFC.live.log2=mean) %>% ggplot(aes(x=microbeFC.live.log2,y=minusFe_Kailasam019.root.log2)) + geom_point() + labs(title="root.bisque4")
+p <- root.voom5.trt.mean.FPsc.live.ATG.moduleColors.signedhybrid %>% filter(root.voom5.module.signedhybrid=="bisque4") %>% inner_join(Fe_deficiency.Kailasam2019.DEGs.all.anno,by="AGI") %>% dplyr::rename(minusFe_Kailasam019.root.log2=logFC) %>% dplyr::rename(microbeFC.live.log2=mean.soilFC) %>% ggplot(aes(x=microbeFC.live.log2,y=minusFe_Kailasam019.root.log2)) + geom_point() + labs(title="root.bisque4")
 ggsave(p,file=file.path("RNA","output","root.bisque4.microbe.VS.minusFe_Kailasam2019_root.png"))
 ```
 
 ## iron (Nishida2017)
 ```{r}
-p <- root.voom5.trt.mean.FPsc.live.ATG.moduleColors.signedhybrid %>% filter(root.voom5.module.signedhybrid=="bisque4") %>% inner_join(minusFe_Nishida_2017_root.DEGs,by="AGI") %>% dplyr::rename(minusFe_Nishida2017.root.log2=logFC) %>% dplyr::rename(microbeFC.live.log2=mean) %>% ggplot(aes(x=microbeFC.live.log2,y=minusFe_Nishida2017.root.log2)) + geom_point() + labs(title="root.bisque4")
+p <- root.voom5.trt.mean.FPsc.live.ATG.moduleColors.signedhybrid %>% filter(root.voom5.module.signedhybrid=="bisque4") %>% inner_join(minusFe_Nishida_2017_root.DEGs,by="AGI") %>% dplyr::rename(minusFe_Nishida2017.root.log2=logFC) %>% dplyr::rename(microbeFC.live.log2=mean.soilFC) %>% ggplot(aes(x=microbeFC.live.log2,y=minusFe_Nishida2017.root.log2)) + geom_point() + labs(title="root.bisque4")
 ggsave(p,file=file.path("RNA","output","root.bisque4.microbe.VS.minusFe_Nishida2017_root.png"))
 ```
 
 ## minusN 
 # plot (root.bisque module, minusN_Peng2007)
 ```{r}
-  p <- root.voom5.trt.mean.FPsc.live.ATG.moduleColors.signedhybrid %>% filter(root.voom5.module.signedhybrid=="bisque4") %>% inner_join(N_Peng_2007_ST1and2.AGI,by="AGI") %>% dplyr::rename(minusN_Peng2007.root.log2=logFC) %>% dplyr::rename(microbeFC.live.log2=mean) %>% ggplot(aes(x=microbeFC.live.log2,y=minusN_Peng2007.root.log2)) + geom_point() + labs(title="root.bisque4")
+  p <- root.voom5.trt.mean.FPsc.live.ATG.moduleColors.signedhybrid %>% filter(root.voom5.module.signedhybrid=="bisque4") %>% inner_join(N_Peng_2007_ST1and2.AGI,by="AGI") %>% dplyr::rename(minusN_Peng2007.root.log2=logFC) %>% dplyr::rename(microbeFC.live.log2=mean.soilFC) %>% ggplot(aes(x=microbeFC.live.log2,y=minusN_Peng2007.root.log2)) + geom_point() + labs(title="root.bisque4")
 ggsave(p,file=file.path("RNA","output","root.bisque4.microbe.VS.minusN_Peng2007_root.png"))
 ```
 
 # plot (root.bisque4 module, plusN_Wang2003)
 ```{r}
 p <- root.voom5.trt.mean.FPsc.live.ATG.moduleColors.signedhybrid %>% filter(root.voom5.module.signedhybrid=="bisque4") %>% inner_join(fits.summary.AGI.FC[,c("AGI","mean.FC.AGI")],by="AGI") %>% dplyr::rename(plusN_Wang2003.root.log2=mean.FC.AGI) %>%
-  dplyr::rename(microbeFC.live.log2=mean) %>%
+  dplyr::rename(microbeFC.live.log2=mean.soilFC) %>%
   ggplot(aes(x=microbeFC.live.log2,y=plusN_Wang2003.root.log2)) + geom_point() + labs(title="root.bisque4")
 ggsave(p,file=file.path("RNA","output","root.bisque4.microbe.VS.plusN_Wang2003_root.png"))
 ```
 
 ## Pi 1d
 ```{r}
-  p <- root.voom5.trt.mean.FPsc.live.ATG.moduleColors.signedhybrid %>% filter(root.voom5.module.signedhybrid=="bisque4") %>% inner_join(minusPi_1d_Liu_2016_shoot.DEGs,by="AGI") %>% dplyr::rename(minusPi_1d_Liu_2016_shoot.DEGs=logFC) %>% dplyr::rename(microbeFC.live.log2=mean) %>% ggplot(aes(x=microbeFC.live.log2,y=minusPi_1d_Liu_2016_shoot.DEGs)) + geom_point() + labs(title="root.bisque4")
+  p <- root.voom5.trt.mean.FPsc.live.ATG.moduleColors.signedhybrid %>% filter(root.voom5.module.signedhybrid=="bisque4") %>% inner_join(minusPi_1d_Liu_2016_shoot.DEGs,by="AGI") %>% dplyr::rename(minusPi_1d_Liu_2016_shoot.DEGs=logFC) %>% dplyr::rename(microbeFC.live.log2=mean.soilFC) %>% ggplot(aes(x=microbeFC.live.log2,y=minusPi_1d_Liu_2016_shoot.DEGs)) + geom_point() + labs(title="root.bisque4")
 ggsave(p,file=file.path("RNA","output","root.bisque4.microbe.VS.minusPi1d_Liu2016_root.png"))
 ```
 
 ## Pi 3d
 ```{r}
-  p <- root.voom5.trt.mean.FPsc.live.ATG.moduleColors.signedhybrid %>% filter(root.voom5.module.signedhybrid=="bisque4") %>% inner_join(minusPi_3d_Liu_2016_shoot.DEGs,by="AGI") %>% dplyr::rename(minusPi_3d_Liu_2016_shoot.DEGs=logFC) %>% dplyr::rename(microbeFC.live.log2=mean) %>% ggplot(aes(x=microbeFC.live.log2,y=minusPi_3d_Liu_2016_shoot.DEGs)) + geom_point() + labs(title="root.bisque4")
+  p <- root.voom5.trt.mean.FPsc.live.ATG.moduleColors.signedhybrid %>% filter(root.voom5.module.signedhybrid=="bisque4") %>% inner_join(minusPi_3d_Liu_2016_shoot.DEGs,by="AGI") %>% dplyr::rename(minusPi_3d_Liu_2016_shoot.DEGs=logFC) %>% dplyr::rename(microbeFC.live.log2=mean.soilFC) %>% ggplot(aes(x=microbeFC.live.log2,y=minusPi_3d_Liu_2016_shoot.DEGs)) + geom_point() + labs(title="root.bisque4")
 ggsave(p,file=file.path("RNA","output","root.bisque4.microbe.VS.minusPi3d_Liu2016_root.png"))
 ```
 
 ## Pi Nishida
 ```{r}
-p <- root.voom5.trt.mean.FPsc.live.ATG.moduleColors.signedhybrid %>% filter(root.voom5.module.signedhybrid=="bisque4") %>% inner_join(minusP_Nishida_2017_root.DEGs,by="AGI") %>% dplyr::rename(minusP_Nishida2017.root.log2=logFC) %>% dplyr::rename(microbeFC.live.log2=mean) %>% ggplot(aes(x=microbeFC.live.log2,y=minusP_Nishida2017.root.log2)) + geom_point() + labs(title="root.bisque4")
+p <- root.voom5.trt.mean.FPsc.live.ATG.moduleColors.signedhybrid %>% filter(root.voom5.module.signedhybrid=="bisque4") %>% inner_join(minusP_Nishida_2017_root.DEGs,by="AGI") %>% dplyr::rename(minusP_Nishida2017.root.log2=logFC) %>% dplyr::rename(microbeFC.live.log2=mean.soilFC) %>% ggplot(aes(x=microbeFC.live.log2,y=minusP_Nishida2017.root.log2)) + geom_point() + labs(title="root.bisque4")
 ggsave(p,file=file.path("RNA","output","root.bisque4.microbe.VS.minusP_Nishida2017_root.png"))
 ```
 

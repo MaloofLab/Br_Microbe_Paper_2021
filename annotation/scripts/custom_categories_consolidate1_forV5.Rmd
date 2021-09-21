@@ -28,6 +28,7 @@ To Do
 * Making v4 custom categories and use it for this script
 * Modify for updated plusN_Wang2003 using v5 (080621-081021)
 * Save as "custom_categories_consolidate1_forV5"
+* heatmap coloaring by soil FC sign (positive vs negative) (Sep 2021)
 
 #### making root + shoot category with up and down and
 # prep
@@ -234,7 +235,7 @@ redo the conversion so that we keep gene names
 
 for each gene total the number of sets that it is in
 ```{r}
-filtered.custom.data.numeric  # original
+filtered.custom.data.numeric  # original. no more exist
 filtered.custom.data.consolidated.numeric <- filtered.custom.data.consolidated.numeric %>% 
   mutate(totalSetN=rowSums(filtered.custom.data.consolidated.numeric[,-1])) %>%
   dplyr::select(genes, totalSetN, everything())
@@ -270,6 +271,8 @@ save(filtered.custom.data.consolidated.numericL,file=file.path("RNA","output","f
 
 # Something is wrong with making "filtered.custom.data.consolidated.numericLL" below (chunk 17)? (061821, Kazu)
 ```{r}
+load(file.path("RNA","output","filtered.custom.v5.data.consolidated.numericL.Rdata"))
+
 filtered.custom.data.consolidated.numericLL <- filtered.custom.data.consolidated.numericL %>%
   pivot_longer(c(starts_with("In"),starts_with("Total", ignore.case = FALSE)), names_to = "group", values_to = "group_summary")
 head(filtered.custom.data.consolidated.numericLL,20)
@@ -675,166 +678,17 @@ Total.consolidated.forGSEA.list[[i]] <- Total.forGSEA %>% dplyr::select(i) %>% p
 #
 Total.consolidated.forGSEA.DF <- Total.consolidated.forGSEA.list %>% enframe() %>% unnest(value) %>% drop_na(value)# does not work if I did not rename "category" columns
 # use Total.consolidated.forGSEA.DF for later
+# convert into list by gene name
+Total.consolidated.forGSEA.list2 <- Total.consolidated.forGSEA.DF %>%split(.$value) %>%   map(~dplyr::select(.,category)) %>% map(~as_vector(.))
 
-# ORA
-# all modules using filtered.custom.data.consolidated.list
+save(Total.consolidated.forGSEA.list2,file=file.path("annotation","output","Total.consolidated.forGSEA.list2.v5.Rdata"))
+
+# all modules using filtered.custom.data.consolidated.list? why not Total.consolidated.forGSEA.list? (Sep 14, 2021)
 GOseq.temp <- Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid %>% ungroup() %>% dplyr::select(name,root.voom5.module.signedhybrid,leaf.voom5.module.signedhybrid) %>%
 pivot_longer(cols=-1,names_to = "voom")  %>% drop_na(value) %>% unite(voom.module,c("voom","value")) %>%  split(.$voom.module) %>% map(~GOseq.Brgo.v3.0.Atgoslim.BP.list.ORA2(genelist=.$name,custom.category.list=filtered.custom.data.consolidated.list,ontology="none")) # ,custom.category.list=GSEA_cust_rootshoot_updown2.list
 GOseq.temp %>% enframe() %>% unnest(value) %>% write_csv(file.path("RNA","output","WGCNA.voom5.signedhybrid.all.moduleColors.customcatv5.Total.consolidated.FDR0.001.GOseq.csv"))
 ```
 
-OK to write it out in gmx format need a first row that is "na"
-
-```{r}
-# # In01.forGSEA
-# In01.consolidated.forGSEA <- rbind(rep("na", ncol(In01.consolidated.forGSEA)), In01.consolidated.forGSEA)
-# In01.consolidated.forGSEA
-# write_tsv(In01.consolidated.forGSEA, "annotation/output/filtered.custom.data.In01.consolidated.rootshoot.v3.FDR0.001.gmx") 
-# # In02orless.forGSEA
-# In02orless.consolidated.forGSEA <- rbind(rep("na", ncol(In02orless.consolidated.forGSEA)), In02orless.consolidated.forGSEA)
-# In02orless.consolidated.forGSEA
-# write_tsv(In02orless.consolidated.forGSEA, "annotation/output/filtered.custom.data.In02orless.consolidated.rootshoot.v3.FDR0.001.gmx") 
-# 
-# # In03orLess.forGSEA
-# In03orless.consolidated.forGSEA <- rbind(rep("na", ncol(In03orless.consolidated.forGSEA)), In03orless.consolidated.forGSEA)
-# In03orless.consolidated.forGSEA
-# write_tsv(In03orless.consolidated.forGSEA, "annotation/output/filtered.custom.data.In03orless.consolidated.rootshoot.v3.FDR0.001.gmx") 
-# 
-# # In05orless.forGSEA
-# In05orless.consolidated.forGSEA <- rbind(rep("na", ncol(In05orless.consolidated.forGSEA)), In05orless.consolidated.forGSEA)
-# In05orless.consolidated.forGSEA
-# write_tsv(In05orless.consolidated.forGSEA, "annotation/output/filtered.custom.data.In05orless.consolidated.rootshoot.v3.FDR0.001.gmx") 
-# 
-# # In10orless.forGSEA
-# In10orless.consolidated.forGSEA <- rbind(rep("na", ncol(In10orless.consolidated.forGSEA)), In10orless.consolidated.forGSEA)
-# In10orless.consolidated.forGSEA
-# write_tsv(In10orless.consolidated.forGSEA, "annotation/output/filtered.custom.data.In10orless.consolidated.rootshoot.v3.FDR0.001.gmx") 
-# 
-# 
-# 
-# # In20orless.forGSEA
-# In20orless.consolidated.forGSEA <- rbind(rep("na", ncol(In20orless.consolidated.forGSEA)), In20orless.consolidated.forGSEA)
-# In20orless.consolidated.forGSEA
-# write_tsv(In20orless.consolidated.forGSEA, "annotation/output/filtered.custom.data.In20orless.consolidated.rootshoot.v3.FDR0.001.gmx") 
-# 
-# # Total.forGSEA
-# Total.forGSEA <- rbind(rep("na", ncol(Total.forGSEA)), Total.forGSEA)
-# Total.forGSEA
-# write_tsv(Total.forGSEA, "annotation/output/filtered.custom.data.Total.rootshoot.v3.FDR0.001.gmx") 
-# 
-# # In05orMore.forGSEA
-# In05orMore.consolidated.forGSEA <- rbind(rep("na", ncol(In05orMore.consolidated.forGSEA)), In05orMore.consolidated.forGSEA)
-# In05orMore.consolidated.forGSEA
-# write_tsv(In05orMore.consolidated.forGSEA, "annotation/output/filtered.custom.data.In05orMore.consolidated.rootshoot.v3.FDR0.001.gmx") 
-# 
-# # In10orMore.forGSEA
-# In10orMore.consolidated.forGSEA <- rbind(rep("na", ncol(In10orMore.consolidated.forGSEA)), In10orMore.consolidated.forGSEA)
-# In10orMore.consolidated.forGSEA
-# write_tsv(In10orMore.consolidated.forGSEA, "annotation/output/filtered.custom.data.In10orMore.consolidated.rootshoot.v3.FDR0.001.gmx") 
-```
-
-# Function to filter by number of sets that a gene is in, and create equal sized sets (when possible)
-* error in reading csv file (050921)
-* The error is becasue FDR is all 1, which is interpretted as True/False.
-* 
-
-```{r}
-topXgenesInYsets <- function(geneCutoff, setCutoff,filtered.custom.data=custom.data,filtered.custom.data.numericL=filtered.custom.data.consolidated.numericL) {
-# filtered.custom.data <- read_csv(file.path("..","output","filtered.custom.data.rootshoot.csv.gz"),guess_max = 17000)
-# howmany genes in the list?
-summary(!is.na(filtered.custom.data))
-# genes + genest combination in in01
-temp <- filtered.custom.data.numericL %>%
-  filter(totalSetN <= setCutoff, presentInSet ==1) %>%
-  select(genes, set) %>%
-  unite(genes.geneset,genes,set) %>%
-  mutate(genes.geneset=str_remove_all(genes.geneset,"_FC_up")) %>%
-  mutate(genes.geneset=str_remove_all(genes.geneset,"_FC_down")) 
-
-# top 20 selection
- GSEA_cust_rootshoot_equal.updown <- filtered.custom.data %>%
-  dplyr::select(genes, ends_with("up"), ends_with("down"), -starts_with("exp")) %>%
-  pivot_longer(-genes, names_to = c("geneset", ".value"), names_pattern = "(^.*_shoot|^.*_root|^.*_seedlings|^.*_whole)_(.*)") %>%
-  unite(genes.geneset,genes,geneset) %>% inner_join(temp,by="genes.geneset") %>% # extract in in01
-    mutate(genes.geneset=str_replace_all(genes.geneset,"coldKilian","cold_Kilian")) %>% # fix coldKilian
-#  separate(genes.geneset,into=c("genes", "geneset"),sep="_minus|_plus|_cold|_heat",extra="merge") %>% View()
-  separate(genes.geneset,into=c("genes", "geneset"),sep=".3C_",extra="merge") %>% 
-#  mutate(genes=paste(genes,".3C")) %>% #View()
-  mutate(genes=paste(genes,".3C",sep="")) %>% # pointed out by Julin (061020)
-  group_by(geneset) %>%
-  mutate(rankfdr_up=rank(FDR_up, ties.method = "first", na.last = "keep"),
-         rankfdr_down=rank(FDR_down, ties.method = "first", na.last = "keep"),
-         rankfc_up=rank(-abs(FC_up), ties.method = "first", na.last = "keep"),
-         rankfc_down=rank(-abs(FC_down), ties.method = "first", na.last = "keep")
-         ) %>% 
-  mutate(finalrank_up=ifelse(is.na(FDR_up)|FDR_up==0, rankfc_up, rankfdr_up),
-         finalrank_down=ifelse(is.na(FDR_down)|FDR_down==0, rankfc_down, rankfdr_down),
-         finalrank_up=rank(finalrank_up, ties.method = "first", na.last = "keep"),
-         finalrank_down=rank(finalrank_down, ties.method = "first", na.last = "keep")) %>% #needed because we are combing different rank lists
-  filter(finalrank_up <= geneCutoff | finalrank_down <=geneCutoff )  %>% 
-   ungroup() %>% 
-   filter(FC_up>0|FC_down<0)  %>% 
-   mutate(FC_up2=ifelse(is.na(FC_up),"",FC_up)) %>% 
-   mutate(FC_down2=ifelse(is.na(FC_down),"",FC_down)) %>%   
-   unite(FC,FC_up2,FC_down2,sep="") %>% 
-   mutate(FC = as.numeric(FC)) %>%
-   mutate(geneset2=ifelse(FC>0,str_c(geneset,"_up"),str_c(geneset,"_down"))) %>% 
-   select(-FC, -geneset,-FDR_up, -FDR_down, -FC_up, -FC_down, -rankfdr_up, -rankfdr_down, -rankfc_up, -rankfc_down ) %>% 
-   group_by(geneset2) %>%
-   pivot_wider(names_from = geneset2, values_from = genes) %>%
-  arrange(finalrank_up) 
-# 
-colnames(GSEA_cust_rootshoot_equal.updown) # 
-# 
-summary(is.na(GSEA_cust_rootshoot_equal.updown)) # 
-
-
-GSEA_cust_rootshoot_equal.updown <- GSEA_cust_rootshoot_equal.updown %>% dplyr::select(-finalrank_up, -finalrank_down) %>% mutate_all(sort, na.last=TRUE) 
-#
-GSEA_cust_rootshoot_equal.updown <- GSEA_cust_rootshoot_equal.updown[apply(GSEA_cust_rootshoot_equal.updown,1,function(x) !all(is.na(x))),]
-#
-summary(is.na(GSEA_cust_rootshoot_equal.updown)) # 
-
-forGSEA.updown <- rbind(rep("na", ncol(GSEA_cust_rootshoot_equal.updown)), GSEA_cust_rootshoot_equal.updown)
-
-#convert NA to ""
-forGSEA.updown <- forGSEA.updown %>% 
-  mutate_all(str_replace_na) %>%
-  mutate_all(str_replace, pattern="NA", replacement="")
-
-# forGSEA.updown
-write_tsv(forGSEA.updown, str_c("annotation/output/GSEA_cust_rootshoot_In",setCutoff, ".equal.", geneCutoff, ".updown.v4.consolidated.gmx") )
-return(forGSEA.updown)
-}
-```
-
-```{r}
-custom.data=read_csv(file.path("annotation","output","filtered.custom.data.rootshoot.csv.gz"),guess_max = 17000)
-# top20
-topXgenesInYsets(20, 1) %>% View()
-topXgenesInYsets(20, 2) %>% View()
-topXgenesInYsets(20, 3) %>% View()
-topXgenesInYsets(20, 5) %>% View()
-topXgenesInYsets(20, 10) %>% View()
-topXgenesInYsets(20, 20) %>% View()
-
-# top50
-topXgenesInYsets(50, 1) %>% View()
-topXgenesInYsets(50, 2) %>% View()
-topXgenesInYsets(50, 3) %>% View()
-topXgenesInYsets(50, 5) %>% View()
-topXgenesInYsets(50, 10) %>% View()
-topXgenesInYsets(50, 20) %>% View()
-
-# top100
-topXgenesInYsets(100, 1) %>% View()
-topXgenesInYsets(100, 2) %>% View()
-topXgenesInYsets(100, 3) %>% View()
-topXgenesInYsets(100, 5) %>% View()
-topXgenesInYsets(100, 10) %>% View()
-topXgenesInYsets(100, 20) %>% View()
-
-```
 
 
 # annotate filtered.custom.data.numericL
@@ -917,7 +771,7 @@ data2 <- data %>% mutate(name=str_replace(name,"_",".")) %>% dplyr::rename(NAME=
   drop_na(category3) %>%
   unite(category3.up_down,category3, up_down)# check
 data2 %>% View()
-
+# note: "tissue3" and "category3" came from the same name (i.e. "tissue3" is tissues used for "category3")
 # arbitrally convert value of 0 into 10^-10 for scale visualization
 data2[data2$over_represented_padjust < 10^-10,"over_represented_padjust"] <- 10^-10
 # clean up and sort "InX.FDR0.001" column
@@ -925,28 +779,6 @@ data3 <- data2 %>% mutate(InX=str_replace(InX.FDR0.001,"WGCNA.voom5.signedhybrid
 table(data3$InX)
 data3 <- data3 %>% mutate(InX=factor(InX,levels=c("In10orMore","In05orMore","Total","In20orless","In10orless","In05orless","In03orless","In02orless","In01")))
 table(data3$InX) # does work (no NA)
-```
-
-# plot root.ivory module
-```{r}
-# data3.root.ivory <- data3 %>% filter(NAME=="root.voom5.module.signedhybrid.ivory")
-# data3.root.ivory %>% View()
-# unique(data3$InX) # error in In03orless
-# # plot 
-# WGCNA.voom5.signedhybrid.root.ivory.customcat.GOseq.plot.InXcomparison <- ggplot(data3.root.ivory, aes(x=category3.up_down,y=InX)) + geom_tile(aes(fill=-log10(over_represented_padjust)),colour="white") + scale_fill_gradient2(limit=c(0,10), high=muted("magenta")) + facet_grid(.~tissue3,scales="free_x",space="free")
-# 
-# WGCNA.voom5.signedhybrid.root.ivory.customcat.GOseq.plot.InXcomparison <- WGCNA.voom5.signedhybrid.root.ivory.customcat.GOseq.plot.InXcomparison + theme(axis.text.x=element_text(size=8,angle=90,hjust=1,vjust=0.3),
-#                                       axis.text.y=element_text(size=8),
-#                                       axis.title=element_text(size=8),
-#                                       axis.ticks = element_blank(),
-#                                       strip.text.y = element_text(angle=0),
-#                                       strip.text.x = element_text(size=8,angle=90),
-#                                       panel.background = element_rect(fill = "white",colour="black"),
-#                                       plot.title=element_text(size=14),
-#                                       axis.line=element_blank()) + 
-#       labs(x="",y="",fill="-log10\n FDR",title=" ")
-# WGCNA.voom5.signedhybrid.root.ivory.customcat.GOseq.plot.InXcomparison
-# ggsave(path=file.path("RNA","output"),filename="WGCNA.voom5.signedhybrid.root.ivory.customcat.consolidated.GOseq.plot.InXcomparison.png",height=8,width=11) 
 ```
 
 # plot each module, making  function
@@ -1126,41 +958,245 @@ InX.comparison.plot3()
 
 ```
 
-# new InX.comparion.plot4() for color coding FDR by microbiome FC (Aug 23, 2021)
+# new InX.comparion.plot4() for color coding FDR by microbiome FC (Aug 23, 2021) -> abundan this (Sep 14, 2021)
 ```{r}
-# WGCNA module info + In01.consolidated.forGSEA.DF 
-consolidated.InX.table <- Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid %>% ungroup() %>% dplyr::select(name,root.voom5.module.signedhybrid,leaf.voom5.module.signedhybrid) %>% left_join(In01.consolidated.forGSEA.DF[,c("value","category")],by=c("name"="value")) %>% dplyr::rename(In01=category) %>% # In01
-  left_join(In02orless.consolidated.forGSEA.DF[,c("value","category")],by=c("name"="value")) %>% dplyr::rename(In02orless=category) %>% # In02orless
-  left_join(In03orless.consolidated.forGSEA.DF[,c("value","category")],by=c("name"="value")) %>% dplyr::rename(In03orless=category) %>% # In03orless
-  left_join(In05orless.consolidated.forGSEA.DF[,c("value","category")],by=c("name"="value")) %>% dplyr::rename(In05orless=category) %>% # In05orless
-  left_join(In10orless.consolidated.forGSEA.DF[,c("value","category")],by=c("name"="value")) %>% dplyr::rename(In10orless=category) %>% # In10orless
-  left_join(In20orless.consolidated.forGSEA.DF[,c("value","category")],by=c("name"="value")) %>% dplyr::rename(In20orless=category) %>% # In20orless
-  left_join(Total.consolidated.forGSEA.DF[,c("value","category")],by=c("name"="value")) %>% dplyr::rename(Total=category) %>% # Total
-  left_join(In05orMore.consolidated.forGSEA.DF[,c("value","category")],by=c("name"="value")) %>% dplyr::rename(In05orMore=category) %>% # In05orMore
-  left_join(In10orMore.consolidated.forGSEA.DF[,c("value","category")],by=c("name"="value")) %>% dplyr::rename(In10orMore=category)
-# write csv
-write_csv(consolidated.InX.table,file=file.path("RNA","output","consolidated.InX.table.csv.gz"))
-# read
-consolidated.InX.table <- read_csv(file.path("RNA","output","consolidated.InX.table.csv.gz"))
-# a function to spit out overlapped gene names 
-overlap.genes.WGCNAmodule.category <- function(raw.table=consolidated.InX.table,module,category,InX=c("In01","In02orless","In03orless","In05orless","In10orless","In20orless","Total","In05orMore","In10orMore"),tissue=c("root","leaf")) {
-  if(tissue=="root") {
-temp <- raw.table %>% filter(root.voom5.module.signedhybrid==module) #%>% filter(!!enquo(InX)==category) # this does not work
-print("print temp")
-print(temp)
-return(temp)
-  } else if(tissue=="leaf") {
-    
-  } else {print("Please specify tissue")}
-  }
-# test
-module <- "ivory";raw.table <- consolidated.InX.table
-raw.table %>% filter(root.voom5.module.signedhybrid==module) %>% count(In01)
-raw.table %>% filter(root.voom5.module.signedhybrid==module) %>% filter(In01=="heat_root_FC_down") # works. Only one gene
-
-# test function
-overlap.genes.WGCNAmodule.category(category="heat_root_FC_down",tissue="root",InX="In01",module="ivory")
+# # WGCNA module info + In01.consolidated.forGSEA.DF 
+# consolidated.InX.table <- Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid %>% ungroup() %>% dplyr::select(name,root.voom5.module.signedhybrid,leaf.voom5.module.signedhybrid) %>% left_join(In01.consolidated.forGSEA.DF[,c("value","category")],by=c("name"="value")) %>% dplyr::rename(In01=category) %>% # In01
+#   left_join(In02orless.consolidated.forGSEA.DF[,c("value","category")],by=c("name"="value")) %>% dplyr::rename(In02orless=category) %>% # In02orless
+#   left_join(In03orless.consolidated.forGSEA.DF[,c("value","category")],by=c("name"="value")) %>% dplyr::rename(In03orless=category) %>% # In03orless
+#   left_join(In05orless.consolidated.forGSEA.DF[,c("value","category")],by=c("name"="value")) %>% dplyr::rename(In05orless=category) %>% # In05orless
+#   left_join(In10orless.consolidated.forGSEA.DF[,c("value","category")],by=c("name"="value")) %>% dplyr::rename(In10orless=category) %>% # In10orless
+#   left_join(In20orless.consolidated.forGSEA.DF[,c("value","category")],by=c("name"="value")) %>% dplyr::rename(In20orless=category) %>% # In20orless
+#   left_join(Total.consolidated.forGSEA.DF[,c("value","category")],by=c("name"="value")) %>% dplyr::rename(Total=category) %>% # Total
+#   left_join(In05orMore.consolidated.forGSEA.DF[,c("value","category")],by=c("name"="value")) %>% dplyr::rename(In05orMore=category) %>% # In05orMore
+#   left_join(In10orMore.consolidated.forGSEA.DF[,c("value","category")],by=c("name"="value")) %>% dplyr::rename(In10orMore=category)
+# # dropna (how???)
+# # consolidated.InX.table.dropna <- consolidated.InX.table %>% drop_na() # This is not what I want.
+# #consolidated.InX.table %>% mutate(across(4:12,is.na)) %>% mutate(across(4:12,.fn=as.numeric)) %>% head() %>% rowwise() %>% mutate(is.na.num=sum(In01:In10orMore))  %>% View() # now what I want.
+# temp <- consolidated.InX.table %>% mutate(across(2:12,is.na)) %>% mutate(across(2:12,.fn=as.numeric))
+# temp2 <- temp %>% mutate(isnanum=rowSums(temp[,2:12])) %>% mutate(isnanum.module=rowSums(temp[,2:3])) #%>% View() # now this is what I want.
+# temp2 %>% count(isnanum) # all NA is only 14058. "5" is 13778901.
+# 
+# dim(temp2)
+# temp3 <- temp2 %>% filter(isnanum<9) %>% filter(isnanum.module < 2)
+# dim(temp3)
+# 
+# # write csv
+# write_csv(temp3,file=file.path("RNA","output","consolidated.InX.table.s.csv.gz")) # boo big. needs to drop off na line. J's suggestions is to use across() or accross_all() etc.
+# 
+# # read
+# consolidated.InX.table <- read_csv(file.path("RNA","output","consolidated.InX.table.s.csv.gz"))
+# dim(consolidated.InX.table) #[1] 16629963       14
+# # a function to spit out overlapped gene names (wrong one. do no use it, 091421)
+# overlap.genes.WGCNAmodule.category <- function(raw.table=consolidated.InX.table,module,category,InX=c("In01","In02orless","In03orless","In05orless","In10orless","In20orless","Total","In05orMore","In10orMore"),tissue=c("root","leaf")) {
+#   if(tissue=="root") {
+# temp <- raw.table %>% filter(root.voom5.module.signedhybrid==module) %>% filter(!!as.name(InX)==!!as.name(category)) # this does not work
+# print("print temp")
+# print(temp)
+# return(temp)
+#   } else if(tissue=="leaf") {
+#     
+#   } else {print("Please specify tissue")}
+#   }
+# # test
+# module <- "ivory";raw.table <- consolidated.InX.table
+# raw.table %>% filter(root.voom5.module.signedhybrid==module) %>% count(In01)
+# raw.table %>% filter(root.voom5.module.signedhybrid==module) %>% filter(In01=="heat_root_FC_down") # works. Only one gene
+# 
+# # test function
+# overlap.genes.WGCNAmodule.category(category="heat_root_FC_down",tissue="root",InX="In01",module="ivory")
 
 ```
 
+### start calculating microbiome responsiveness FC
+# calculate microbe FC
+# load normalized log2 expression data (Brassica genome v3.0 annotation) 
+```{r}
+# plus R500 in residual
+root.voom5 <- readr::read_tsv(file.path("RNA","output","voom_expression.e1and3.resid.exp_gt.root.plusR500.txt.gz"))
+leaf.voom5 <- readr::read_tsv(file.path("RNA","output","voom_expression.e1and3.resid.exp_gt.leaf.plusR500.txt.gz"))
+```
+
+# WGCNA modules
+```{r}
+Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid <- read_csv(file.path("RNA","output","WGCNA.signedhybrid.moduleColors.voom5.csv.gz"))
+```
+
+# make sample description data frame 
+```{r}
+sample.description.e1 <- read_csv(file.path("plant","output","Br.mbio.e1.sample.description.csv"))
+sample.description.e3 <- read_csv(file.path("plant","output","Br.mbio.e3.sample.description.csv"))
+
+sample.description.e1 %>% summarize(n_distinct(group))
+sample.description.e1 %>% group_by(trt) %>% summarize(n())
+##
+root.voom5.e1 <- tibble(root.voom5 = colnames(root.voom5)[-1]) %>% inner_join(sample.description.e1[,c("sample","genotype","tissue","trt")],by=c("root.voom5"="sample"))
+root.voom5.e3 <- tibble(root.voom5 = colnames(root.voom5)[-1]) %>% mutate(genotype="FPsc") %>% inner_join(sample.description.e3[,c("sample","tissue","trt")],by=c("root.voom5"="sample"))  
+root.voom5.sample <- bind_rows(root.voom5.e1,root.voom5.e3) %>% mutate(trt=str_remove(trt,"5E_"))
+# for Whitney
+# root.voom5.sample <- bind_rows(root.voom5.e1,root.voom5.e3)
+# root.voom5.sample$trt <- gsub("5E_","",root.voom5.sample$trt)
+root.voom5.sample %>% group_by(genotype) %>% summarise(num=n())
+
+
+# leaf.voom5.sample
+leaf.voom5.e1 <- tibble(leaf.voom5 = colnames(leaf.voom5)[-1]) %>% inner_join(sample.description.e1[,c("sample","genotype","tissue","trt")],by=c("leaf.voom5"="sample"))
+leaf.voom5.e3 <- tibble(leaf.voom5 = colnames(leaf.voom5)[-1]) %>% mutate(genotype="FPsc") %>% inner_join(sample.description.e3[,c("sample","tissue","trt")],by=c("leaf.voom5"="sample"))  
+leaf.voom5.sample <- bind_rows(leaf.voom5.e1,leaf.voom5.e3) %>% mutate(trt=str_remove(trt,"5E_")) # str_remove did not work in Whitney (041721)
+# for Whitney
+# leaf.voom5.sample <- bind_rows(leaf.voom5.e1,leaf.voom5.e3)
+# leaf.voom5.sample$trt <- gsub("5E_","",root.voom5.sample$trt)
+leaf.voom5.sample %>% group_by(genotype) %>% summarise(num=n())
+```
+
+## gene annotation
+```{r}
+# annotation file for v3.0annotation
+Br.v3.0.At.BLAST <- read_csv(file.path("annotation","output","Brapa_v3.0_annotated.csv")) 
+# This annotation is redundant with name (Br grene). Eg 
+Br.v3.0.At.BLAST %>% filter(name=="BraA01g040570.3C")
+# reduce the redundancy (112418)
+Br.v3.0anno.At.BLAST.highscore <- Br.v3.0.At.BLAST %>% group_by(name) %>% arrange(desc(score)) %>% dplyr::slice(1)
+```
+# calculate microbiome FC (root)
+```{r}
+root.voom5.trt.mean <- root.voom5 %>% pivot_longer(col=-1) %>% inner_join(root.voom5.sample,by=c("name"="root.voom5")) %>% group_by(genes,genotype,trt) %>% summarize(mean.soilFC=mean(value))
+root.voom5.trt.mean # scaled to zero, i.e., value in "dead" and one in "live" are the same absolute value.
+root.voom5.trt.mean.FPsc.live <- root.voom5.trt.mean %>% filter(trt=="live",genotype=="FPsc")
+# add ATG
+root.voom5.trt.mean.FPsc.live.ATG.moduleColors.signedhybrid <- root.voom5.trt.mean.FPsc.live %>% inner_join(Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid,by=c("genes"="name"))
+```
+
+# calculate microbiome responsiveness FC (leaf)
+```{r}
+leaf.voom5.trt.mean <- leaf.voom5 %>% pivot_longer(col=-1) %>% inner_join(leaf.voom5.sample,by=c("name"="leaf.voom5")) %>% group_by(genes,genotype,trt) %>% summarize(mean.soilFC=mean(value))
+leaf.voom5.trt.mean # scaled to zero, i.e., value in "dead" and one in "live" are the same absolute value.
+leaf.voom5.trt.mean.FPsc.live <- leaf.voom5.trt.mean %>% filter(trt=="live",genotype=="FPsc")
+# add ATG
+leaf.voom5.trt.mean.FPsc.live.ATG.moduleColors.signedhybrid <- leaf.voom5.trt.mean.FPsc.live %>% inner_join(Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid,by=c("genes"="name"))
+```
+
+### the end of calculation of microbe FC
+
+#  
+```{r}
+load(file.path("annotation","output","In01.consolidated.forORA.list2.v5.Rdata"))
+load(file.path("annotation","output","In02orless.consolidated.forORA.list2.v5.Rdata"))
+load(file.path("annotation","output","In03orless.consolidated.forORA.list2.v5.Rdata"))
+load(file.path("annotation","output","In05orless.consolidated.forORA.list2.v5.Rdata"))
+load(file.path("annotation","output","In10orless.consolidated.forORA.list2.v5.Rdata"))
+load(file.path("annotation","output","In20orless.consolidated.forORA.list2.v5.Rdata"))
+load(file.path("annotation","output","Total.consolidated.forGSEA.list2.v5.Rdata"))
+load(file.path("annotation","output","In05orMore.consolidated.forORA.list2.v5.Rdata"))
+load(file.path("annotation","output","In10orMore.consolidated.forORA.list2.v5.Rdata"))
+# check loaded cosolidated custom categories
+In01.consolidated.forORA.list2
+In02orless.consolidated.forORA.list2
+In03orless.consolidated.forORA.list2
+In05orless.consolidated.forORA.list2
+In10orless.consolidated.forORA.list2
+Total.consolidated.forGSEA.list2
+In05orMore.consolidated.forORA.list2
+In10orMore.consolidated.forORA.list2
+# check WGCNA modules
+root.voom5.trt.mean.FPsc.live.ATG.moduleColors.signedhybrid
+leaf.voom5.trt.mean.FPsc.live.ATG.moduleColors.signedhybrid
+# create function
+overlap.genes.WGCNAmodule.category2 <- function(tissue=c("root","leaf"),custom.category.list=In01.consolidated.forORA.list2) {
+  if(tissue=="root") {
+    temp.root <- custom.category.list %>% enframe(value="category") %>% unnest(category) %>%  inner_join(root.voom5.trt.mean.FPsc.live.ATG.moduleColors.signedhybrid,by=c("name"="genes")) #%>% View()
+    summary(temp.root)
+# test
+    temp.root %>% filter(root.voom5.module.signedhybrid=="bisque4",category=="cold_root_FC_down") %>% print()
+# summarize() of mean FC by root modules and custom categories
+    temp.root.summary <- temp.root %>% group_by(root.voom5.module.signedhybrid,category) %>% dplyr::summarise(soilFC=mean(mean.soilFC)) #%>% View() # values are positive to negative. What does that mean?
+return(temp.root.summary)
+  } else if(tissue=="leaf") {
+  temp.leaf <- custom.category.list %>% enframe(value="category") %>% unnest(category) %>%  inner_join(leaf.voom5.trt.mean.FPsc.live.ATG.moduleColors.signedhybrid,by=c("name"="genes")) #%>% View()
+    summary(temp.leaf)
+# summarize() of mean FC by root modules and custom categories
+    temp.leaf.summary <- temp.leaf %>% group_by(leaf.voom5.module.signedhybrid,category) %>% dplyr::summarise(soilFC=mean(mean.soilFC)) #%>% View() # values are positive to negative. What does that mean?
+return(temp.leaf.summary)
+  
+  } else {print("Please specify tissue")}
+}
+# calc
+root.In01 <- overlap.genes.WGCNAmodule.category2(custom.category.list=In01.consolidated.forORA.list2,tissue="root") %>% mutate(tissue="root",InX="In01") %>% rename(module=root.voom5.module.signedhybrid)
+leaf.In01 <- overlap.genes.WGCNAmodule.category2(custom.category.list=In01.consolidated.forORA.list2,tissue="leaf") %>% mutate(tissue="leaf",InX="In01") %>% rename(module=leaf.voom5.module.signedhybrid)
+root.In02orless <- overlap.genes.WGCNAmodule.category2(custom.category.list=In02orless.consolidated.forORA.list2,tissue="root") %>% mutate(tissue="root",InX="In02orless") %>% rename(module=root.voom5.module.signedhybrid)
+leaf.In02orless <- overlap.genes.WGCNAmodule.category2(custom.category.list=In02orless.consolidated.forORA.list2,tissue="leaf") %>% mutate(tissue="leaf",InX="In02orless") %>% rename(module=leaf.voom5.module.signedhybrid)
+
+root.In03orless <- overlap.genes.WGCNAmodule.category2(custom.category.list=In03orless.consolidated.forORA.list2,tissue="root") %>% mutate(tissue="root",InX="In03orless") %>% rename(module=root.voom5.module.signedhybrid)
+leaf.In03orless <- overlap.genes.WGCNAmodule.category2(custom.category.list=In03orless.consolidated.forORA.list2,tissue="leaf") %>% mutate(tissue="leaf",InX="In03orless") %>% rename(module=leaf.voom5.module.signedhybrid)
+
+root.In05orless <- overlap.genes.WGCNAmodule.category2(custom.category.list=In05orless.consolidated.forORA.list2,tissue="root") %>% mutate(tissue="root",InX="In05orless") %>% rename(module=root.voom5.module.signedhybrid)
+leaf.In05orless <- overlap.genes.WGCNAmodule.category2(custom.category.list=In05orless.consolidated.forORA.list2,tissue="leaf") %>% mutate(tissue="leaf",InX="In05orless") %>% rename(module=leaf.voom5.module.signedhybrid)
+
+root.In10orless <- overlap.genes.WGCNAmodule.category2(custom.category.list=In10orless.consolidated.forORA.list2,tissue="root") %>% mutate(tissue="root",InX="In10orless") %>% rename(module=root.voom5.module.signedhybrid)
+leaf.In10orless <- overlap.genes.WGCNAmodule.category2(custom.category.list=In10orless.consolidated.forORA.list2,tissue="leaf") %>% mutate(tissue="leaf",InX="In10orless") %>% rename(module=leaf.voom5.module.signedhybrid)
+
+root.In20orless <- overlap.genes.WGCNAmodule.category2(custom.category.list=In20orless.consolidated.forORA.list2,tissue="root") %>% mutate(tissue="root",InX="In20orless") %>% rename(module=root.voom5.module.signedhybrid)
+leaf.In20orless <- overlap.genes.WGCNAmodule.category2(custom.category.list=In10orless.consolidated.forORA.list2,tissue="leaf") %>% mutate(tissue="leaf",InX="In20orless") %>% rename(module=leaf.voom5.module.signedhybrid)
+
+root.Total <- overlap.genes.WGCNAmodule.category2(custom.category.list=Total.consolidated.forGSEA.list2,tissue="root") %>% mutate(tissue="root",InX="Total") %>% rename(module=root.voom5.module.signedhybrid)
+leaf.Total <- overlap.genes.WGCNAmodule.category2(custom.category.list=Total.consolidated.forGSEA.list2,tissue="leaf") %>% mutate(tissue="leaf",InX="Total") %>% rename(module=leaf.voom5.module.signedhybrid)
+
+root.In05orMore <- overlap.genes.WGCNAmodule.category2(custom.category.list=In05orMore.consolidated.forORA.list2,tissue="root") %>% mutate(tissue="root",InX="In05orMore") %>% rename(module=root.voom5.module.signedhybrid)
+leaf.In05orMore <- overlap.genes.WGCNAmodule.category2(custom.category.list=In05orMore.consolidated.forORA.list2,tissue="leaf") %>% mutate(tissue="leaf",InX="In05orMore") %>% rename(module=leaf.voom5.module.signedhybrid)
+
+root.In10orMore <- overlap.genes.WGCNAmodule.category2(custom.category.list=In10orMore.consolidated.forORA.list2,tissue="root") %>% mutate(tissue="root",InX="In10orMore") %>% rename(module=root.voom5.module.signedhybrid)
+leaf.In10orMore <- overlap.genes.WGCNAmodule.category2(custom.category.list=In10orMore.consolidated.forORA.list2,tissue="leaf") %>% mutate(tissue="leaf",InX="In10oreMore") %>% rename(module=leaf.voom5.module.signedhybrid)
+# combine all
+InX.all.soilFC <- bind_rows(root.In01,leaf.In01,
+                            root.In02orless,leaf.In02orless,
+                            root.In03orless,leaf.In03orless,
+                            root.In05orless,leaf.In05orless,
+                            root.In10orless,leaf.In10orless,
+                            root.In20orless,leaf.In20orless,
+                            root.Total,leaf.Total,
+                            root.In05orMore,leaf.In05orMore,
+                            root.In10orMore,leaf.In10orMore) 
+summary(InX.all.soilFC)
+write_csv(InX.all.soilFC,file=file.path("RNA","output","InX.all.soilFC.csv"))
+```
+
+# new plot with color coding of heat plot according to soil FC.
+# all in one plot (June 29, 2021) -> updated version (Sep 16, 2021 )
+```{r}
+InX.all.soilFC <- read_csv(file.path("RNA","output","InX.all.soilFC.csv"))
+InX.comparison.plot4 <- function(data=data3,soilFC=InX.all.soilFC) {
+  data <- data %>% mutate(NAME2=str_remove_all(NAME,"voom5.module.signedhybrid.")) #%>% separate(NAME2,into=c("tissue","module"))
+  # unite
+    data <- data %>% unite(col=tissue.module.category.InX, c(NAME2,tissue3,category3.up_down,InX),sep=".",remove=FALSE) # this tissue3 is for category, not for module.
+  # modify soilFC
+    soilFC <- soilFC %>% separate(category,into=c("category3","tissue3","FC","up_down")) %>% unite(category3.up_down,c(category3,up_down),sep="_") %>% unite(col=tissue.module.category.InX, c(tissue,module,tissue3,category3.up_down,InX),sep=".",remove=FALSE) #%>% View(). what is this tissue? tissue for modules.
+    # combine data and soilFC
+    data.combine <- data %>% inner_join(soilFC,by="tissue.module.category.InX") #
+    data.combine
+    # modify over_represented_padjust according to soilFC
+    data.combine <- data.combine %>% mutate(minuslog10.soilFC.over_represented_padjust=ifelse(soilFC>=0,-log10(over_represented_padjust),log10(over_represented_padjust))) #%>% View()
+  # plot 
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- ggplot(data.combine, aes(x=category3.up_down.x,y=InX.x)) + geom_tile(aes(fill=minuslog10.soilFC.over_represented_padjust),colour="white") + scale_fill_gradient2(limit=c(-10,10), low="green",high=muted("magenta")) + facet_grid(NAME~tissue3.x,scales="free_x",space="free")
+
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison + theme(axis.text.x=element_text(size=12,angle=90,hjust=1,vjust=0.3),
+                                      axis.text.y=element_text(size=12),
+                                      axis.title=element_text(size=10),
+                                      axis.ticks = element_blank(),
+                                      strip.text.y = element_text(size=16,angle=0),
+                                      strip.text.x = element_text(size=8,angle=90),
+                                      panel.background = element_rect(fill = "white",colour="black"),
+                                      plot.title=element_text(size=14),
+                                      axis.line=element_blank()) + 
+      labs(x="",y="",fill="-log10\n FDR",title=str_c("WGCNA.customcatv5.consolidated1.GOseq.plot.InXcomparison."))
+# adding overlap numbers
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison + geom_text(aes(label=numDEInCat))
+
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison
+ggsave(path=file.path("RNA","output"),filename="WGCNA.customcatv5.consolidated1.GOseq.plot.InXcomparison.allmodules.soilFC.pdf",height=200,width=20,limitsize=FALSE) 
+}
+
+# test
+InX.comparison.plot4()
+
+```
 
