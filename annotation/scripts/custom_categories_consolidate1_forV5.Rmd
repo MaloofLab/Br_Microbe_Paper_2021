@@ -12,8 +12,6 @@ Summary
 History
 * copied from "06_f_cor_table.Rmd"
 * add GSEA_cust_rootshoot_updown3.FDR0.001.list (051221)
-
-To Do
 *  Expand DEGs with FC threshold for all custom categoreis
 * root data including minusN_Peng_2007 and plusIAA_Nembauser_2006
 * adding Nishida_2017 to root categories (070720)
@@ -29,6 +27,9 @@ To Do
 * Modify for updated plusN_Wang2003 using v5 (080621-081021)
 * Save as "custom_categories_consolidate1_forV5"
 * heatmap coloaring by soil FC sign (positive vs negative) (Sep 2021)
+
+To Do
+
 
 #### making root + shoot category with up and down and
 # prep
@@ -162,13 +163,11 @@ categories.up.down.combined <- categories.up.down %>% gsub("_up","",.) %>% gsub(
   pivot_longer(-genes) 
 cust_rootshoot_updown5.consolidated.FDR0.001.list <- cust_rootshoot_updown2 %>% drop_na(value) %>% filter(str_detect(name,"FC")) %>% dplyr::select(-value) %>%split(.$genes) %>%   map(~dplyr::select(.,name)) %>% map(~as_vector(.))
 save(cust_rootshoot_updown5.consolidated.FDR0.001.list,file=file.path("annotation","output","cust_rootshoot_updown5.consolidated.FDR0.001.list.Rdata"))
-#save(GSEA_cust_rootshoot_updown3.FDR0.01.list,file=file.path("annotation","output","GSEA_cust_rootshoot_updown3.FDR0.01.list.Rdata"))
 ```
 
-# 
+# load consolidated custom categories
 ```{r}
 load(file.path("annotation","output","cust_rootshoot_updown5.consolidated.FDR0.001.list.Rdata"))
-
 ```
 
 # Find unique genes among all custom categories and remove them by calculating majority roles (root and shoot categories)
@@ -866,8 +865,6 @@ load(file.path("annotation","output","In02orless.consolidated.forORA.list2.v5.Rd
 In02orless.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # 6 overlap
 #### under construction ####
 
-
-
 # 
 load(file.path("annotation","output","In03orless.consolidated.forORA.list2.Rdata"))
 In03orless.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # 17 overlap
@@ -959,54 +956,6 @@ InX.comparison.plot3()
 ```
 
 # new InX.comparion.plot4() for color coding FDR by microbiome FC (Aug 23, 2021) -> abundan this (Sep 14, 2021)
-```{r}
-# # WGCNA module info + In01.consolidated.forGSEA.DF 
-# consolidated.InX.table <- Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid %>% ungroup() %>% dplyr::select(name,root.voom5.module.signedhybrid,leaf.voom5.module.signedhybrid) %>% left_join(In01.consolidated.forGSEA.DF[,c("value","category")],by=c("name"="value")) %>% dplyr::rename(In01=category) %>% # In01
-#   left_join(In02orless.consolidated.forGSEA.DF[,c("value","category")],by=c("name"="value")) %>% dplyr::rename(In02orless=category) %>% # In02orless
-#   left_join(In03orless.consolidated.forGSEA.DF[,c("value","category")],by=c("name"="value")) %>% dplyr::rename(In03orless=category) %>% # In03orless
-#   left_join(In05orless.consolidated.forGSEA.DF[,c("value","category")],by=c("name"="value")) %>% dplyr::rename(In05orless=category) %>% # In05orless
-#   left_join(In10orless.consolidated.forGSEA.DF[,c("value","category")],by=c("name"="value")) %>% dplyr::rename(In10orless=category) %>% # In10orless
-#   left_join(In20orless.consolidated.forGSEA.DF[,c("value","category")],by=c("name"="value")) %>% dplyr::rename(In20orless=category) %>% # In20orless
-#   left_join(Total.consolidated.forGSEA.DF[,c("value","category")],by=c("name"="value")) %>% dplyr::rename(Total=category) %>% # Total
-#   left_join(In05orMore.consolidated.forGSEA.DF[,c("value","category")],by=c("name"="value")) %>% dplyr::rename(In05orMore=category) %>% # In05orMore
-#   left_join(In10orMore.consolidated.forGSEA.DF[,c("value","category")],by=c("name"="value")) %>% dplyr::rename(In10orMore=category)
-# # dropna (how???)
-# # consolidated.InX.table.dropna <- consolidated.InX.table %>% drop_na() # This is not what I want.
-# #consolidated.InX.table %>% mutate(across(4:12,is.na)) %>% mutate(across(4:12,.fn=as.numeric)) %>% head() %>% rowwise() %>% mutate(is.na.num=sum(In01:In10orMore))  %>% View() # now what I want.
-# temp <- consolidated.InX.table %>% mutate(across(2:12,is.na)) %>% mutate(across(2:12,.fn=as.numeric))
-# temp2 <- temp %>% mutate(isnanum=rowSums(temp[,2:12])) %>% mutate(isnanum.module=rowSums(temp[,2:3])) #%>% View() # now this is what I want.
-# temp2 %>% count(isnanum) # all NA is only 14058. "5" is 13778901.
-# 
-# dim(temp2)
-# temp3 <- temp2 %>% filter(isnanum<9) %>% filter(isnanum.module < 2)
-# dim(temp3)
-# 
-# # write csv
-# write_csv(temp3,file=file.path("RNA","output","consolidated.InX.table.s.csv.gz")) # boo big. needs to drop off na line. J's suggestions is to use across() or accross_all() etc.
-# 
-# # read
-# consolidated.InX.table <- read_csv(file.path("RNA","output","consolidated.InX.table.s.csv.gz"))
-# dim(consolidated.InX.table) #[1] 16629963       14
-# # a function to spit out overlapped gene names (wrong one. do no use it, 091421)
-# overlap.genes.WGCNAmodule.category <- function(raw.table=consolidated.InX.table,module,category,InX=c("In01","In02orless","In03orless","In05orless","In10orless","In20orless","Total","In05orMore","In10orMore"),tissue=c("root","leaf")) {
-#   if(tissue=="root") {
-# temp <- raw.table %>% filter(root.voom5.module.signedhybrid==module) %>% filter(!!as.name(InX)==!!as.name(category)) # this does not work
-# print("print temp")
-# print(temp)
-# return(temp)
-#   } else if(tissue=="leaf") {
-#     
-#   } else {print("Please specify tissue")}
-#   }
-# # test
-# module <- "ivory";raw.table <- consolidated.InX.table
-# raw.table %>% filter(root.voom5.module.signedhybrid==module) %>% count(In01)
-# raw.table %>% filter(root.voom5.module.signedhybrid==module) %>% filter(In01=="heat_root_FC_down") # works. Only one gene
-# 
-# # test function
-# overlap.genes.WGCNAmodule.category(category="heat_root_FC_down",tissue="root",InX="In01",module="ivory")
-
-```
 
 ### start calculating microbiome responsiveness FC
 # calculate microbe FC
@@ -1161,7 +1110,7 @@ write_csv(InX.all.soilFC,file=file.path("RNA","output","InX.all.soilFC.csv"))
 ```
 
 # new plot with color coding of heat plot according to soil FC.
-# all in one plot (June 29, 2021) -> updated version (Sep 16, 2021 )
+# all in one plot (June 29, 2021) -> updated version (Sep 20, 2021 )
 ```{r}
 InX.all.soilFC <- read_csv(file.path("RNA","output","InX.all.soilFC.csv"))
 InX.comparison.plot4 <- function(data=data3,soilFC=InX.all.soilFC) {
