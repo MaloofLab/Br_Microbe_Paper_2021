@@ -340,17 +340,18 @@ root.densitycr.DEGs.int.all <- topTags(root.densitycr.lrt,n = Inf,p.value = 1)$t
 leaf.densitycr.DEGs.int.all <- topTags(leaf.densitycr.lrt,n = Inf,p.value = 1)$table
 
 # expression pattern exp1 ad 3, using expression.pattern.Br.graph.exp1and3.v3.0annotation.voom() function in Expression_pattern_graph2.R
-expression.pattern.Br.graph.exp1and3.v3.0annotation.voom(target.genes=head(topTags(root.trtlive.lrt)$table$genes),title="ex1 & 3 v3.0 voom",tissue.type="root",FDR=head(topTags(root.trtlive.lrt)$table),geno="both") # confirming this DEGs is true for only root UN.
+p <- expression.pattern.Br.graph.exp1and3.v3.0annotation.voom(target.genes=head(topTags(root.trtlive.lrt)$table$genes),title="ex1 & 3 v3.0 voom",tissue.type="root",FDR=head(topTags(root.trtlive.lrt)$table),geno="both") # confirming this DEGs is true for only root UN.
+p
 
 ```
 
 # Additive model, rD.rCR
 ```{r}
 # relevel trt and density to "dead" and "CR"
-dge.root$samples<-dge.root$samples %>% mutate(trt=fct_relevel(trt,"dead")) #%>% str() 
-dge.root$samples<-dge.root$samples %>% mutate(density=fct_relevel(density,"cr")) #%>% str() 
-dge.leaf$samples<-dge.leaf$samples %>% mutate(trt=fct_relevel(trt,"dead")) #%>% str() 
-dge.leaf$samples<-dge.leaf$samples %>% mutate(density=fct_relevel(density,"cr")) #%>% str() 
+dge.root$samples <- dge.root$samples %>% mutate(trt=fct_relevel(trt,"dead")) #%>% str() 
+dge.root$samples <- dge.root$samples %>% mutate(density=fct_relevel(density,"cr")) #%>% str() 
+dge.leaf$samples <- dge.leaf$samples %>% mutate(trt=fct_relevel(trt,"dead")) #%>% str() 
+dge.leaf$samples <- dge.leaf$samples %>% mutate(density=fct_relevel(density,"cr")) #%>% str() 
 ## dge
 root.design.add <- with(dge.root$samples, model.matrix(~ density + trt + block))
 leaf.design.add <- with(dge.leaf$samples, model.matrix(~ density + trt + block))
@@ -473,18 +474,18 @@ leaf.densityun.DEGs.int.all.rD.rCR.v3.0anno <- left_join(leaf.densityun.DEGs.int
 # write csv (naming: "tissue"."coef1"_"coef2"_"coef3"."DEGs"."model"."reference for soil (D,dead;L,live)"."reference for density"."annotation version") if there are triple coefs (all)
 ```{r}
 ## density
-write.csv(root.densityun_densityun.trtlive.DEGs.int.all.rD.rCR.v3.0anno,file=file.path("RNA","output","FULLtoptag","root.densityun_densityun.trtlive.DEGs.int.rD.rCR.v3.0anno.csv"))
-write.csv(leaf.densityun_densityun.trtlive.DEGs.int.all.rD.rCR.v3.0anno,file=file.path("RNA","output","FULLtoptag","leaf.densityun_densityun.trtlive.DEGs.int.rD.rCR.v3.0anno.csv"))
+write.csv(root.densityun_densityun.trtlive.DEGs.int.all.rD.rCR.v3.0anno,file=file.path("RNA","output","FULLtoptag","e3.root.densityun_densityun.trtlive.DEGs.int.rD.rCR.v3.0anno.csv"))
+write.csv(leaf.densityun_densityun.trtlive.DEGs.int.all.rD.rCR.v3.0anno,file=file.path("RNA","output","FULLtoptag","e3.leaf.densityun_densityun.trtlive.DEGs.int.rD.rCR.v3.0anno.csv"))
 ## trtlive
-write.csv(root.trtlive_densityun.trtlive.DEGs.int.all.rD.rCR.v3.0anno,file=file.path("RNA","output","FULLtoptag","root.trtlive_densityun.trtlive.DEGs.int.rD.rCR.v3.0anno.csv"))
-write.csv(leaf.trtlive_densityun.trtlive.DEGs.int.all.rD.rCR.v3.0anno,file=file.path("RNA","output","FULLtoptag","leaf.trtlive_densityun.trtlive.DEGs.int.rD.rCR.v3.0anno.csv"))
+write.csv(root.trtlive_densityun.trtlive.DEGs.int.all.rD.rCR.v3.0anno,file=file.path("RNA","output","FULLtoptag","e3.root.trtlive_densityun.trtlive.DEGs.int.rD.rCR.v3.0anno.csv"))
+write.csv(leaf.trtlive_densityun.trtlive.DEGs.int.all.rD.rCR.v3.0anno,file=file.path("RNA","output","FULLtoptag","e3.leaf.trtlive_densityun.trtlive.DEGs.int.rD.rCR.v3.0anno.csv"))
 ## density:trtlive
-write.csv(root.densityun.trtlive.DEGs.int.all.rD.rCR.v3.0anno,file=file.path("RNA","output","FULLtoptag","root.densityun.trtlive.DEGs.int.rD.rCR.v3.0anno.csv"))
-write.csv(leaf.densityun.trtlive.DEGs.int.all.rD.rCR.v3.0anno,file=file.path("RNA","output","FULLtoptag","leaf.densityun.trtlive.DEGs.int.rD.rCR.v3.0anno.csv"))
+write.csv(root.densityun.trtlive.DEGs.int.all.rD.rCR.v3.0anno,file=file.path("RNA","output","FULLtoptag","e3.root.densityun.trtlive.DEGs.int.rD.rCR.v3.0anno.csv"))
+write.csv(leaf.densityun.trtlive.DEGs.int.all.rD.rCR.v3.0anno,file=file.path("RNA","output","FULLtoptag","e3.leaf.densityun.trtlive.DEGs.int.rD.rCR.v3.0anno.csv"))
 ## trtlive
-write.csv(root.trtlive.DEGs.int.all.rD.rCR.v3.0anno,file=file.path("RNA","output","FULLtoptag","root.trtlive.DEGs.int.rD.rCR.v3.0anno.csv"))
-write.csv(leaf.trtlive.DEGs.int.all.rD.rCR.v3.0anno,file=file.path("RNA","output","FULLtoptag","leaf.trtlive.DEGs.int.rD.rCR.v3.0anno.csv"))
+write.csv(root.trtlive.DEGs.int.all.rD.rCR.v3.0anno,file=file.path("RNA","output","FULLtoptag","e3.root.trtlive.DEGs.int.rD.rCR.v3.0anno.csv"))
+write.csv(leaf.trtlive.DEGs.int.all.rD.rCR.v3.0anno,file=file.path("RNA","output","FULLtoptag","e3.leaf.trtlive.DEGs.int.rD.rCR.v3.0anno.csv"))
 ## density (single; new)
-write.csv(root.densityun.DEGs.int.all.rD.rCR.v3.0anno,file=file.path("RNA","output","FULLtoptag","root.densityun.DEGs.int.rD.rCR.v3.0anno.csv"))
-write.csv(leaf.densityun.DEGs.int.all.rD.rCR.v3.0anno,file=file.path("RNA","output","FULLtoptag","leaf.densityun.DEGs.int.rD.rCR.v3.0anno.csv"))
+write.csv(root.densityun.DEGs.int.all.rD.rCR.v3.0anno,file=file.path("RNA","output","FULLtoptag","e3.root.densityun.DEGs.int.rD.rCR.v3.0anno.csv"))
+write.csv(leaf.densityun.DEGs.int.all.rD.rCR.v3.0anno,file=file.path("RNA","output","FULLtoptag","e3.leaf.densityun.DEGs.int.rD.rCR.v3.0anno.csv"))
 ```
