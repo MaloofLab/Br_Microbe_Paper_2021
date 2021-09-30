@@ -200,6 +200,8 @@ filtered.custom.data.TF5 %>% dplyr::count(genes,category2,au,yr,tissue,up_down) 
 filtered.custom.data.consolidated <- filtered.custom.data.TF5 %>% filter(value==1) %>% dplyr::count(genes,category2,tissue,FC,up_down) %>% unite(category.cons,category2,tissue,FC,up_down) #%>% View()
 #
 filtered.custom.data.consolidated %>% View()
+# how many genes in each category?
+filtered.custom.data.consolidated %>% dplyr::select(-n) %>% dplyr::count(category.cons) %>% View()
 # make list
 filtered.custom.data.consolidated.list <- filtered.custom.data.consolidated  %>% dplyr::select(-n) %>% split(.$genes) %>%   map(~dplyr::select(.,category.cons)) %>% map(~as_vector(.))
 save(filtered.custom.data.consolidated.list,file=file.path("annotation","output","cust_rootshoot_updown5.consolidated.FDR0.001.list.Rdata")) 
@@ -235,8 +237,8 @@ redo the conversion so that we keep gene names
 for each gene total the number of sets that it is in
 ```{r}
 filtered.custom.data.numeric  # original. no more exist
-filtered.custom.data.consolidated.numeric <- filtered.custom.data.consolidated.numeric %>% 
-  mutate(totalSetN=rowSums(filtered.custom.data.consolidated.numeric[,-1])) %>%
+filtered.custom.data.consolidated.numeric
+filtered.custom.data.consolidated.numeric <- filtered.custom.data.consolidated.numeric %>%   mutate(totalSetN=rowSums(filtered.custom.data.consolidated.numeric[,-1])) %>%
   dplyr::select(genes, totalSetN, everything())
 head(filtered.custom.data.consolidated.numeric)
 ```
@@ -669,6 +671,9 @@ Total.forGSEA <- filtered.custom.data.consolidated.numericL %>%
   mutate_all(sort, na.last=TRUE)
 Total.forGSEA <- Total.forGSEA[apply(Total.forGSEA,1,function(x) !all(is.na(x))),]
 Total.forGSEA %>% View()
+# write csv file of consolidated categories
+write_csv(Total.forGSEA,file=file.path("annotation","output","Total.consolidated1.v5.csv"))
+
 # 
 Total.consolidated.forGSEA.list <- list()
 for(i in 1:(dim(Total.forGSEA)[2]-1)) {
