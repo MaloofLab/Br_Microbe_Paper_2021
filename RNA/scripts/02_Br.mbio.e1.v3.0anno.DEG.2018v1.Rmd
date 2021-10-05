@@ -354,3 +354,31 @@ write.csv(leaf.trt5E_live.genotypeR500_trt5E_live.DEGs.int.all.rD.rFPsc.v3.0anno
 write.csv(root.trt5E_live.genotypeR500.DEGs.int.all.rD.rFPsc.v3.0anno,file=file.path("RNA","output","FULLtoptag","e1.root.trt5E_live.genotypeR500.DEGs.int.rD.rFPsc.NB.v3.0anno.csv"))
 write.csv(leaf.trt5E_live.genotypeR500.DEGs.int.all.rD.rFPsc.v3.0anno,file=file.path("RNA","output","FULLtoptag","e1.leaf.trt5E_live.genotypeR500.DEGs.int.rD.rFPsc.NB.v3.0anno.csv"))
 ```
+
+# plot expression pattern (genotype: soil treatment interaction)
+```{r}
+# root
+root.trt5E_live.genotypeR500.DEGs.int.all.rD.rFPsc.v3.0anno <- read_csv(file.path("RNA","output","FULLtoptag","e1.root.trt5E_live.genotypeR500.DEGs.int.rD.rFPsc.NB.v3.0anno.csv"))
+# leaf
+leaf.trt5E_live.genotypeR500.DEGs.int.all.rD.rFPsc.v3.0anno <- read_csv(file.path("RNA","output","FULLtoptag","e1.leaf.trt5E_live.genotypeR500.DEGs.int.rD.rFPsc.NB.v3.0anno.csv"))
+
+# expression pattern (root)
+target <- root.trt5E_live.genotypeR500.DEGs.int.all.rD.rFPsc.v3.0anno %>% filter(FDR < 0.05) %>% dplyr::select(genes) %>% as_vector() #
+length(target) # 5
+FDR.e1 <- root.trt5E_live.genotypeR500.DEGs.int.all.rD.rFPsc.v3.0anno  %>% dplyr::select(genes,FDR)
+p.root.trt.gt.e1 <- expression.pattern.Br.graph.exp1and3.v3.0annotation.voom(target.genes=target,title.e1="ex1 v3.0 voom",title.e3="exp3 v3.0 voom",tissue.type="root",FDR.e1=FDR.e1,FDR.e3="N/A",geno="both",exp="exp1and3") # confirming this DEGs is true for only root UN.
+p.root.trt.gt.e1 # needs to write FDR in correct exp. size of plot is different
+ggsave(p.root.trt.gt.e1,file=file.path("RNA","output","p.root.trt.gt.e1.png"),width=8,height=6)
+# expression pattern (leaf)
+target <- leaf.trt5E_live.genotypeR500.DEGs.int.all.rD.rFPsc.v3.0anno %>% filter(FDR < 0.05) %>% dplyr::select(genes) %>% as_vector() #
+length(target)
+FDR.e1 <- leaf.trt5E_live.genotypeR500.DEGs.int.all.rD.rFPsc.v3.0anno  %>% dplyr::select(genes,FDR)
+p.leaf.trt.gt.e1 <- expression.pattern.Br.graph.exp1and3.v3.0annotation.voom(target.genes=target,title.e1="ex1 v3.0 voom",title.e3="exp3 v3.0 voom",tissue.type="leaf",FDR.e1=FDR.e1,FDR.e3="N/A",geno="both",exp="exp1and3") # confirming this DEGs is true for only root UN.
+p.leaf.trt.gt.e1 # needs to write FDR in correct exp. size of plot is different
+ggsave(p.leaf.trt.gt.e1,file=file.path("RNA","output","p.leaf.trt.gt.e1.png"),width=8,height=6)
+```
+
+
+
+
+

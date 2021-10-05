@@ -61,7 +61,14 @@ leaf.voom5.sample %>% group_by(genotype) %>% summarise(num=n())
 
 # using voom data (tissue specific)
 #### under construction ####
-expression.pattern.Br.graph.exp1.v3.0annotation.voom <- function(target.genes="",FDR="",sample.description=sample.description.e1,title="",tissue.type="leaf",geno=c("R500","FPsc","both")){
+expression.pattern.Br.graph.exp1and3.v3.0annotation.voom <- 
+  function(target.genes="",
+           title.e1=" ",
+           title.e3=" ",
+           tissue.type="leaf",
+           FDR.e1, FDR.e3,# "N/A" if not available.
+           geno=c("R500","FPsc","both"),
+           exp=c("exp1and3","exp1","exp3")){
   if (tissue.type=="leaf") {
       data <- leaf.voom5
     } else {data <- root.voom5}
@@ -75,39 +82,110 @@ expression.pattern.Br.graph.exp1.v3.0annotation.voom <- function(target.genes=""
   # using FDR
   # if target_id exist (under construction)
   # if(data.temp$target_id) 
-  data.temp <- data  %>%
+  data.temp.e1 <- data  %>%
     filter(genes %in% target.genes) %>% 
     pivot_longer(cols=-genes,names_to="sample",values_to="value") %>%
     #gather(sample,value,-genes) %>%
-    inner_join(sample.description, by="sample") %>% 
-    filter(tissue==tissue.type) %>%
-    right_join(FDR, by="genes") %>% # add FDR info
-    mutate(FDR=format(FDR,digits=2,scientific=TRUE)) %>%
+    inner_join(sample.description.e1, by="sample") %>% #View()
+    filter(tissue==tissue.type) 
+    # add FDR info (if any)
+  if(FDR.e1=="N/A") {data.temp.e1 <- data.temp.e1} else {
+    print("adding FDR.e1 to data.temp.e1.")
+    data.temp.e1 <- data.temp.e1 %>%
+    inner_join(FDR.e1, by="genes") %>% mutate(FDR=format(FDR,digits=2,scientific=TRUE)) %>%
     unite(genes.FDR,genes,FDR,sep="\n FDR ")
-
+    data.temp.e1
+  }
+  data.temp.e3 <- data  %>%
+    filter(genes %in% target.genes) %>% 
+    pivot_longer(cols=-genes,names_to="sample",values_to="value") %>%
+    #gather(sample,value,-genes) %>%
+    inner_join(sample.description.e3, by="sample") %>% 
+    mutate(genotype="FPsc") %>%
+    filter(tissue==tissue.type)  
+  if(FDR.e3=="N/A") {data.temp.e3 <- data.temp.e3} else {
+    print("adding FDR.e3 to data.temp.e3.")
+    data.temp.e3 <- data.temp.e3 %>%
+      inner_join(FDR.e3, by="genes") %>% mutate(FDR=format(FDR,digits=2,scientific=TRUE)) %>%
+      unite(genes.FDR,genes,FDR,sep="\n FDR ")
+  }
   # 
   if(geno=="both") { # needs to impove this
     # ggplot(data.temp, aes(x=genotype,y=value))  + geom_jitter(alpha = 0.5,aes(colour=trt,shape=tissue) )  + theme_bw() + facet_grid(target_id~tissue,scales="free") + theme(strip.text.y=element_text(angle=0),axis.text.x=element_text(angle=90)) + theme(legend.position="bottom") + labs(title=title)
-    p<-data.temp %>% ggplot(aes(x=trt,y=value))  + 
+    if(FDR.e1=="N/A") {
+      p.e1 <- data.temp.e1 %>% ggplot(aes(x=trt,y=value))  + 
+        geom_jitter(alpha = 0.5,aes(colour=trt,shape=as.character(block)),width=0.2,size=3)  + 
+        theme_bw() +
+        facet_grid(genes~genotype,scales="free") + 
+        theme(strip.text.y=element_text(angle=0),axis.text.x=element_text(angle=90)) +
+        theme(legend.position="bottom") + labs(title=title.e1)
+    } else {
+    p.e1 <- data.temp.e1 %>% ggplot(aes(x=trt,y=value))  + 
       geom_jitter(alpha = 0.5,aes(colour=trt,shape=as.character(block)),width=0.2,size=3)  + 
       theme_bw() +
       facet_grid(genes.FDR~genotype,scales="free") + 
       theme(strip.text.y=element_text(angle=0),axis.text.x=element_text(angle=90)) +
-      theme(legend.position="bottom") + labs(title=title)
-    p
+      theme(legend.position="bottom") + labs(title=title.e1)
+    }
+    if(FDR.e3=="N/A") {
+    p.e3 <- data.temp.e3 %>% ggplot(aes(x=trt,y=value))  + 
+      geom_jitter(alpha = 0.5,aes(colour=trt,shape=as.character(block)),width=0.2,size=3)  + 
+      theme_bw() +
+      facet_grid(genes~genotype,scales="free") + 
+      theme(strip.text.y=element_text(angle=0),axis.text.x=element_text(angle=90)) +
+      theme(legend.position="bottom") + labs(title=title.e3)
+    } else {
+    p.e3 <- data.temp.e3 %>% ggplot(aes(x=trt,y=value))  + 
+      geom_jitter(alpha = 0.5,aes(colour=trt,shape=as.character(block)),width=0.2,size=3)  + 
+      theme_bw() +
+      facet_grid(genes.FDR~genotype,scales="free") + 
+      theme(strip.text.y=element_text(angle=0),axis.text.x=element_text(angle=90)) +
+      theme(legend.position="bottom") + labs(title=title.e3)
+    }
+    # plot
+    if(exp=="exp1and3") {
+      # combine e1.p and e3.p by cowplot
+        p <- plot_grid(p.e1, p.e3) 
+      return(p)
+      } else if(exp=="exp1") {
+        p <- p.e1
+        return(p)
+    } else if(exp=="exp3") {
+       p <- p.e3
+       return(p)
+    } else {print("Which experiment?");stop}
   } else if(geno=="FPsc"|geno=="R500") {
-    data.temp %>% filter(genotype==geno) %>% 
+    p.e1 <- data.temp.e1 %>% filter(genotype==geno) %>% 
       ggplot(aes(x=trt,y=value))  + geom_jitter(alpha = 0.5,aes(colour=trt))  
     + theme_bw() + facet_grid(genes~.,scales="free") 
     + theme(strip.text.y=element_text(angle=0),axis.text.x=element_text(angle=90)) 
     + theme(legend.position="bottom") 
-    + labs(title=title)
+    + labs(title=title.e1)
+    p.e3 <- data.temp.e3 %>% filter(genotype==geno) %>% 
+      ggplot(aes(x=trt,y=value))  + geom_jitter(alpha = 0.5,aes(colour=trt))  
+    + theme_bw() + facet_grid(genes~.,scales="free") 
+    + theme(strip.text.y=element_text(angle=0),axis.text.x=element_text(angle=90)) 
+    + theme(legend.position="bottom") 
+    + labs(title=title.e3)    
+    # plot
+    if(exp=="exp1and3") {
+      # combine e1.p and e3.p by cowplot
+      p <- plot_grid(p.e1, p.e3) 
+      p
+      return(p)
+    } else if(exp=="exp1") {
+      p <- p.e1
+      return(p)
+    } else if(exp=="exp3") {
+      p <- p.e3
+      return(p)
+    } else {print("Which experiment?");stop}
   }  else {print("Specify genotype.");stop}
 }
 
 # 
 # using voom data (tissue specific), exp1 and 3
-expression.pattern.Br.graph.exp1and3.v3.0annotation.voom <- function(target.genes="",FDR="",sample.description="",title="",tissue.type="leaf",geno=c("R500","FPsc","both")){
+expression.pattern.Br.graph.exp1and3.v3.0annotation.voom2 <- function(target.genes="",FDR="",sample.description="",title="",tissue.type="leaf",geno=c("R500","FPsc","both")){
   if (tissue.type=="leaf") {
     data <- leaf.voom5
     sample.description <- leaf.voom5.sample
