@@ -155,9 +155,9 @@ summary(!is.na(filtered.custom.data))
 # how many categories?
 TF <- names(filtered.custom.data) %>% str_detect(c("plus","minus"))
 categories.up.down <- names(filtered.custom.data)[TF] %>% gsub("_FC","",.) %>% gsub("_FDR","",.) %>% unique() # 58 categories
-categories.up.down.combined <- categories.up.down %>% gsub("_up","",.) %>% gsub("_down","",.) %>% unique() # 30 categories
+categories.up.down.combined <- categories.up.down %>% gsub("_up","",.) %>% gsub("_down","",.) %>% unique() # 30 categories (responsive genes= "up" or "down")
 
-# convert into list object
+# convert into list object ("value" is fold change)
  cust_rootshoot_updown2 <- filtered.custom.data %>%
   dplyr::select(genes, ends_with("up"), ends_with("down"), -starts_with("exp")) %>%
   pivot_longer(-genes) 
@@ -196,7 +196,7 @@ filtered.custom.data.TF4 <- bind_cols(filtered.custom.data[,"genes"],as_tibble(f
 filtered.custom.data.TF5 <- filtered.custom.data.TF4 %>% pivot_longer(cols=-genes,names_to="category")  %>% mutate(category=str_replace_all(category,"Kailasam2019","Kailasam_2019")) %>% mutate(category=str_replace_all(category,"minusPi_1d","minusPi")) %>% mutate(category=str_replace_all(category,"minusPi_3d","minusPi")) %>% mutate(category=str_replace_all(category,"coldKilian","cold_Kilian")) %>% mutate(category=str_replace_all(category,"Rodriguez-Celma","RodriguezCelma")) %>% mutate(category=str_replace_all(category,"Kim2019","Kim_2019")) %>% mutate(category=str_replace_all(category,"Wang2003","Wang_2003")) %>% mutate(category=str_replace_all(category,"Aarabi2016","Aarabi_2016")) %>%  mutate(category=str_replace_all(category,"Ligaba-OSena","LigabaOSena")) %>% separate(category,c("category2","au","yr","tissue","FC","up_down"),remove=FALSE) #%>% View()
 
 filtered.custom.data.TF5 %>% dplyr::count(genes,category2,au,yr,tissue,up_down) %>% View()
-# consolidate categories
+# consolidate categories (value is "0" (absent) or "1" present in each category)
 filtered.custom.data.consolidated <- filtered.custom.data.TF5 %>% filter(value==1) %>% dplyr::count(genes,category2,tissue,FC,up_down) %>% unite(category.cons,category2,tissue,FC,up_down) #%>% View()
 #
 filtered.custom.data.consolidated %>% View()

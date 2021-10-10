@@ -231,8 +231,6 @@ leaf.voom5.trt.mean.FPsc.live.ATG.moduleColors.signedhybrid <- leaf.voom5.trt.me
 ```
 
 
-
-
 ```{r}
 mod <- "root.ivory"
 customcategory <- ""
@@ -1427,6 +1425,10 @@ plot.combined <- plot_grid(plot.GSEA,WGCNA.voom5.signedhybrid.all.modules.custom
 ggsave(plot.combined,path=file.path("RNA","output"),filename="WGCNA.voom5.signedhybrid.leaf_avg_std.correlated.modules.ML.customcat.FDR0.001.GSEA.combined3.FDR0.3.wider.png",height=8,width=15)
 ```
 
+
+
+
+
 # combine GSEA plot and WGCNA module ORA plot (ORAminus5 plus new custom category (FDR 0.001))
 
 ```{r}
@@ -1443,9 +1445,5 @@ plot.combined <- plot_grid(plot.GSEA,WGCNA.voom5.signedhybrid.all.modules.custom
 ggsave(plot.combined,path=file.path("RNA","output"),filename="WGCNA.voom5.signedhybrid.leaf_avg_std.correlated.modules.ML.customcat.FDR0.001.GSEA.combined3.FDR0.3.ORAminus5.wider.png",height=8,width=15)
 ```
 
-# overlap GSEA results and WGCNA modules to get gene lists
-```{r}
-
-```
 
 
