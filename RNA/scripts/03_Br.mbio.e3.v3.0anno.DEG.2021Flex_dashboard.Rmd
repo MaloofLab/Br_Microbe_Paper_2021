@@ -22,7 +22,8 @@ library(knitr)
 library(flexdashboard)
 library(edgeR);library(tidyverse)
 library(readr);library(readxl)
-library(UpSetR)
+# library(UpSetR)
+library(ggVennDiagram) # for VennDiagram
 #url <- "http://datasets.flowingdata.com/ppg2008.csv"
 #nba_players <- read.csv(url, row.names = 1)
 ```
@@ -124,7 +125,7 @@ Human readable table {data-navmenu="Kazu"}
 DEG.e3.v3.0anno.table.ss %>% knitr::kable()
 ```
 
-# Using more comprehensive gene list to make gene presence or absence table to look for phyA and ATHB2  {data-navmenu="Kazu"}
+# Using more comprehensive gene list to make gene presence or absence table to look for phyA and ATHB2 (needs to update, 102821) {data-navmenu="Kazu"}
 ```{r eval=FALSE}
 # combine all DEG tables in one and have union of DEG names (DEG.unique)
 DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation
@@ -160,7 +161,7 @@ DEG.tib %>% separate(object2, into=c("tissue","term","model"),sep = "\\.",extra=
 ```
 
 
-Overlap between DEGs {data-navmenu="DEGs overlap"}
+Overlap between DEGs (Oct 28, 2021) {data-navmenu="DEGs overlap"}
 ==========================================
 ```{r error=TRUE}
 DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation
@@ -230,7 +231,7 @@ venn <- limma::vennDiagram(vdc) # traditional version
 dev.off()
 ```
 
-# ggVennDiagram version
+# ggVennDiagram version (Oct, 2021)
 ```{r}
 venn.list <- list(
   e1.root=DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1[["e1.root.trt5E_live.DEGs.add.rD.rFPsc.NB"]] %>% dplyr::select(genes) %>% as_vector(),
@@ -248,14 +249,258 @@ venn.ggplot <- ggVennDiagram(
 ggsave(file.path("RNA","output","venn.ggplot.png"),width=8,height=6)
 ```
 
+# scatter plot exp1 vs exp3 (copied from "06_d_cor_permutation.Rd")
+For each experiment, replace gene not meeting the threshold with "NAs".  This will allow GGpairs to function correctly and also will allow the permutation approach for p-values to work in GGpairs
+## this part is under construction ### (Oct 16, 2021) ##
+
+# prep
+```{r}
+#rm(list=ls())
+knitr::opts_chunk$set(echo = TRUE,error=TRUE)
+library(tidyverse);library(GGally);library(readxl)
+library(readr)
+library(stringr)
+# https://bioconductor.org/packages/devel/workflows/vignettes/maEndToEnd/inst/doc/MA-Workflow.html
+```
+
+```{r}
+# default is nperm=100000
+perm.cor <- function(data=all.data, # data frame with unfiltered data (to draw from for permutations)
+                     xname, # (unquoted) column to use as "x"  
+                     yname, # (unquoted) column to use as "y".  
+                     xdat, #x values in ggpairs
+                     ydat, #y values in ggpairs
+                     nperm=100000,
+                     method="pearson") {
+
+  true.ct <- cor.test(xdat, ydat, method = method)$estimate
+  
+  #Figure out what to permute.  If exp1 and exp3 are in the comparison and if they have more values, then they were not filtered and should be permuted
+  
+  
+  if(str_detect(rlang::as_name(xname), "exp(1|3)")) {
+    
+    print("exp 1 or 3 in X position") 
+    if(length(na.omit(xdat)) > length(na.omit(ydat))) {
+      
+      print("exp1/3 unfiltered")
+      permute <- pull(data, !!xname)
+      constant <- ydat 
+    } else {
+      print("exp 1/3 filtered")
+      permute <- pull(data, !!yname)
+      constant <- xdat }
+  } else { 
+    if(str_detect(rlang::as_name(yname), "exp(1|3)")) {
+      print("exp 1 or 3 in Y position") 
+      if(length(na.omit(ydat)) > length(na.omit(xdat))) {
+        print("exp1/3 unfiltered")
+        permute <- pull(data, !!yname)
+        constant <- xdat 
+      } else {
+        print("exp 1/3 filtered")
+        permute <- pull(data, !!xname)
+        constant <- ydat }
+    } else {
+      print("exp 1 and 3 not in comparison")
+      permute <- pull(data, !!xname)
+      constant <- ydat }
+  }
+  
+  
+  perm.results <- sapply(1:nperm, function(z) {
+    cor.test(x = sample(permute, size = length(constant)),
+             y = constant, 
+             method = method)$estimate
+  })
+  
+  pval <- sum(abs(perm.results) > abs(true.ct)) / nperm
+  if (pval==0) pval <- 1/nperm
+  return(pval)
+}
+```
+
+
+```{r}
+# 
+my_custom_cor_color2 <- function(data, mapping, color = I("black"), sizeRange = c(1, 5), ...) {
+  
+  print((mapping))
+  
+  # get the x and y data to use the other code
+  x <- GGally::eval_data_col(data, mapping$x)
+  y <- GGally::eval_data_col(data, mapping$y)
+  
+  print("x")
+  print(summary(x))
+  print("y")
+  print(summary(y))
+  
+  overlap <- na.omit(cbind(x,y))
+  
+  print(paste("overlap: ", nrow(overlap)))
+  
+  if (nrow(overlap) > 9) {
+    ct <- cor.test(x,y)
+    
+    print(paste("ct is",ct))
+    r <- unname(ct$estimate)
+    rt <- format(r, digits=2)[1]
+    # since we can't print it to get the strsize, just use the max size range
+    cex <- max(sizeRange)
+    tt <- as.character(rt)
+    sig <- symnum(
+      ct$p.value, corr = FALSE, na = FALSE,
+      cutpoints = c(0, 0.00000001,0.0000001,0.000001, 0.00001, 0.0001, 0.001, 0.01,1),
+      symbols = c("******","*****","****", "***", "**","*", ".", " ")
+    )
+    print(paste("sig is ", sig))
+    # plot the cor value
+    p <- ggally_text(
+      label = tt, 
+      mapping = aes(),
+      xP = 0.5, yP = 0.5, 
+      size = 6,
+      color=color,
+      ...
+    ) +
+      # add the sig stars
+      geom_text(
+        aes_string(
+          x = 0.8,
+          y = 0.8
+        ),
+        label = sig, 
+        size = I(cex),
+        color = color,
+        ...
+      ) +
+      theme(
+        panel.background=element_rect(fill="white"),
+        #panel.background = element_rect(color = "black", linetype = "dashed"), # does not work
+        panel.grid.minor=element_blank(),
+        panel.grid.major=element_blank()
+      ) 
+    
+    corColors <- RColorBrewer::brewer.pal(n = 7, name = "RdYlGn")[2:8]
+    # p.value version  
+    if (ct$p.value <= 0.00000001) {
+      corCol <- corColors[1]
+    } else if (ct$p.value <= 0.0000001) {
+      corCol <- corColors[2]
+    }  else if (ct$p.value <= 0.000001) {
+      corCol <- corColors[3]
+    } else if (ct$p.value <= 0.00001) {
+      corCol <- corColors[4]
+    } else if (ct$p.value <= 0.0001) {
+      corCol <- corColors[5]
+    } else if (ct$p.value <= 0.001) {
+      corCol <- corColors[6]
+    } else if (ct$p.value <= 0.01) {
+      corCol <- corColors[7]
+    } else {
+      corCol <- corColors[8]
+    }
+    p <- p + theme(
+      panel.background = element_rect(fill= corCol)
+    )
+  } else {# the end of if
+    p <- ggally_text(
+      label = "", 
+      mapping = aes(),
+      xP = 0.5, yP = 0.5, 
+      size = 6,
+      color=color,
+      ...
+    )
+  }
+  p
+}
+# smooth
+my_custom_smooth <- function(data, mapping, ...) {
+  ggplot(data = data, mapping = mapping) +
+    geom_point(aes(color = I("black"))) + 
+    scale_color_brewer(palette="Accent") +
+    geom_smooth(method = "lm", color = I("black"), ...) +
+    theme(panel.background=element_blank(),
+          panel.grid.minor=element_blank(),
+          panel.grid.major=element_line(color="gray"))
+}
+```
+
+
+# prep for e1 and e3 data
+### prep
+```{r echo=TRUE, error=TRUE, message=FALSE, warning=FALSE}
+# all model including subset data
+DEG.objs.e1.e3.v3.0annotation.all <- list.files(path=file.path("RNA","output","FULLtoptag"),
+                                           pattern="(^e1|^e3)(\\.)(leaf|root)(\\.)(.+)(v3.0anno)(.csv)") 
+DEG.objs.e1.e3.v3.0annotation.all # 24 csv files. correct? (102121)
+# read csv file (only full model)
+DEG.count.list.e1.e3.v3.0annotation.all <- lapply(DEG.objs.e1.e3.v3.0annotation.all, function(x) read_csv(paste(file.path("RNA","output","FULLtoptag"),"/",x,sep="")))
+names(DEG.count.list.e1.e3.v3.0annotation.all) <- gsub(".csv","",DEG.objs.e1.e3.v3.0annotation.all)
+```
+
+
+# combine exp1 and exp3
+## root
+```{r}
+# DEGs of interest
+e1.root.trtlive.DEGs <- DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1[["e1.root.trt5E_live.DEGs.add.rD.rFPsc.NB"]] %>% dplyr::select("genes","AGI","logFC","FDR") %>% drop_na(AGI) %>% dplyr::rename(`original root`=logFC,exp1root_FDR=FDR) # 63 genes
+e3.root.cr.trtlive.DEGs <- DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1[["e3.root.trtlive.DEGs.add.rD.rCR"]] %>% dplyr::select("genes","AGI","logFC","FDR") %>% drop_na(AGI) %>% dplyr::rename(`validation root`=logFC,exp3.root_FDR=FDR)   # 4975 genes
+e1.leaf.trtlive.DEGs <- DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1[["e1.leaf.trt5E_live.DEGs.add.rD.rFPsc.NB"]] %>% dplyr::select("genes","AGI","logFC","FDR") %>% drop_na(AGI) %>% dplyr::rename(`original leaf`=logFC,exp1.leaf_FDR=FDR)  # 3729 genes
+e3.leaf.cr.trtlive.DEGs <- DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1[["e3.leaf.trtlive.DEGs.add.rD.rCR"]]  %>% dplyr::select("genes","AGI","logFC","FDR") %>% drop_na(AGI) %>% dplyr::rename(`validation leaf`=logFC,exp3.leaf_FDR=FDR)  # 319 genes
+
+# combine e1 adn e3 (root): original ggpair()
+root.exp1and3.FDR0.1.plot <- e1.root.trtlive.DEGs %>% inner_join(e3.root.cr.trtlive.DEGs,by="genes") %>% GGally::ggpairs(columns=c(3,6),lower = list(continuous = wrap("points", alpha = 0.2)))
+# combine e1 adn e3 (leaf): original ggpair()
+leaf.exp1and3.FDR0.1.plot <- e1.leaf.trtlive.DEGs %>% inner_join(e3.leaf.cr.trtlive.DEGs,by="genes") %>% GGally::ggpairs(columns=c(3,6),lower = list(continuous = wrap("points", alpha = 0.2)))
+
+```
+
+# my_custom_cor_color2 with permutation results for custom ggpair()
+```{r}
+root.exp1and3.FDR0.1.plot <- e1.root.trtlive.DEGs %>% inner_join(e3.root.cr.trtlive.DEGs,by="genes") %>% ggpairs(
+  columns=c(3,6),
+  upper = list(continuous = my_custom_cor_color2),
+  diag = list(continuous = "densityDiag"), 
+  lower = list(continuous = wrap("points", alpha = 0.5))
+  #lower = list(
+  #  continuous = my_custom_smooth, 
+  #  combo = "dot"
+  #)
+) + theme(strip.text.x=element_text(angle=45),strip.text.y=element_text(angle=0))
+root.exp1and3.FDR0.1.plot
+#ggsave(root.exp1and3.FDR0.1.plot,path=file.path("RNA","output"),filename="exp1_3_DEGs_cor.permut100000.root.png",width=3,height=4)
+
+# leaf
+leaf.exp1and3.FDR0.1.plot <- e1.leaf.trtlive.DEGs %>% inner_join(e3.leaf.cr.trtlive.DEGs,by="genes") %>% ggpairs(
+  columns=c(3,6),
+  upper = list(continuous = my_custom_cor_color2),
+  diag = list(continuous = "densityDiag"), 
+  lower = list(continuous = wrap("points", alpha = 0.5))
+  #lower = list(
+  #  continuous = my_custom_smooth, 
+  #  combo = "dot"
+  #)
+) + theme(strip.text.x=element_text(angle=45),strip.text.y=element_text(angle=0))
+leaf.exp1and3.FDR0.1.plot
+#ggsave(leaf.exp1and3.FDR0.1.plot,path=file.path("RNA","output"),filename="exp1_3_DEGs_cor.permut100000.leaf.png",width=3,height=4)
+```
+
+# combine all three figs in Fig1
+```{r}
+library(cowplot)
+p.all <- cowplot::plot_grid(venn.ggplot, root.exp1and3.FDR0.1.plot, leaf.exp1and3.FDR0.1.plot, labels = c('A','B', 'C'), label_size = 12)
+# errors
+
+```
 
 
 
 
-
-
-
-########### under construction below #
+########### under construction below ###########3
+################################################
 making loop to calculate interseciton (DEG.counts1) {data-navmenu="DEGs overlap"}
 # does not work (100521)
 ==========================================
