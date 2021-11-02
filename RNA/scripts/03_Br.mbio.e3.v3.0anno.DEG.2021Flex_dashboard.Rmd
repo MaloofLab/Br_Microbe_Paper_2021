@@ -203,6 +203,9 @@ system(paste("rm ",file.path("annotation","input","Brapa_genome_v3.0_cds.fa"),se
 # DEGs of interest
 e1.root.trtlive.DEGs <- DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1[["e1.root.trt5E_live.DEGs.add.rD.rFPsc.NB"]] %>% dplyr::select(genes) %>% mutate(e1.root=1) # 63 genes
 e3.root.cr.trtlive.DEGs <- DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1[["e3.root.trtlive.DEGs.add.rD.rCR"]]  %>% dplyr::select(genes) %>% mutate(e3.root.cr=1)  # 4975 genes
+# fold change for manuscript
+dim(e3.root.cr.trtlive.DEGs)[1]/dim(e1.root.trtlive.DEGs)[1]
+# 
 e1.leaf.trtlive.DEGs <- DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1[["e1.leaf.trt5E_live.DEGs.add.rD.rFPsc.NB"]] %>% dplyr::select(genes) %>% mutate(e1.leaf=1) # 3729 genes
 e3.leaf.cr.trtlive.DEGs <- DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1[["e3.leaf.trtlive.DEGs.add.rD.rCR"]]  %>% dplyr::select(genes) %>% mutate(e3.leaf.cr=1)  # 319 genes
 
@@ -488,14 +491,49 @@ leaf.exp1and3.FDR0.1.plot
 #ggsave(leaf.exp1and3.FDR0.1.plot,path=file.path("RNA","output"),filename="exp1_3_DEGs_cor.permut100000.leaf.png",width=3,height=4)
 ```
 
-# combine all three figs in Fig1
+# combine all three figs in Fig1 # errors -> (meeting with J; no need of distribution. Use simple point() and text() for p-value) (102821)
 ```{r}
 library(cowplot)
-p.all <- cowplot::plot_grid(venn.ggplot, root.exp1and3.FDR0.1.plot, leaf.exp1and3.FDR0.1.plot, labels = c('A','B', 'C'), label_size = 12)
-# errors
-
+library(ggplotify) # https://github.com/ggobi/ggally/issues/256
+p.all <- cowplot::plot_grid(ggmatrix_gtable(root.exp1and3.FDR0.1.plot), ggmatrix_gtable(leaf.exp1and3.FDR0.1.plot), venn.ggplot, labels = c('A','B','C'), label_size = 8,ncol=3)
+# errors below wi/o ggmatrix_gtable()
+# p.all <- cowplot::plot_grid(venn.ggplot, root.exp1and3.FDR0.1.plot, leaf.exp1and3.FDR0.1.plot, labels = c('A','B','C'), label_size = 8,ncol=3)
+# Warning messages:
+# 1: In as_grob.default(plot) :
+#  Cannot convert object of class ggggmatrix into a grob.
+# 2: In as_grob.default(plot) :
+#  Cannot convert object of class ggggmatrix into a grob.
 ```
 
+# simpler cor.test() version. No permutation (Nov 2, 2021)
+```{r}
+root.exp1and3.FDR0.1.data <- e1.root.trtlive.DEGs %>% inner_join(e3.root.cr.trtlive.DEGs,by="genes") %>% dplyr::select(c(3,6)) 
+leaf.exp1and3.FDR0.1.data <- e1.leaf.trtlive.DEGs %>% inner_join(e3.leaf.cr.trtlive.DEGs,by="genes") %>% dplyr::select(c(3,6)) 
+#perm.cor(data=root.exp1and3.FDR0.1.data,xname=`original root`,yname=`validation root`,xdat=`original root`,ydat=`validation root`) # does not work. Do I need to use permutation?
+# root
+root.cor.test.result <- cor.test(~`original root`+`validation root`, root.exp1and3.FDR0.1.data)
+# leaf
+leaf.cor.test.result <- cor.test(~`original leaf`+`validation leaf`, leaf.exp1and3.FDR0.1.data)
+# summary
+cor.summary <- tibble(
+  x = c(-0.7,-0.7,-0.7,-0.7), y=c(0.9,0.75,1.55,1.35),
+  value=c(paste("cor = ",round(root.cor.test.result$estimate,2),sep=""),
+          paste("p.value = ", signif(root.cor.test.result$p.value,2),sep=""),
+          paste("cor = ",round(leaf.cor.test.result$estimate,2),sep=""),
+          paste("p.value = ",signif(leaf.cor.test.result$p.value,2),sep="")))
+
+# root plot
+root.exp1and3.FDR0.1.plot.s <- ggplot(root.exp1and3.FDR0.1.data) + geom_point(aes(x=`original root`,y=`validation root`,alpha=0.5),size=3) + theme(legend.position="none") + geom_text(data=cor.summary[1:2,],aes(label=value,x=x,y=y),size=6)
+# leaf plot
+leaf.exp1and3.FDR0.1.plot.s <- ggplot(leaf.exp1and3.FDR0.1.data) + geom_point(aes(x=`original leaf`,y=`validation leaf`,alpha=0.5),size=3) + theme(legend.position="none") +  geom_text(data=cor.summary[3:4,],aes(label=value,x=x,y=y),size=6)
+
+# combine
+library(cowplot)
+#library(ggplotify) # https://github.com/ggobi/ggally/issues/256
+p.all <- cowplot::plot_grid(root.exp1and3.FDR0.1.plot.s, leaf.exp1and3.FDR0.1.plot.s, venn.ggplot, labels = c('A','B','C'), label_size = 12,ncol=3,rel_widths=c(1,1,2),rel_heights = c(2,2,1))
+p.all
+ggsave2(p.all,filename=file.path("RNA","output","cor.plus.Venn.png"),width=11,height=8,units="in")
+```
 
 
 
