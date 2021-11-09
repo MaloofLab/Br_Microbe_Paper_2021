@@ -1,0 +1,357 @@
+---
+title: "RNA expression analysis of Brassica Microbe Data. III: prep data (Round 3, CR vs UN samples)"
+output: html_notebook
+---
+
+Data is from February, 2018 sequencing.
+
+## Download and map:
+
+Working on Cabernet for read mapping.  Directory: `/share/malooflab/Julin/Brapa_microbes/20180202-samples`
+
+### 20180202 reads
+
+Build index.  Use V3.0 reads
+```{r, engine='bash', eval=FALSE}
+cd /share/malooflab/ref_genomes/B_rapa/V3.0
+
+wget http://brassicadb.org/brad/datasets/pub/BrassicaceaeGenome/Brassica_rapa/V3.0/Brapa_genome_v3.0_cds.fasta.gz 
+
+module load kallisto
+
+kallisto index -i B_rapa_CDS_V3.0_k31_kallisto_index Brapa_genome_v3.0_cds.fasta.gz
+
+cd /share/malooflab/Julin/Brapa_microbes/20180202-samples
+```
+
+Download new data
+```{r, engine='bash', eval=FALSE}
+mkdir 20180202-data/raw-fastq
+cd raw-fastq
+wget -r --no-host-directories ftp://wyoming-ftp:yMEd9gyPKY@ftp.AmaryllisNucleics.com/2018-01-31/
+wget -r --no-host-directories ftp://wyoming-ftp:yMEd9gyPKY@ftp.AmaryllisNucleics.com/2018-02-21/
+wget -r --no-host-directories ftp://wyoming-ftp:yMEd9gyPKY@ftp.AmaryllisNucleics.com/2018-03-05/
+```
+
+```{r, engine='bash', eval=FALSE}
+cd ../
+mkdir fastqc-out
+fastqc --help | more
+fastqc -o fastqc-out -t 12 raw-fastq/*.gz
+
+multiqc fastqc-out/
+```
+
+
+Map reads
+
+```{r, engine='bash',eval=FALSE}
+mkdir kallisto_out
+```
+
+use the following cluster script:
+
+```
+#!/bin/bash
+#SBATCH --partition=production # partition to submit to
+#SBATCH --job-name=Brapa_Kallisto # Job name
+#SBATCH --array=0-63
+#SBATCH --nodes=1 # single node, anything more than 1 will not run
+#SBATCH --ntasks=01 # equivalent to cpus, stick to around 20 max on gc64, or gc128 nodes
+#SBATCH --mem=4000 # in MB, memory pool all cores, default is 2GB per cpu
+#SBATCH --time=0-01:00:00  # expected time of completion in hours, minutes, seconds, default 1-day
+#SBATCH --output=Kallisto_%A_%a.out # STDOUT
+#SBATCH --error=Kallisto_%A_%a.err # STDERR
+#SBATCH --mail-user=jnmaloof@ucdavis.edu #
+#SBATCH --mail-type=ALL #
+
+# This will be run once for a single process
+
+/bin/hostname
+
+start=`date +%s`
+
+# Load Kallisto
+
+module load kallisto/0.43.1
+
+# Change directory
+
+cd /share/malooflab/Julin/Brapa_microbes/20180202-samples/
+
+# Identify each array run
+
+echo "My SLURM_ARRAY_TASK_ID: " $SLURM_ARRAY_TASK_ID
+
+f=(`find 20180202-data/raw-fastq/*/*gz -printf "%f\n" | cut -s -d _ -f 1-7 | uniq`)
+
+f=${f[${SLURM_ARRAY_TASK_ID}]}
+
+echo "file stem: " $f
+
+outdir=`basename $f`
+
+kallisto quant \
+    --index /share/malooflab/ref_genomes/B_rapa/V3.0/B_rapa_CDS_V3.0_k31_kallisto_index   \
+    --output-dir 20180202-data/kallisto_outV3.0/$outdir \
+    --plaintext \
+    --single \
+     -l 250 \
+     -s 40 \
+    20180202-data/raw-fastq/*/$f*
+
+
+end=`date +%s`
+runtime=$((end-start))
+echo $runtime seconds to completion
+```
+
+Move the counts to my local computer
+
+```{r, engine='bash', eval=FALSE}
+cd /Users/jmaloof/git/Brapa_microbes/v3.0annotation/20180202-samples/input/20180202-data
+sftp://barbera.genomecenter.ucdavis.edu
+cd ...#get right path
+get -r kallisto_outV3.0
+```
+
+compress the files on my comptuer and remove unneeded json files
+
+```{r}
+library(R.utils, eval=FALSE)
+kallisto_files <- dir(path = "../input/20180202-data/kallisto_outV3.0",pattern="abundance.tsv",recursive = TRUE,full.names = TRUE)
+for(f in kallisto_files) {
+  gzip(f)
+}
+
+json_files <- dir(path = "../input/20180202-data/kallisto_outV3.0",pattern="json",recursive = TRUE,full.names = TRUE)
+for(f in json_files) {
+  file.remove(f)
+}
+```
+
+
+## Get counts into R
+
+```{r}
+library(tidyverse)
+library(stringr)
+library(edgeR)
+```
+
+```{r}
+kallisto_files <- dir(path = "../input/20180202-data/kallisto_outV3.0",pattern="abundance.tsv",recursive = TRUE,full.names = TRUE)
+kallisto_names <- str_split(kallisto_files,"/",simplify=TRUE)[,5]
+```
+
+```{r, message=FALSE}
+counts.list <- lapply(kallisto_files,read_tsv)
+names(counts.list) <- kallisto_names
+head(counts.list[[1]])
+```
+
+```{r}
+counts <- sapply(counts.list, select, est_counts) %>% 
+  bind_cols(counts.list[[1]][,"target_id"],.)
+counts[is.na(counts)] <- 0
+colnames(counts) <- sub(".est_counts","",colnames(counts),fixed = TRUE)
+head(counts)
+colSums(counts[,-1])
+```
+
+
+```{r}
+write_csv(counts,"../output/20180202_V3.0_raw_counts.csv.gz")
+```
+
+## make sample description data frame
+
+
+```{r}
+sample.description <- tibble(sample=colnames(counts)[-1]) %>%
+  mutate(sample2 = str_remove(sample, "_S[0-9]+$"))
+head(sample.description)
+
+## get additional metadata
+sample.info <- read_csv("../input/20180202-data/wy003-metadata.csv")
+head(sample.info)
+
+##combine
+sample.description <- left_join(sample.description, sample.info, by = c("sample2" = "SAMPLE ID")) %>%
+  rename_all(tolower)
+sample.description <- sample.description %>% 
+  mutate(group=paste(tissue,soil,treatment,crowding,sep="_"))
+head(sample.description)
+sample.description %>% summarize(n_distinct(group))
+```
+
+## summarize counts
+```{r}
+pl.orig <- counts[,-1] %>% colSums() %>% tibble(sample=names(.),count=.) %>%
+  ggplot(aes(x=sample,y=count)) + 
+  geom_col() +
+  theme(axis.text.x  = element_text(angle=90, vjust=0.5,size = 7)) 
+pl.orig
+```
+
+## load to edgeR, normalize
+
+```{r}
+#confirm that everthing is in the right order
+all(colnames(counts)[-1]==sample.description$sample)
+dge <- DGEList(counts[,-1],
+               group=sample.description$group,
+               samples=sample.description,
+               genes=counts$target_id)
+```
+
+```{r}
+dge <- calcNormFactors(dge)
+barplot(dge$samples$lib.size)
+ggplot(dge$samples,aes(x=sample,y=norm.factors,fill=tissue)) + geom_col() + 
+  theme(axis.text.x  = element_text(angle=90, vjust=0.5,size = 7)) 
+ggplot(dge$samples,aes(x=sample,y=norm.factors,fill=treatment)) + geom_col() + 
+  theme(axis.text.x  = element_text(angle=90, vjust=0.5,size = 7)) 
+ggplot(dge$samples,aes(x=sample,y=norm.factors,fill=crowding)) + geom_col() + 
+  theme(axis.text.x  = element_text(angle=90, vjust=0.5,size = 7)) 
+ggplot(dge$samples,aes(x=sample,y=norm.factors,fill=as.factor(block))) + geom_col() +
+  theme(axis.text.x  = element_text(angle=90, vjust=0.5,size = 7)) 
+```
+
+Looks like we should normalize separately for root and leaf
+
+# do separately for leaf and root values
+
+```{r}
+leaf.names <- sample.description %>% filter(tissue=="leaf") %>% pull(sample)
+root.names <- sample.description %>% filter(tissue=="root") %>% pull(sample)
+
+counts.leaf <- counts %>% select(target_id, !!leaf.names)
+counts.root <- counts %>% select(target_id, !!root.names)
+
+sample.description.leaf <- sample.description %>% filter(tissue=="leaf")
+sample.description.root <- sample.description %>% filter(tissue=="root")
+```
+
+Leaf
+```{r}
+#confirm that everthing is in the right order
+all(colnames(counts.leaf)[-1]==sample.description.leaf$sample)
+dge.leaf <- DGEList(counts.leaf[,-1],
+                    group=sample.description.leaf$group,
+                    samples=sample.description.leaf,
+                    genes=counts.leaf$target_id)
+dge.leaf <- calcNormFactors(dge.leaf)
+```
+
+Root
+```{r}
+#confirm that everthing is in the right order
+all(colnames(counts.root)[-1]==sample.description.root$sample)
+dge.root <- DGEList(counts.root[,-1],
+                    group=sample.description.root$group,
+                    samples=sample.description.root,
+                    genes=counts.root$target_id)
+dge.root <- calcNormFactors(dge.root)
+```
+
+```{r}
+save(dge.leaf,dge.root,sample.description.leaf,sample.description.root,file="../output/edgeR_dge_objects.Rdata")
+```
+
+
+## Write out cpm values
+
+```{r}
+cpm.leaf.w <- bind_cols(dge.leaf$gene,as_tibble(cpm(dge.leaf))) %>% as_tibble() %>% rename(transcript_ID=genes)
+head(cpm.leaf.w)
+write_csv(cpm.leaf.w,"../output/cpm_wide_20180202_leaf_samples.csv.gz")
+```
+
+```{r}
+cpm.root.w <- bind_cols(dge.root$gene,as_tibble(cpm(dge.root))) %>% as_tibble() %>% rename(transcript_ID=genes)
+head(cpm.root.w)
+write_csv(cpm.root.w,"../output/cpm_wide_20180202_root_samples.csv.gz")
+```
+
+
+Also let's reformat this to long format and add metadata
+
+```{r}
+cpm.leaf.long <- cpm.leaf.w %>% 
+  gather(-transcript_ID,key = sample,value=cpm) %>%
+  left_join(sample.description.leaf)
+head(cpm.leaf.long)
+write_csv(cpm.leaf.long,"../output/cpm_long_with_metadata_20180202_leaf_samples.csv.gz")
+```
+
+```{r}
+cpm.root.long <- cpm.root.w %>% 
+  gather(-transcript_ID,key = sample,value=cpm) %>%
+  left_join(sample.description.root)
+head(cpm.root.long)
+write_csv(cpm.root.long,"../output/cpm_long_with_metadata_20180202_root_samples.csv.gz")
+```
+
+
+## compute and write out voom-transformed values
+
+```{r}
+design.leaf <- model.matrix(~ sample.description.leaf$group)
+dge4voom.leaf <- dge.leaf[rowSums(cpm(dge.leaf)>1) >= 6,,keep.lib.sizes=FALSE]
+dge4voom.leaf <- calcNormFactors(dge4voom.leaf)
+data.voom.leaf <- voom(dge4voom.leaf,design = design.leaf)
+data.voom.exp.leaf <- bind_cols(data.voom.leaf$genes,as_tibble(data.voom.leaf$E)) %>%
+  rename(transcript_ID=genes) %>% as_tibble()
+head(data.voom.exp.leaf)
+write_csv(data.voom.exp.leaf, "../output/voom_expression_20180202_T6_leaf_samples.csv.gz")
+```
+
+
+```{r}
+voom.long.leaf <- data.voom.exp.leaf %>% 
+  gather(-transcript_ID,key = sample,value=expression) %>%
+  left_join(sample.description.leaf)
+head(voom.long.leaf)
+hist(voom.long.leaf$expression)
+write_csv(voom.long.leaf,"../output/voom_long_with_metadata_20180202_T6_leaf_samples.csv.gz")
+```
+
+
+```{r}
+design.root <- model.matrix(~ sample.description.root$group)
+dge4voom.root <- dge.root[rowSums(cpm(dge.root)>1) >= 6,,keep.lib.sizes=FALSE]
+dge4voom.root <- calcNormFactors(dge4voom.root)
+data.voom.root <- voom(dge4voom.root,design = design.root)
+data.voom.exp.root <- bind_cols(data.voom.root$genes,as_tibble(data.voom.root$E)) %>%
+  rename(transcript_ID=genes) %>% as_tibble()
+head(data.voom.exp.root)
+write_csv(data.voom.exp.root, "../output/voom_expression_20180202_T6_root_samples.csv.gz")
+```
+
+
+```{r}
+voom.long.root <- data.voom.exp.root %>% 
+  gather(-transcript_ID,key = sample,value=expression) %>%
+  left_join(sample.description.root)
+head(voom.long.root)
+hist(voom.long.root$expression)
+write_csv(voom.long.root,"../output/voom_long_with_metadata_20180202_T6_root_samples.csv.gz")
+```
+
+write it to irods
+
+Need to run this yourself in terminal
+
+```{r, engine='bash', eval=FALSE}
+iinit
+icd /iplant/home/shared/ucd.brassica/analyses/Brapa_Microbiome_RNAseq/
+for f in (ls cpm*)
+    echo $f
+    iput -vf $f
+end
+for f in (ls voom*)
+    echo $f
+    iput -vf $f
+end
+```

@@ -73,12 +73,31 @@ root_results <- inner_join(sample_info, rootMEs) %>%
 root_results <- root_results %>% 
   filter(term=="trtlive") %>%
   arrange(p.value) %>% 
-  mutate(fdr=p.adjust(p.value, method="fdr")) %>%
+  mutate(fdr=p.adjust(p.value, method="fdr")) 
+
+root_results_full <- root_results #for plotting
+
+root_results <- root_results %>%
   select(module, term, estimate, p.value, fdr)
 
 root_results
 
 write_csv(root_results, "../output/root_eigen_microbes_lm.csv")
+```
+
+## make a plot
+
+```{r}
+
+rootorder <- root_results %>% filter(fdr<0.1) %>% arrange(fdr) %>% pull(module)
+
+root_results_full %>% filter(fdr<0.1) %>%
+  select(module, data, fdr) %>% arrange(fdr) %>% unnest(data) %>%
+  ggplot(aes(x=module, y=eigen_value, fill=trt)) +
+  geom_boxplot() + 
+  scale_x_discrete(limits=rootorder) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10) )
+ggsave("../../_Paper_Figures/Eigen_microbe_root.pdf")
 ```
 
 # leaf
@@ -127,13 +146,33 @@ leaf_results <- inner_join(sample_info, leafMEs) %>%
 leaf_results <- leaf_results %>% 
   filter(term=="trtlive") %>%
   arrange(p.value) %>% 
-  mutate(fdr=p.adjust(p.value, method="fdr")) %>%
+  mutate(fdr=p.adjust(p.value, method="fdr"))
+
+leaf_results_full <- leaf_results #for plotting
+
+leaf_results <- leaf_results %>%
   select(module, term, estimate, p.value, fdr)
 
 leaf_results
 
 write_csv(leaf_results, "../output/leaf_eigen_microbes_lm.csv")
 ```
+## make a plot
+
+```{r}
+
+leaforder <- leaf_results %>% filter(fdr<0.1) %>% arrange(fdr) %>% pull(module)
+
+leaf_results_full %>% filter(fdr<0.1) %>%
+  select(module, data, fdr) %>% arrange(fdr) %>% unnest(data) %>%
+  ggplot(aes(x=module, y=eigen_value, fill=trt)) +
+  geom_boxplot() + 
+  scale_x_discrete(limits=leaforder) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10) )
+ggsave("../../_Paper_Figures/Eigen_microbe_leaf.pdf")
+```
+
+
 # combine with leaf.length and GO results
 
 ```{r}
