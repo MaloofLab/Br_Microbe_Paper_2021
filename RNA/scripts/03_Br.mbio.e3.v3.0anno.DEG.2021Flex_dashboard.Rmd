@@ -1,0 +1,759 @@
+---
+title: "Br.mbio.e3.v3.0anno.DEG.2021v1.flex_dashboard"
+output: 
+  flexdashboard::flex_dashboard:
+    #css: libs/my-theme.css
+    vertical_layout: scroll
+    orientation: columns
+    #social: menu
+    source_code: embed
+    #theme: default
+editor_options: 
+  chunk_output_type: console
+---
+
+See the flexdashboard website for [additional documentation] (http://rmarkdown.rstudio.com/flexdashboard/)
+To Do: 1. Add interation term DEGs in int model.
+
+
+```{r setup, include=FALSE}
+library(knitr)
+#library(d3heatmap)
+library(flexdashboard)
+library(edgeR);library(tidyverse)
+library(readr);library(readxl)
+# library(UpSetR)
+library(ggVennDiagram) # for VennDiagram
+#url <- "http://datasets.flowingdata.com/ppg2008.csv"
+#nba_players <- read.csv(url, row.names = 1)
+```
+
+Reading DEG data in csv {data-navmenu="Kazu"}
+===========================================
+### DEG summary using files in "output" directory
+
+```{r echo=TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+# detect files in target directory
+list.files(path=file.path("RNA","output","FULLtoptag"),
+           pattern="(^e1|^e3)(\\.)(leaf|root)(\\.)(.+)(v3.0anno)(.csv)") 
+```
+
+Making list object of DEG {data-navmenu="Kazu"}
+===========================================
+### summary: Table of DEGs
+
+```{r echo=TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+# only full model (exp3)
+#DEG.objs.e3.v3.0annotation<-list.files(path=file.path("RNA","output","FULLtoptag"),
+#           pattern="(^e3)(\\.)(leaf|root)(\\.)(.+)(v3.0anno)(.csv)") 
+# only full model (exp1 and exp3, additive)
+DEG.objs.e1and3.add.v3.0annotation<-list.files(path=file.path("RNA","output","FULLtoptag"),
+           pattern="(^e1|^e3)(\\.)(leaf|root)(\\.)(.+)(add)(.+)(v3.0anno)(.csv)") 
+# only use treatment effects (rD, rFPsc)
+DEG.objs.e1and3.add.trt.v3.0annotation <- DEG.objs.e1and3.add.v3.0annotation %>% as_tibble() %>% filter(str_detect(value,"live")) 
+
+# read csv file
+DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation <- lapply(DEG.objs.e1and3.add.trt.v3.0annotation %>% as_vector(), function(x) read_csv(paste(file.path("RNA","output","FULLtoptag"),"/",x,sep="")))
+# rename the list
+names(DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation) <-
+  DEG.objs.e1and3.add.trt.v3.0annotation %>% mutate(value=str_remove(value,"\\.v3\\.0anno\\.csv")) %>% as_vector()
+
+  
+```
+
+DEG numbers table (code) under construction {data-navmenu="Kazu"}
+==========================================
+###  Counting DEGs in each CSV file
+```{r echo=TRUE, message=FALSE, warning=FALSE, paged.print=FALSE, eval=FALSE}
+DEG.count.e3.v3.0annotation <- tibble(object=names(DEG.count.list.e3.v3.0annotation),
+                                   DEGs=sapply(DEG.count.list.e3.v3.0annotation,function(x) {
+                                     xx <-x[x$FDR<0.05,]
+                                    value <- nrow(xx)
+                                    ifelse(is.null(value),0,value)
+                                    }  ))  # learn get()
+# for nice table
+DEG.count.e3.v3.0annotation <- DEG.count.e3.v3.0annotation %>% 
+  mutate(object2=str_replace_all(object,"densitycr.trtlive","densitycr:trtlive")) %>%
+  mutate(object2=str_replace_all(object2,"densitycr.trtdead","densitycr:trtdead")) %>%
+  mutate(object2=str_replace_all(object2,"densityun.trtlive","densityun:trtlive")) %>%
+  mutate(object2=str_replace_all(object2,"densityun.trtdead","densityun:trtdead")) %>%
+  mutate(object2=str_remove_all(object2,".DEGs")) %>%
+  mutate(object2=str_replace_all(object2,"\\.r","\\_r")) %>%
+  mutate(object2=str_remove_all(object2,".v3.0anno")) 
+# drawing table (under construction, 11/08/2018) needs to work 
+DEG.count.e3.v3.0annotation %>% separate(object2, into=c("tissue","term","model"),sep = "\\.",extra="drop")  %>% separate(model,into=c("model","ref_trt","ref_density"),sep="_") %>% mutate(term=str_replace_all(term,"\\_","+")) %>% dplyr::arrange(tissue,term,model,object) -> DEG.e3.v3.0anno.table
+DEG.e3.v3.0anno.table %>% View()
+#write_csv(DEG.e3.v3.0anno.table,path="../output/DEG.e3.v3.0anno.table.csv")
+```
+
+DEG numbers table {data-navmenu="Kazu"}
+==========================================
+### Write nice table
+Can I add text above the chunk? The script is not shown even "echo=TRUE".
+
+```{r eval=FALSE}
+DEG.e3.v3.0anno.table %>% knitr::kable()
+```
+
+Human readable table (code) under construction {data-navmenu="Kazu"}
+======================================================= 
+### Simplify the table
+```{r echo=TRUE, message=FALSE, warning=FALSE, paged.print=FALSE, eval=FALSE}
+## I want to have a particular object to be selected after slice(); eg. densitycr.DEGs.add.rD.rUN.v3.0anno for "shade" responsiveness. Giving up automated way
+# mannualy select "comparison"
+DEG.e3.v3.0anno.table.s <- DEG.e3.v3.0anno.table %>% dplyr::filter(str_detect(string=object,pattern=            "densitycr_densitycr.trtlive.DEGs.int.rD.rUN.v3.0anno|densitycr.DEGs.add.rD.rUN.v3.0anno|trtlive_densitycr.trtlive.DEGs.int.rD.rUN.v3.0anno|trtlive.DEGs.add.rD.rUN.v3.0anno|densitycr.trtlive.DEGs.int.rD.rUN.v3.0anno")) # does not pick interaction
+DEG.e3.v3.0anno.table.s %>% View()
+# simpler
+DEG.e3.v3.0anno.table.ss <- DEG.e3.v3.0anno.table.s %>%  unite(comparison,term,model,ref_trt,remove=FALSE) %>% 
+  mutate(comparison=str_replace_all(comparison,"trtlive_add_rD","live soil")) %>% 
+  mutate(comparison=str_replace_all(comparison,"densitycr_add_rD","crowded")) %>% 
+  mutate(comparison=str_replace_all(comparison,"trtlive\\+densitycr\\:trtlive_int_rD","live soil")) %>% 
+  mutate(comparison=str_replace_all(comparison,"densitycr\\+densitycr\\:trtlive_int_rD","crowded")) %>% 
+  mutate(comparison=str_replace_all(comparison,"densitycr\\:trtlive_int_rD","density-soil interaction")) %>%
+  dplyr::select(tissue,comparison,model,DEGs,object) 
+
+
+# save file
+#write_csv(DEG.e3.v3.0anno.table.ss,path="../output/DEG.e3.v3.0anno.table.ss.csv")
+
+```
+
+Human readable table {data-navmenu="Kazu"}
+=======================================================
+### Using knitr::kable()
+```{r eval=FALSE}
+DEG.e3.v3.0anno.table.ss %>% knitr::kable()
+```
+
+# Using more comprehensive gene list to make gene presence or absence table to look for phyA and ATHB2 (needs to update, 102821) {data-navmenu="Kazu"}
+```{r eval=FALSE}
+# combine all DEG tables in one and have union of DEG names (DEG.unique)
+DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation
+# test<-do.call(rbind.data.frame,DEG.count.list.e1.v3.0annotation) # error
+temp <- DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation[[1]]$genes
+for(i in 2:length(names(DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation))) {temp<-c(temp,DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation[[i]]$genes)}
+DEG.unique<-unique(temp)
+# using the DEG.unique, assign 1 (present) or 0 (absent) in a given DEGs list
+DEG.DF<-data.frame(genes=DEG.unique)
+for(i in 1:length(names(DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation))) {
+DEG<-DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation[[i]]$genes
+temp2<-rep(0,length(DEG.unique))
+temp2[DEG.unique %in% DEG]<-1
+DEG.DF<-cbind(DEG.DF,temp2)
+}
+names(DEG.DF)[-1]<-names(DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation)
+# How about phyA "BraA06g006450.3C" and "BraA09g062320.3C" and ATHB2 "BraA01g019700.3C"?
+DEG.tDF<-as.data.frame(t(DEG.DF[DEG.DF$genes %in% c("BraA06g006450.3C", "BraA09g062320.3C","BraA01g019700.3C"),-1]))
+colnames(DEG.tDF)<-c("BraA06g006450.3C", "BraA09g062320.3C","BraA01g019700.3C") # gene
+
+#DEG.tDF<-as.data.frame(t(DEG.DF[,-1]))
+#colnames(DEG.tDF)<-DEG.DF[,1] # gene
+DEG.tib<-as_tibble(DEG.tDF) %>% mutate(object=str_remove(colnames(DEG.DF)[-1],".v3.0anno")) %>% mutate(object2=str_replace_all(object,"densitycr.trtlive","densitycr:trtlive")) %>%
+  mutate(object2=str_replace_all(object2,"densitycr.trtdead","densitycr:trtdead")) %>%
+  mutate(object2=str_replace_all(object2,"densityun.trtlive","densityun:trtlive")) %>%
+  mutate(object2=str_replace_all(object2,"densityun.trtdead","densityun:trtdead")) %>%
+  mutate(object2=str_remove_all(object2,".DEGs")) %>%
+  mutate(object2=str_replace_all(object2,"\\.r","\\_r")) %>%
+  mutate(object2=str_remove_all(object2,".v3.0anno")) %>% select(object2,BraA06g006450.3C, BraA09g062320.3C,BraA01g019700.3C)
+# drawing nice table (under construction)
+DEG.tib %>% separate(object2, into=c("tissue","term","model"),sep = "\\.",extra="drop")  %>% separate(model,into=c("model","ref_trt","ref_density"),sep="_") %>% mutate(term=str_replace_all(term,"\\_","+")) %>% dplyr::arrange(tissue,term,model) %>% knitr::kable()
+
+```
+
+
+Overlap between DEGs (Oct 28, 2021) {data-navmenu="DEGs overlap"}
+==========================================
+```{r error=TRUE}
+DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation
+# FDR < 0.1
+DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1 <- DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation %>% map(.,~filter(.x,FDR < 0.1))
+names(DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation)
+# 
+DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1[["e3.root.trtlive.DEGs.add.rD.rCR"]] %>% View() # OK? 4975 genes, which is different from one in slide 14...
+```
+
+# VennDiagram between exp1 FPsc root soil, exp3 cr root soil, exp3 un root soil. {data-navmenu="Soil responsive genes in FPsc root, exp1 and 3"}
+===========================================
+
+Column
+-------------------------------------
+```{r echo=FALSE, message=FALSE, warning=FALSE, error=TRUE}
+## gene annotation
+# annotation file for v3.0annotation
+Br.v3.0.At.BLAST <- read_csv(file.path("annotation","output","Brapa_v3.0_annotated.csv")) 
+# This annotation is redundant with name (Br grene). Eg 
+Br.v3.0.At.BLAST %>% filter(name=="BraA01g040570.3C")
+# reduce the redundancy (112418)
+Br.v3.0anno.At.BLAST.highscore <- Br.v3.0.At.BLAST %>% group_by(name) %>% arrange(desc(score)) %>% dplyr::slice(1)
+# Using annotation file for all gene list
+# length(unique(Br.v3.0.At.BLAST$name))==length(unique(Br.v3.0anno.At.BLAST.highscore$name)) # no genes missing
+# obtaining complete v3.0anno gene name list
+library(ShortRead)
+#library(goseq);library(GO.db);library("annotate")
+
+# obtainig cDNA length for goseq
+## uncompress gz file
+system(paste("gunzip -c ",file.path("annotation","input","Brapa_genome_v3.0_cds.gz")," > ",file.path("annotation","input","Brapa_genome_v3.0_cds.fa")))
+## read cDNA fasta file 
+Bra.v3.0_cdna<-readDNAStringSet(file.path("annotation","input","Brapa_genome_v3.0_cds.fa")) # copied from /Volumes/data_work/Data8/NGS_related/Brassica_rapa_Upendra/G3
+# Bra.v3.0_cdna
+## remove fasta file
+system(paste("rm ",file.path("annotation","input","Brapa_genome_v3.0_cds.fa"),sep=""))
+
+# DEGs of interest
+e1.root.trtlive.DEGs <- DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1[["e1.root.trt5E_live.DEGs.add.rD.rFPsc.NB"]] %>% dplyr::select(genes) %>% mutate(e1.root=1) # 63 genes
+e3.root.cr.trtlive.DEGs <- DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1[["e3.root.trtlive.DEGs.add.rD.rCR"]]  %>% dplyr::select(genes) %>% mutate(e3.root.cr=1)  # 4975 genes
+# fold change for manuscript
+dim(e3.root.cr.trtlive.DEGs)[1]/dim(e1.root.trtlive.DEGs)[1]
+# 
+e1.leaf.trtlive.DEGs <- DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1[["e1.leaf.trt5E_live.DEGs.add.rD.rFPsc.NB"]] %>% dplyr::select(genes) %>% mutate(e1.leaf=1) # 3729 genes
+e3.leaf.cr.trtlive.DEGs <- DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1[["e3.leaf.trtlive.DEGs.add.rD.rCR"]]  %>% dplyr::select(genes) %>% mutate(e3.leaf.cr=1)  # 319 genes
+
+# note that no all genes were listed in Br.v3.0anno.At.BLAST.highscore! (031419)
+# e3.root.cr.trtlive.DEGs %>% anti_join(Br.v3.0anno.At.BLAST.highscore,by=c("genes"="name")) # 44 genes were not in Br.v3.0anno.At.BLsAST.highscore. That is why I used Bra.v3.0_cdna.
+
+# summarize
+summary.DEGS <- tibble(genes=names(Bra.v3.0_cdna)) %>%
+  left_join(e1.root.trtlive.DEGs,by="genes") %>% 
+  left_join(e3.root.cr.trtlive.DEGs,by="genes") %>% 
+  left_join(e1.leaf.trtlive.DEGs,by="genes") %>%
+  left_join(e3.leaf.cr.trtlive.DEGs,by="genes")
+#dim(summary.DEGS)[1]==length(names(Bra.v3.0_cdna)) # TRUE. OK.
+summary.DEGS[is.na(summary.DEGS)]<-0
+summary.DEGS.desc<-summary.DEGS %>% left_join(Br.v3.0anno.At.BLAST.highscore,by=c("genes"="name"))
+# overlap
+summary.DEGS.desc %>% filter(e1.root==1&e3.root.cr==1) # 29 genes
+
+# write_csv did not work well (deformed)
+#write_csv(summary.DEGS.desc,path="../output/summary.DEGS.e1and3.soil.csv")
+# convert into count table
+vdc<-limma::vennCounts(summary.DEGS[,-1])
+# plot (classical way)
+png(file.path("RNA","output","venn.png"))
+venn <- limma::vennDiagram(vdc) # traditional version
+dev.off()
+```
+
+# ggVennDiagram version (Oct, 2021)
+```{r}
+venn.list <- list(
+  e1.root=DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1[["e1.root.trt5E_live.DEGs.add.rD.rFPsc.NB"]] %>% dplyr::select(genes) %>% as_vector(),
+  e3.root.cr=DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1[["e3.root.trtlive.DEGs.add.rD.rCR"]]  %>% dplyr::select(genes) %>% as_vector(),
+  e1.leaf=DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1[["e1.leaf.trt5E_live.DEGs.add.rD.rFPsc.NB"]] %>% dplyr::select(genes) %>% as_vector(),
+  e3.leaf.cr=DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1[["e3.leaf.trtlive.DEGs.add.rD.rCR"]]  %>% dplyr::select(genes) %>% as_vector())
+# default
+ggVennDiagram(venn.list)
+# modify
+venn.ggplot <- ggVennDiagram(
+  venn.list, label_alpha = 0,label="count", edge_size=1,
+  category.names = c("original\nroot","validation\nroot","original\nleaf", "validation\nleaf")
+  ) +
+  ggplot2::scale_fill_gradient(low="white",high = "white") + theme(legend.position = "none") # how to delete %??
+ggsave(file.path("RNA","output","venn.ggplot.png"),width=8,height=6)
+```
+
+# scatter plot exp1 vs exp3 (copied from "06_d_cor_permutation.Rd")
+For each experiment, replace gene not meeting the threshold with "NAs".  This will allow GGpairs to function correctly and also will allow the permutation approach for p-values to work in GGpairs
+## this part is under construction ### (Oct 16, 2021) ##
+
+# prep
+```{r}
+#rm(list=ls())
+knitr::opts_chunk$set(echo = TRUE,error=TRUE)
+library(tidyverse);library(GGally);library(readxl)
+library(readr)
+library(stringr)
+# https://bioconductor.org/packages/devel/workflows/vignettes/maEndToEnd/inst/doc/MA-Workflow.html
+```
+
+```{r}
+# default is nperm=100000
+perm.cor <- function(data=all.data, # data frame with unfiltered data (to draw from for permutations)
+                     xname, # (unquoted) column to use as "x"  
+                     yname, # (unquoted) column to use as "y".  
+                     xdat, #x values in ggpairs
+                     ydat, #y values in ggpairs
+                     nperm=100000,
+                     method="pearson") {
+
+  true.ct <- cor.test(xdat, ydat, method = method)$estimate
+  
+  #Figure out what to permute.  If exp1 and exp3 are in the comparison and if they have more values, then they were not filtered and should be permuted
+  
+  
+  if(str_detect(rlang::as_name(xname), "exp(1|3)")) {
+    
+    print("exp 1 or 3 in X position") 
+    if(length(na.omit(xdat)) > length(na.omit(ydat))) {
+      
+      print("exp1/3 unfiltered")
+      permute <- pull(data, !!xname)
+      constant <- ydat 
+    } else {
+      print("exp 1/3 filtered")
+      permute <- pull(data, !!yname)
+      constant <- xdat }
+  } else { 
+    if(str_detect(rlang::as_name(yname), "exp(1|3)")) {
+      print("exp 1 or 3 in Y position") 
+      if(length(na.omit(ydat)) > length(na.omit(xdat))) {
+        print("exp1/3 unfiltered")
+        permute <- pull(data, !!yname)
+        constant <- xdat 
+      } else {
+        print("exp 1/3 filtered")
+        permute <- pull(data, !!xname)
+        constant <- ydat }
+    } else {
+      print("exp 1 and 3 not in comparison")
+      permute <- pull(data, !!xname)
+      constant <- ydat }
+  }
+  
+  
+  perm.results <- sapply(1:nperm, function(z) {
+    cor.test(x = sample(permute, size = length(constant)),
+             y = constant, 
+             method = method)$estimate
+  })
+  
+  pval <- sum(abs(perm.results) > abs(true.ct)) / nperm
+  if (pval==0) pval <- 1/nperm
+  return(pval)
+}
+```
+
+
+```{r}
+# 
+my_custom_cor_color2 <- function(data, mapping, color = I("black"), sizeRange = c(1, 5), ...) {
+  
+  print((mapping))
+  
+  # get the x and y data to use the other code
+  x <- GGally::eval_data_col(data, mapping$x)
+  y <- GGally::eval_data_col(data, mapping$y)
+  
+  print("x")
+  print(summary(x))
+  print("y")
+  print(summary(y))
+  
+  overlap <- na.omit(cbind(x,y))
+  
+  print(paste("overlap: ", nrow(overlap)))
+  
+  if (nrow(overlap) > 9) {
+    ct <- cor.test(x,y)
+    
+    print(paste("ct is",ct))
+    r <- unname(ct$estimate)
+    rt <- format(r, digits=2)[1]
+    # since we can't print it to get the strsize, just use the max size range
+    cex <- max(sizeRange)
+    tt <- as.character(rt)
+    sig <- symnum(
+      ct$p.value, corr = FALSE, na = FALSE,
+      cutpoints = c(0, 0.00000001,0.0000001,0.000001, 0.00001, 0.0001, 0.001, 0.01,1),
+      symbols = c("******","*****","****", "***", "**","*", ".", " ")
+    )
+    print(paste("sig is ", sig))
+    # plot the cor value
+    p <- ggally_text(
+      label = tt, 
+      mapping = aes(),
+      xP = 0.5, yP = 0.5, 
+      size = 6,
+      color=color,
+      ...
+    ) +
+      # add the sig stars
+      geom_text(
+        aes_string(
+          x = 0.8,
+          y = 0.8
+        ),
+        label = sig, 
+        size = I(cex),
+        color = color,
+        ...
+      ) +
+      theme(
+        panel.background=element_rect(fill="white"),
+        #panel.background = element_rect(color = "black", linetype = "dashed"), # does not work
+        panel.grid.minor=element_blank(),
+        panel.grid.major=element_blank()
+      ) 
+    
+    corColors <- RColorBrewer::brewer.pal(n = 7, name = "RdYlGn")[2:8]
+    # p.value version  
+    if (ct$p.value <= 0.00000001) {
+      corCol <- corColors[1]
+    } else if (ct$p.value <= 0.0000001) {
+      corCol <- corColors[2]
+    }  else if (ct$p.value <= 0.000001) {
+      corCol <- corColors[3]
+    } else if (ct$p.value <= 0.00001) {
+      corCol <- corColors[4]
+    } else if (ct$p.value <= 0.0001) {
+      corCol <- corColors[5]
+    } else if (ct$p.value <= 0.001) {
+      corCol <- corColors[6]
+    } else if (ct$p.value <= 0.01) {
+      corCol <- corColors[7]
+    } else {
+      corCol <- corColors[8]
+    }
+    p <- p + theme(
+      panel.background = element_rect(fill= corCol)
+    )
+  } else {# the end of if
+    p <- ggally_text(
+      label = "", 
+      mapping = aes(),
+      xP = 0.5, yP = 0.5, 
+      size = 6,
+      color=color,
+      ...
+    )
+  }
+  p
+}
+# smooth
+my_custom_smooth <- function(data, mapping, ...) {
+  ggplot(data = data, mapping = mapping) +
+    geom_point(aes(color = I("black"))) + 
+    scale_color_brewer(palette="Accent") +
+    geom_smooth(method = "lm", color = I("black"), ...) +
+    theme(panel.background=element_blank(),
+          panel.grid.minor=element_blank(),
+          panel.grid.major=element_line(color="gray"))
+}
+```
+
+
+# prep for e1 and e3 data
+### prep
+```{r echo=TRUE, error=TRUE, message=FALSE, warning=FALSE}
+# all model including subset data
+DEG.objs.e1.e3.v3.0annotation.all <- list.files(path=file.path("RNA","output","FULLtoptag"),
+                                           pattern="(^e1|^e3)(\\.)(leaf|root)(\\.)(.+)(v3.0anno)(.csv)") 
+DEG.objs.e1.e3.v3.0annotation.all # 24 csv files. correct? (102121)
+# read csv file (only full model)
+DEG.count.list.e1.e3.v3.0annotation.all <- lapply(DEG.objs.e1.e3.v3.0annotation.all, function(x) read_csv(paste(file.path("RNA","output","FULLtoptag"),"/",x,sep="")))
+names(DEG.count.list.e1.e3.v3.0annotation.all) <- gsub(".csv","",DEG.objs.e1.e3.v3.0annotation.all)
+```
+
+
+# combine exp1 and exp3
+## root
+```{r}
+# DEGs of interest
+e1.root.trtlive.DEGs <- DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1[["e1.root.trt5E_live.DEGs.add.rD.rFPsc.NB"]] %>% dplyr::select("genes","AGI","logFC","FDR") %>% drop_na(AGI) %>% dplyr::rename(`original root`=logFC,exp1root_FDR=FDR) # 63 genes
+e3.root.cr.trtlive.DEGs <- DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1[["e3.root.trtlive.DEGs.add.rD.rCR"]] %>% dplyr::select("genes","AGI","logFC","FDR") %>% drop_na(AGI) %>% dplyr::rename(`validation root`=logFC,exp3.root_FDR=FDR)   # 4975 genes
+e1.leaf.trtlive.DEGs <- DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1[["e1.leaf.trt5E_live.DEGs.add.rD.rFPsc.NB"]] %>% dplyr::select("genes","AGI","logFC","FDR") %>% drop_na(AGI) %>% dplyr::rename(`original leaf`=logFC,exp1.leaf_FDR=FDR)  # 3729 genes
+e3.leaf.cr.trtlive.DEGs <- DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1[["e3.leaf.trtlive.DEGs.add.rD.rCR"]]  %>% dplyr::select("genes","AGI","logFC","FDR") %>% drop_na(AGI) %>% dplyr::rename(`validation leaf`=logFC,exp3.leaf_FDR=FDR)  # 319 genes
+
+# combine e1 adn e3 (root): original ggpair()
+root.exp1and3.FDR0.1.plot <- e1.root.trtlive.DEGs %>% inner_join(e3.root.cr.trtlive.DEGs,by="genes") %>% GGally::ggpairs(columns=c(3,6),lower = list(continuous = wrap("points", alpha = 0.2)))
+# combine e1 adn e3 (leaf): original ggpair()
+leaf.exp1and3.FDR0.1.plot <- e1.leaf.trtlive.DEGs %>% inner_join(e3.leaf.cr.trtlive.DEGs,by="genes") %>% GGally::ggpairs(columns=c(3,6),lower = list(continuous = wrap("points", alpha = 0.2)))
+
+```
+
+# my_custom_cor_color2 with permutation results for custom ggpair()
+```{r}
+root.exp1and3.FDR0.1.plot <- e1.root.trtlive.DEGs %>% inner_join(e3.root.cr.trtlive.DEGs,by="genes") %>% ggpairs(
+  columns=c(3,6),
+  upper = list(continuous = my_custom_cor_color2),
+  diag = list(continuous = "densityDiag"), 
+  lower = list(continuous = wrap("points", alpha = 0.5))
+  #lower = list(
+  #  continuous = my_custom_smooth, 
+  #  combo = "dot"
+  #)
+) + theme(strip.text.x=element_text(angle=45),strip.text.y=element_text(angle=0))
+root.exp1and3.FDR0.1.plot
+#ggsave(root.exp1and3.FDR0.1.plot,path=file.path("RNA","output"),filename="exp1_3_DEGs_cor.permut100000.root.png",width=3,height=4)
+
+# leaf
+leaf.exp1and3.FDR0.1.plot <- e1.leaf.trtlive.DEGs %>% inner_join(e3.leaf.cr.trtlive.DEGs,by="genes") %>% ggpairs(
+  columns=c(3,6),
+  upper = list(continuous = my_custom_cor_color2),
+  diag = list(continuous = "densityDiag"), 
+  lower = list(continuous = wrap("points", alpha = 0.5))
+  #lower = list(
+  #  continuous = my_custom_smooth, 
+  #  combo = "dot"
+  #)
+) + theme(strip.text.x=element_text(angle=45),strip.text.y=element_text(angle=0))
+leaf.exp1and3.FDR0.1.plot
+#ggsave(leaf.exp1and3.FDR0.1.plot,path=file.path("RNA","output"),filename="exp1_3_DEGs_cor.permut100000.leaf.png",width=3,height=4)
+```
+
+# combine all three figs in Fig1 # errors -> (meeting with J; no need of distribution. Use simple point() and text() for p-value) (102821)
+```{r}
+library(cowplot)
+library(ggplotify) # https://github.com/ggobi/ggally/issues/256
+p.all <- cowplot::plot_grid(ggmatrix_gtable(root.exp1and3.FDR0.1.plot), ggmatrix_gtable(leaf.exp1and3.FDR0.1.plot), venn.ggplot, labels = c('A','B','C'), label_size = 8,ncol=3)
+# errors below wi/o ggmatrix_gtable()
+# p.all <- cowplot::plot_grid(venn.ggplot, root.exp1and3.FDR0.1.plot, leaf.exp1and3.FDR0.1.plot, labels = c('A','B','C'), label_size = 8,ncol=3)
+# Warning messages:
+# 1: In as_grob.default(plot) :
+#  Cannot convert object of class ggggmatrix into a grob.
+# 2: In as_grob.default(plot) :
+#  Cannot convert object of class ggggmatrix into a grob.
+```
+
+# simpler cor.test() version. No permutation (Nov 2, 2021)
+```{r}
+root.exp1and3.FDR0.1.data <- e1.root.trtlive.DEGs %>% inner_join(e3.root.cr.trtlive.DEGs,by="genes") %>% dplyr::select(c(3,6)) 
+leaf.exp1and3.FDR0.1.data <- e1.leaf.trtlive.DEGs %>% inner_join(e3.leaf.cr.trtlive.DEGs,by="genes") %>% dplyr::select(c(3,6)) 
+#perm.cor(data=root.exp1and3.FDR0.1.data,xname=`original root`,yname=`validation root`,xdat=`original root`,ydat=`validation root`) # does not work. Do I need to use permutation?
+# root
+root.cor.test.result <- cor.test(~`original root`+`validation root`, root.exp1and3.FDR0.1.data)
+# leaf
+leaf.cor.test.result <- cor.test(~`original leaf`+`validation leaf`, leaf.exp1and3.FDR0.1.data)
+# summary
+cor.summary <- tibble(
+  x = c(-0.7,-0.7,-0.7,-0.7), y=c(0.9,0.75,1.55,1.35),
+  value=c(paste("cor = ",round(root.cor.test.result$estimate,2),sep=""),
+          paste("p.value = ", signif(root.cor.test.result$p.value,2),sep=""),
+          paste("cor = ",round(leaf.cor.test.result$estimate,2),sep=""),
+          paste("p.value = ",signif(leaf.cor.test.result$p.value,2),sep="")))
+
+# root plot
+root.exp1and3.FDR0.1.plot.s <- ggplot(root.exp1and3.FDR0.1.data) + geom_point(aes(x=`original root`,y=`validation root`,alpha=0.5),size=3) + theme(legend.position="none") + geom_text(data=cor.summary[1:2,],aes(label=value,x=x,y=y),size=6)
+# leaf plot
+leaf.exp1and3.FDR0.1.plot.s <- ggplot(leaf.exp1and3.FDR0.1.data) + geom_point(aes(x=`original leaf`,y=`validation leaf`,alpha=0.5),size=3) + theme(legend.position="none") +  geom_text(data=cor.summary[3:4,],aes(label=value,x=x,y=y),size=6)
+
+# combine
+library(cowplot)
+#library(ggplotify) # https://github.com/ggobi/ggally/issues/256
+p.all <- cowplot::plot_grid(root.exp1and3.FDR0.1.plot.s, leaf.exp1and3.FDR0.1.plot.s, venn.ggplot, labels = c('A','B','C'), label_size = 12,ncol=3,rel_widths=c(1,1,2),rel_heights = c(2,2,1))
+p.all
+ggsave2(p.all,filename=file.path("RNA","output","cor.plus.Venn.png"),width=11,height=8,units="in")
+```
+
+
+
+########### under construction below ###########3
+################################################
+making loop to calculate interseciton (DEG.counts1) {data-navmenu="DEGs overlap"}
+# does not work (100521)
+==========================================
+```{r error=TRUE}
+# calculate overlap
+## making empty tibble.
+DEG.overlap1and3 <- tibble(x=rep(names(DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1),each=length(names(DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1))),y=rep(names(DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1),length(names(DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1)) ))
+# remove the same object
+DEG.overlap1and3 <- DEG.overlap1and3 %>% filter(!x==y)
+# 
+temp<-rep(0,nrow(DEG.overlap1and3))
+for(i in 1:nrow(DEG.overlap1and3)) {
+#   dplyr::inner_join(as_tibble(rownames_to_column(get(as.character(DEG.overlap3[i,1])))),as_tibble(rownames_to_column(get(as.character(DEG.overlap3[i,2])))), by="rowname") %>% nrow() -> temp[i]
+## csv version (using DEG.count1.list). calculating overlap by inner_join
+    if(nrow(DEG.overlap1and3[[as_vector(DEG.overlap1and3[i,"x"])]])==0|nrow(DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation[[as_vector(DEG.overlap1and3[i,"y"])]])==0) {temp[i]=0;next}
+  else {dplyr::inner_join(DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation[[as_vector(DEG.overlap1and3[i,"x"])]],DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation[[as_vector(DEG.overlap1and3[i,"y"])]],by="X1") %>% nrow() -> temp[i]} # no applicable method for 'inner_join' applied to an object of class "NULL"
+} # this does not work.
+# add overlap gene number into DEG.overlap3
+DEG.overlap1and3 <-DEG.overlap1and3 %>% mutate(overlap=temp)
+# look
+DEG.overlap1and3 %>% View() # search "root.R500.trtlive.DEGs.all.rD.v3.0anno"
+# ???
+#DEG.e3.v3.0anno.table<-read_csv("../output/DEG.e3.v3.0anno.table.csv")
+# DEG.e3.subset.v3.0anno.table<-read_csv("../output/DEG.e3.subset.v3.0anno.table.csv")
+
+#DEG.overlap3 %>% inner_join(DEG.v3.0anno.table[,c("object","DEGs")],by=c("x"="object"))
+# what is for?
+DEG.overlap3 <- DEG.overlap3 %>% left_join(bind_rows(DEG.e3.v3.0anno.table[,c("object","DEGs")],DEG.e3.subset.v3.0anno.table[,c("object","DEGs")]),by=c("x"="object")) %>% rename(x.num=DEGs) %>% left_join(bind_rows(DEG.e3.v3.0anno.table[,c("object","DEGs")],DEG.e3.subset.v3.0anno.table[,c("object","DEGs")]),by=c("y"="object")) %>% rename(y.num=DEGs) 
+```
+
+drawing summary table {data-navmenu="DEGs overlap"}
+==========================================
+```{r}
+DEG.overlap3 %>% dplyr::select(x,y,x.num,y.num,overlap) %>% knitr::kable()
+
+```
+
+Read e1.v3.0annotation DEGS for overlap between DEGs {data-navmenu="DEGs overlap"}
+==========================================
+```{r error=TRUE}
+# all model including subset data
+DEG.objs.e1.v3.0annotation.all<-list.files(path=file.path("..","..","20170617-samples","output","FULLtoptag"),
+           pattern="(^leaf|^root)(\\.)(.+)(v3.0anno)(.csv)") 
+# read csv file (only full model)
+DEG.count.list.e1.v3.0annotation.all<-lapply(DEG.objs.e1.v3.0annotation.all, function(x) read_csv(paste(file.path("..","..","20170617-samples","output","FULLtoptag"),"/",x,sep="")))
+names(DEG.count.list.e1.v3.0annotation.all)<-gsub(".csv","",DEG.objs.e1.v3.0annotation.all)
+DEG.count.list.e1.v3.0annotation.all[["root.R500.trtlive.DEGs.all.rD.NB.v3.0anno"]] %>% filter(FDR<0.05)
+names(DEG.count.list.e1.v3.0annotation.all)
+# FDR<0.05
+#DEG.count.list.e1.v3.0annotation.all %>% map(filter(FDR<0.05)) # does not work
+DEG.count.list.e1.v3.0annotation.all.FDR0.05<-DEG.count.list.e1.v3.0annotation.all %>% map(function(df) filter(df,FDR<0.05)) # does work
+names(DEG.count.list.e1.v3.0annotation.all.FDR0.05)
+# playing with map and lapply
+DEG.count.list.e1.v3.0annotation.all %>% map(~filter(.,FDR<0.05)) # does work
+DEG.count.list.e1.v3.0annotation.all %>% map(nrow) # does work
+map(DEG.count.list.e1.v3.0annotation.all,~filter(.x,FDR<0.05)) # does work
+lapply(DEG.count.list.e1.v3.0annotation.all,function(df) filter(df,FDR<0.05)) # does work
+# confirm
+DEG.count.list.e1.v3.0annotation.all.FDR0.05[[""]] %>% View() # OK. 383 genes (449 genes? as of Jan 25, 2021)
+```
+
+
+Overlap between exp1 DEGS and exp3 DEGs {data-navmenu="DEGs overlap"}
+==========================================
+```{r}
+# add exp name 
+names(DEG.count.list.e1.v3.0annotation.all.FDR0.05)<-paste("e1",names(DEG.count.list.e1.v3.0annotation.all.FDR0.05),sep=".")
+names(DEG.count.list.e3.v3.0annotation.all.FDR0.05)<-paste("e3",names(DEG.count.list.e3.v3.0annotation.all.FDR0.05),sep=".")
+
+# calculate overlap
+DEG.count.list.e1ande3.v3.0annotation.FDR0.05<-c(DEG.count.list.e1.v3.0annotation.all.FDR0.05,DEG.count.list.e3.v3.0annotation.all.FDR0.05)
+
+## making empty tibble.
+DEG.overlap.e1and3 <- tibble(x=rep(names(DEG.count.list.e1ande3.v3.0annotation.FDR0.05),each=length(names(DEG.count.list.e1ande3.v3.0annotation.FDR0.05))),y=rep(names(DEG.count.list.e1ande3.v3.0annotation.FDR0.05),length(names(DEG.count.list.e1ande3.v3.0annotation.FDR0.05)) ))
+# remove the same object
+DEG.overlap.e1and3 <- DEG.overlap.e1and3 %>% filter(!x==y)
+# 
+temp<-rep(0,nrow(DEG.overlap.e1and3))
+for(i in 1:nrow(DEG.overlap.e1and3)) {
+## csv version (using DEG.count1.list). calculating overlap by inner_join
+    if(nrow(DEG.count.list.e1ande3.v3.0annotation.FDR0.05[[as_vector(DEG.overlap.e1and3[i,"x"])]])==0|nrow(DEG.count.list.e1ande3.v3.0annotation.FDR0.05[[as_vector(DEG.overlap.e1and3[i,"y"])]])==0) {temp[i]=0;next}
+  else {dplyr::inner_join(DEG.count.list.e1ande3.v3.0annotation.FDR0.05[[as_vector(DEG.overlap.e1and3[i,"x"])]],DEG.count.list.e1ande3.v3.0annotation.FDR0.05[[as_vector(DEG.overlap.e1and3[i,"y"])]],by="genes") %>% nrow() -> temp[i]} # no applicable method for 'inner_join' applied to an object of class "NULL". Serious bag fixed (031319)
+} 
+# add overlap gene number into DEG.overlap.e1and3
+DEG.overlap.e1and3 <-DEG.overlap.e1and3 %>% mutate(overlap=temp)
+# look
+DEG.overlap.e1and3 %>% View() # search "root.R500.trtlive.DEGs.all.rD.v3.0anno"
+# add DEG number (under construction)
+DEG.e1.v3.0anno.table<-read_csv(file.path("..","..","20170617-samples","output","DEG.v3.0anno.table.csv"))
+DEG.e1.subset.v3.0anno.table<-read_csv(file.path("..","..","20170617-samples","output","DEG.e1.subset.v3.0anno.table.csv"))
+# 
+DEG.e3.v3.0anno.table<-read_csv("../output/DEG.e3.v3.0anno.table.csv")
+DEG.e3.subset.v3.0anno.table<-read_csv("../output/DEG.e3.subset.v3.0anno.table.csv")
+# 
+# rename "object" column
+DEG.e1.v3.0anno.table <- DEG.e1.v3.0anno.table %>% mutate(object=str_c("e1",object,sep="."))
+DEG.e1.subset.v3.0anno.table <- DEG.e1.subset.v3.0anno.table %>% mutate(object=str_c("e1",object,sep="."))
+DEG.e3.v3.0anno.table <- DEG.e3.v3.0anno.table %>% mutate(object=str_c("e3",object,sep="."))
+DEG.e3.subset.v3.0anno.table <- DEG.e3.subset.v3.0anno.table %>% mutate(object=str_c("e3",object,sep="."))
+# add DEGs numbers
+DEG.overlap.e1and3<-DEG.overlap.e1and3 %>%
+  left_join(bind_rows(DEG.e1.v3.0anno.table[,c("object","DEGs")],DEG.e1.subset.v3.0anno.table[,c("object","DEGs")],DEG.e3.v3.0anno.table[,c("object","DEGs")],DEG.e3.subset.v3.0anno.table[,c("object","DEGs")]),by=c("x"="object")) %>% dplyr::rename(x.num=DEGs) %>% left_join(bind_rows(DEG.e1.v3.0anno.table[,c("object","DEGs")],DEG.e1.subset.v3.0anno.table[,c("object","DEGs")],DEG.e3.v3.0anno.table[,c("object","DEGs")],DEG.e3.subset.v3.0anno.table[,c("object","DEGs")]),by=c("y"="object")) %>% dplyr::rename(y.num=DEGs)
+# save
+write_csv(DEG.overlap.e1and3,file=file.path("..","output","DEG.overlap.e1and3.csv"))
+```
+
+complete overlap summary table {data-navmenu="DEGs overlap"}
+==========================================
+```{r}
+DEG.overlap.e1and3 %>% dplyr::select(x,y,x.num,y.num,overlap) %>% knitr::kable()
+
+```
+
+# VennDiagram between exp1 FPsc root soil, exp3 cr root soil, exp3 un root soil. {data-navmenu="Soil responsive genes in FPsc root, exp1 and 3"}
+===========================================
+
+Column
+-------------------------------------
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, error=TRUE}
+# Using annotation file for all gene list
+# length(unique(Br.v3.0.At.BLAST$name))==length(unique(Br.v3.0anno.At.BLAST.highscore$name)) # no genes missing
+# obtaining complete v3.0anno gene name list
+library(ShortRead)
+#library(goseq);library(GO.db);library("annotate")
+
+# obtainig cDNA length for goseq
+## uncompress gz file
+system(paste("gunzip -c ",file.path("..","..","..","Annotation","input","v3.0annotation","Brapa_genome_v3.0_cds.gz")," > ",file.path("..","..","..","Annotation","input","v3.0annotation","Brapa_genome_v3.0_cds.fa")))
+## read cDNA fasta file 
+Bra.v3.0_cdna<-readDNAStringSet(file.path("..","..","..","Annotation","input","v3.0annotation","Brapa_genome_v3.0_cds.fa")) # copied from /Volumes/data_work/Data8/NGS_related/Brassica_rapa_Upendra/G3
+# Bra.v3.0_cdna
+## remove fasta file
+system(paste("rm ",file.path("..","..","..","Annotation","input","v3.0annotation","Brapa_genome_v3.0_cds.fa"),sep=""))
+
+# DEGs of interest
+e1.root.FPsc.trtlive.DEGs<-DEG.count.list.e1.v3.0annotation.all.FDR0.05[["e1.root.FPsc.trtlive.DEGs.all.rD.NB.v3.0anno"]] %>% dplyr::filter(FDR<0.05) %>% dplyr::select(genes) %>% mutate(e1.root.FPsc=1) # 9 genes
+e3.root.cr.trtlive.DEGs<-DEG.count.list.e3.v3.0annotation.all.FDR0.05[["e3.root.cr.trtlive.DEGs.all.rD.NB.v3.0anno"]] %>% dplyr::filter(FDR<0.05) %>% dplyr::select(genes) %>% mutate(e3.root.cr=1)  # 3877 genes
+e3.root.un.trtlive.DEGs<-DEG.count.list.e3.v3.0annotation.all.FDR0.05[["e3.root.un.trtlive.DEGs.all.rD.NB.v3.0anno"]] %>% dplyr::filter(FDR<0.05) %>% dplyr::select(genes) %>% mutate(e3.root.un=1) # 287 genes
+# note that no all genes were listed in Br.v3.0anno.At.BLAST.highscore! (031419)
+# e3.root.cr.trtlive.DEGs %>% anti_join(Br.v3.0anno.At.BLAST.highscore,by=c("genes"="name")) # 44 genes were not in Br.v3.0anno.At.BLsAST.highscore. That is why I used Bra.v3.0_cdna.
+
+# summarize
+summary.DEGS<-tibble(genes=names(Bra.v3.0_cdna)) %>% left_join(e1.root.FPsc.trtlive.DEGs,by="genes") %>% left_join(e3.root.cr.trtlive.DEGs,by="genes") %>% left_join(e3.root.un.trtlive.DEGs,by="genes")
+#dim(summary.DEGS)[1]==length(names(Bra.v3.0_cdna)) # TRUE. OK.
+summary.DEGS[is.na(summary.DEGS)]<-0
+summary.DEGS.desc<-summary.DEGS %>% left_join(Br.v3.0anno.At.BLAST.highscore,by=c("genes"="name"))
+# overlap
+summary.DEGS.desc %>% filter(e1.root.FPsc==1&e3.root.cr==1)
+# write_csv did not work well (deformed)
+#write_csv(summary.DEGS.desc,path="../output/summary.DEGS.e1and3.soil.csv")
+# convert into count table
+vdc<-limma::vennCounts(summary.DEGS[,-1])
+# plot (classical way)
+limma::vennDiagram(vdc) # traditional version
+
+```
+
+Column
+-------------------------------------
+
+### Comparison of soil responsive genes
+Comparison of soil responsive genes (live vs dead) in experiment 1 (e1) and 3 (e3). un: uncrowded, cr:crowded. Kazu fixed bugs and updated overlap between them (March 14, 2019). Unfortunately there is no overlapped genes between three DEGs.
+
+# VennDiagram between exp1 FPsc root soil, exp3 cr root soil, exp3 un root soil. {data-navmenu="Soil responsive genes in FPsc root, exp1 and 3"}
+===========================================
+
+Column
+-------------------------------------
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, error=TRUE}
+# Using annotation file for all gene list
+# length(unique(Br.v3.0.At.BLAST$name))==length(unique(Br.v3.0anno.At.BLAST.highscore$name)) # no genes missing
+# obtaining complete v3.0anno gene name list
+library(ShortRead)
+#library(goseq);library(GO.db);library("annotate")
+
+# obtainig cDNA length for goseq
+## uncompress gz file
+system(paste("gunzip -c ",file.path("..","..","..","Annotation","input","v3.0annotation","Brapa_genome_v3.0_cds.gz")," > ",file.path("..","..","..","Annotation","input","v3.0annotation","Brapa_genome_v3.0_cds.fa")))
+## read cDNA fasta file 
+Bra.v3.0_cdna<-readDNAStringSet(file.path("..","..","..","Annotation","input","v3.0annotation","Brapa_genome_v3.0_cds.fa")) # copied from /Volumes/data_work/Data8/NGS_related/Brassica_rapa_Upendra/G3
+# Bra.v3.0_cdna
+## remove fasta file
+system(paste("rm ",file.path("..","..","..","Annotation","input","v3.0annotation","Brapa_genome_v3.0_cds.fa"),sep=""))
+
+# DEGs of interest
+e1.root.FPsc.trtlive.DEGs<-DEG.count.list.e1.v3.0annotation.all.FDR0.05[["e1.root.FPsc.trtlive.DEGs.all.rD.v3.0anno"]] %>% dplyr::filter(FDR<0.05) %>% dplyr::select(genes) %>% mutate(e1.root.FPsc=1) # 9 genes
+e3.root.cr.trtlive.DEGs<-DEG.count.list.e3.v3.0annotation.all.FDR0.05[["e3.root.cr.trtlive.DEGs.all.rD.v3.0anno"]] %>% dplyr::filter(FDR<0.05) %>% dplyr::select(genes) %>% mutate(e3.root.cr=1)  # 3877 genes
+e3.root.un.trtlive.DEGs<-DEG.count.list.e3.v3.0annotation.all.FDR0.05[["e3.root.un.trtlive.DEGs.all.rD.v3.0anno"]] %>% dplyr::filter(FDR<0.05) %>% dplyr::select(genes) %>% mutate(e3.root.un=1) # 287 genes
+# note that no all genes were listed in Br.v3.0anno.At.BLAST.highscore! (031419)
+# e3.root.cr.trtlive.DEGs %>% anti_join(Br.v3.0anno.At.BLAST.highscore,by=c("genes"="name")) # 44 genes were not in Br.v3.0anno.At.BLsAST.highscore. That is why I used Bra.v3.0_cdna.
+
+# summarize
+summary.DEGS<-tibble(genes=names(Bra.v3.0_cdna)) %>% left_join(e1.root.FPsc.trtlive.DEGs,by="genes") %>% left_join(e3.root.cr.trtlive.DEGs,by="genes") %>% left_join(e3.root.un.trtlive.DEGs,by="genes")
+#dim(summary.DEGS)[1]==length(names(Bra.v3.0_cdna)) # TRUE. OK.
+summary.DEGS[is.na(summary.DEGS)]<-0
+summary.DEGS.desc<-summary.DEGS %>% left_join(Br.v3.0anno.At.BLAST.highscore,by=c("genes"="name"))
+# overlap
+summary.DEGS.desc %>% filter(e1.root.FPsc==1&e3.root.cr==1)
+# write_csv did not work well (deformed)
+#write_csv(summary.DEGS.desc,path="../output/summary.DEGS.e1and3.soil.csv")
+# convert into count table
+vdc<-limma::vennCounts(summary.DEGS[,-1])
+# plot (classical way)
+limma::vennDiagram(vdc) # traditional version
+
+```
+
+Column
+-------------------------------------
+
+### Comparison of soil responsive genes
+Given block effects on experiment 1 (e1)... (083019)
+
+
+Comparison of soil responsive genes (live vs dead) in experiment 1 (e1) and 3 (e3). un: uncrowded, cr:crowded. Kazu fixed bugs and updated overlap between them (March 14, 2019). Unfortunately there is no overlapped genes between three DEGs.
+

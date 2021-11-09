@@ -1,0 +1,494 @@
+---
+title: "Br.microbiom.exp3.v3.0.annotationDEG.2021v1"
+author: "Kazu"
+date: "9/25/2018"
+output: 
+  html_document: 
+    keep_md: yes
+editor_options: 
+  chunk_output_type: console
+---
+# purpose: Raw count files to DEGs
+# History
+* For reorganization, create this script from scratch. (092518)
+* Adding MDS plot with block info (090619)
+* Selected models (092421)
+* File renamed (092421)
+
+# To Do
+* source(file.path("RNA","scripts","Expression_pattern_graph2.R")) # needs to update from Expression_pattern_graph.R (Sep 24, 2021)
+* Make edgeR exp1 script as well (092821)
+
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE,error=TRUE)
+```
+```{r}
+library(edgeR);library(tidyverse);library(readr);library(readxl)
+```
+# For Mapping reads with Kalisoga see "Map and normalize.Rmd" in "./v3.0annotation/20170617-samples/scripts" 
+# load reads mapped to v3.0 Brassica genome
+```{r}
+getwd()
+#counts <- readr::read_csv(file.path("..","input","20180202_V3.0_raw_counts.csv.gz"))
+counts <- readr::read_csv(file.path("RNA","input","wyo003_V3.0_raw_counts.csv.gz"))
+# make sure this is v3.0 annotation (look target_id column)
+counts %>% head() %>% View()
+```
+## make sample description data frame (modified from Juiln's script "Map and normalize.Rmd"
+```{r}
+# separate() is useful (like split() in Base package. See "R for data science" pg157)
+sample.description <- tibble(sample=colnames(counts)[-1]) %>%
+  separate(sample,
+           c("location","soil","trt","density","block","pot","unknown2"),
+           remove=FALSE,
+           convert=FALSE) %>% unite(sample2,c("location","soil","trt","density","block","pot"),remove=FALSE)
+head(sample.description) 
+#type_convert(sample.description[,-3]) # to keep "unknown" column as character type.
+#sample.description$block<-as.integer(sample.description$block)
+# change lowercases into uppercases in soil column and character into integer in block
+sample.description<-sample.description %>% mutate(soil=toupper(soil)) %>% mutate(block=str_c("b", as.integer(block))) ## get additional metadata. (Oct 14, 2019) Block effects have to be character, not integer!!!!
+
+sample.info <- read_tsv(file.path("RNA","input","wy003-metadata.txt"), col_names=c("sample2","tissue","soil","trt","density","block","pot"),skip=1) # do I need to add thi info? Yes for tissue info.
+head(sample.info)
+#sample.info %>% mutate(block=as.integer(block))
+##combine
+sample.description2 <- left_join(sample.description, dplyr::select(sample.info,c(sample2,tissue))) %>% dplyr::select(-sample2) #
+sample.description2 <- sample.description2 %>% 
+  mutate(group=paste(trt,density,tissue,sep="_")) 
+head(sample.description2)
+sample.description2 %>% summarize(n_distinct(group)) # n_distinct()
+write_csv(sample.description2,path=file.path("plant","output","Br.mbio.e3.sample.description.csv")) # change file name 
+# data.frame version
+sample.description2.DF<-data.frame(sample.description2)
+```
+
+
+## summarize counts
+```{r eval=FALSE, include=FALSE}
+pl.orig <- counts[,-1] %>% colSums() %>% tibble(sample=names(.),count=.) %>%
+  ggplot(aes(x=sample,y=count)) + 
+  geom_col() +
+  theme(axis.text.x  = element_text(angle=90, vjust=0.5,size = 7)) 
+pl.orig
+```
+## load to edgeR, normalize
+```{r eval=FALSE, include=FALSE}
+#confirm that everthing is in the right order
+all(colnames(counts)[-1]==sample.description2$sample)
+dge <- DGEList(counts[,-1],
+               group=sample.description2$group,
+               samples=sample.description2,
+               genes=counts$target_id)
+```
+# 
+```{r eval=FALSE, include=FALSE}
+dge <- calcNormFactors(dge)
+barplot(dge$samples$lib.size)
+ggplot(dge$samples,aes(x=sample,y=norm.factors,fill=tissue)) + geom_col() + 
+  theme(axis.text.x  = element_text(angle=90, vjust=0.5,size = 7)) 
+ggplot(dge$samples,aes(x=sample,y=norm.factors,fill=density)) + geom_col() + 
+  theme(axis.text.x  = element_text(angle=90, vjust=0.5,size = 7)) 
+ggplot(dge$samples,aes(x=sample,y=norm.factors,fill=as.factor(block))) + geom_col() +
+  theme(axis.text.x  = element_text(angle=90, vjust=0.5,size = 7)) 
+```
+Looks like we should normalize separately for root and leaf
+# do separately for leaf and root values
+```{r eval=FALSE, include=FALSE}
+sample.description2.leaf <- sample.description2 %>% filter(tissue=="leaf")
+sample.description2.root <- sample.description2 %>% filter(tissue=="root")
+
+counts.leaf <- counts %>% select(target_id, sample.description2.leaf$sample)
+counts.root <- counts %>% select(target_id, sample.description2.root$sample)
+```
+
+# Leaf
+```{r eval=FALSE, include=FALSE}
+#confirm that everthing is in the right order
+all(colnames(counts.leaf)[-1]==sample.description2.leaf$sample)
+dge.leaf <- DGEList(counts.leaf[,-1],
+                    group=sample.description2.leaf$group,
+                    samples=sample.description2.leaf,
+                    genes=counts.leaf$target_id)
+# dge.leaf <- calcNormFactors(dge.leaf)
+# # remove genes with low expression level
+# dge.leaf<-dge.leaf[rowSums(cpm(dge.leaf)>1) >= 6,,keep.lib.sizes=FALSE]
+# Kazu's new way:  keep > normalize (012319)
+# Prevent repeated normalization
+ifelse(all(dge.leaf$samples$norm.factors==1),"Normalization has not yet done","Normalization has been done already.") # 
+dge.leaf$samples$norm.factors <- 1 # No matter which case, non-normalize libraries.
+# remove genes with low expression level
+dge.leaf<-dge.leaf[rowSums(cpm(dge.leaf)>1) >= 6,keep.lib.sizes=FALSE]
+# normalize
+dge.leaf <- calcNormFactors(dge.leaf)
+
+
+```
+
+# Root
+```{r eval=FALSE, include=FALSE}
+#confirm that everthing is in the right order
+all(colnames(counts.root)[-1]==sample.description2.root$sample)
+dge.root <- DGEList(counts.root[,-1],
+                    group=sample.description2.root$group,
+                    samples=sample.description2.root,
+                    genes=counts.root$target_id)
+# dge.root <- calcNormFactors(dge.root)
+# # remove genes with low expression level
+# dge.root<-dge.root[rowSums(cpm(dge.root)>1) >= 6,,keep.lib.sizes=FALSE]
+# Kazu's new way:  keep > normalize (012319)
+# Prevent repeated normalization
+ifelse(all(dge.root$samples$norm.factors==1),"Normalization has not yet done","Normalization has been done already.") # 
+dge.root$samples$norm.factors<-1 # No matter which case, non-normalize libraries.
+# remove genes with low expression level
+dge.root<-dge.root[rowSums(cpm(dge.root)>1) >= 6,,keep.lib.sizes=FALSE]
+# normalize
+dge.root <- calcNormFactors(dge.root)
+```
+# save edgeR objects
+```{r eval=FALSE, include=FALSE}
+save(dge.leaf,dge.root,sample.description2.leaf,sample.description2.root,file=file.path("RNA","output","edgeR_dge_objects.e3.v3.0anno.RData")) # Question: dge has sample info.  (092718), block became chracter (101419)
+```
+
+# leaf MDS plot bcv
+```{r}
+load(file.path("RNA","output","edgeR_dge_objects.e3.v3.0anno.RData"))
+# leaf
+mds.leaf <- plotMDS(dge.leaf,method = "bcv",labels=dge.leaf$samples$group,gene.selection = "pairwise",dim.plot = c(1,2),ndim=5)
+mds.leaf.pl <- as_tibble(mds.leaf$cmdscale.out) %>% 
+  bind_cols(data.frame(sample=row.names(mds.leaf$cmdscale.out)),.) %>%
+  inner_join(dge.leaf$samples)
+# V1 vs V2
+p.V1.V2<-mds.leaf.pl %>% ggplot(aes(x=V1,y=V2, shape=density, color=trt,label=density)) + geom_point(size=3) + ggtitle("Leaf Samples DIM 1 vs 2 bcv")+ facet_grid(density~block) + theme_gray()
+p.V1.V2
+ggsave(filename="RNA/output/e3.leaf.mds.bcv.1and2.png",width=6,height=8)
+# V2 vs V3
+p.V2.V3<-mds.leaf.pl %>% ggplot(aes(x=V2,y=V3, shape=density, color=trt,label=density)) + geom_point(size=3) + ggtitle("Leaf Samples DIM 2 vs 3 bcv")+ facet_grid(density~block)+ theme_gray()
+p.V2.V3
+ggsave(filename="RNA/output/e3.leaf.mds.bcv.2and3.png",width=6,height=8)
+# V1 vs V3
+p.V1.V3<-mds.leaf.pl %>% ggplot(aes(x=V1,y=V3, shape=density, color=trt,label=density)) + geom_point(size=3) + ggtitle("Leaf Samples DIM 1 vs 3 bcv")+ facet_grid(density~block)+ theme_gray()
+p.V1.V3
+ggsave(filename="RNA/output/e3.leaf.mds.bcv.1and3.png",width=6,height=8)
+# V1 vs V4
+p.V1.V4<-mds.leaf.pl %>% ggplot(aes(x=V1,y=V4, shape=density, color=trt,label=density)) + geom_point(size=3) + ggtitle("Leaf Samples DIM 1 vs 4 bcv")+ facet_grid(density~block)+ theme_gray()
+p.V1.V4
+ggsave(filename="RNA/output/e3.leaf.mds.bcv.1and4.png",width=6,height=8)
+# V1 vs V5
+p.V1.V5<-mds.leaf.pl %>% ggplot(aes(x=V1,y=V5, shape=density, color=trt,label=density)) + geom_point(size=3) + ggtitle("Leaf Samples DIM 1 vs 5")+ facet_grid(density~block)+ theme_gray()
+p.V1.V5
+ggsave(filename="RNA/output/e3.leaf.mds.bcv.1and5.png",width=6,height=8)
+```
+
+# leaf MDS logFC
+```{r}
+mds.leaf.logFC <- plotMDS(dge.leaf,method = "logFC",labels=dge.leaf$samples$group,gene.selection = "pairwise",dim.plot = c(1,2),ndim=5) # changed ndim=3 into 5
+mds.leaf.pl.logFC <- as_tibble(mds.leaf.logFC$cmdscale.out) %>% 
+  bind_cols(data.frame(sample=row.names(mds.leaf.logFC$cmdscale.out)),.) %>%
+  inner_join(dge.leaf$samples)
+# adding block info
+# V1 vs V2
+p.V1.V2.logFC<-mds.leaf.pl.logFC %>% ggplot(aes(x=V1,y=V2, shape=density, color=trt,label=density)) + geom_point(size=3) + ggtitle("Leaf Samples DIM 1 vs 2, logFC") + facet_grid(density~block)+ theme_gray()
+p.V1.V2.logFC
+ggsave(filename="RNA/output/e3.leaf.mds.logFC.1and2.png",width=6,height=8)
+# V1 vs V3
+p.V1.V3.logFC<-mds.leaf.pl.logFC %>% ggplot(aes(x=V1,y=V3, shape=density, color=trt,label=density)) + geom_point(size=3) + ggtitle("Leaf Samples DIM 1 vs 3, logFC")+ facet_grid(density~block)+ theme_gray()
+p.V1.V3.logFC
+ggsave(filename="RNA/output/e3.leaf.mds.logFC.1and3.png",width=6,height=8)
+# V1 vs V4
+p.V1.V4.logFC<-mds.leaf.pl.logFC %>% ggplot(aes(x=V1,y=V4, shape=density, color=trt,label=density)) + geom_point(size=3) + ggtitle("Leaf Samples DIM 1 vs 4, logFC")+ facet_grid(density~block)+ theme_gray()
+p.V1.V4.logFC
+ggsave(filename="RNA/output/e3.leaf.mds.logFC.1and4.png",width=6,height=8)
+# V1 vs V5
+p.V1.V5.logFC<-mds.leaf.pl.logFC %>% ggplot(aes(x=V1,y=V5, shape=density, color=trt,label=density)) + geom_point(size=3) + ggtitle("Leaf Samples DIM 1 vs 5, logFC")+ facet_grid(density~block)+ theme_gray()
+p.V1.V5.logFC
+ggsave(filename="RNA/output/e3.leaf.mds.logFC.1and5.png",width=6,height=8)
+```
+
+# root MDS plot bcv
+```{r}
+# root
+mds.root <- plotMDS(dge.root,method = "bcv",labels=dge.root$samples$group,gene.selection = "pairwise",dim.plot = c(1,2),ndim=5)
+mds.root.pl <- as_tibble(mds.root$cmdscale.out) %>% 
+  bind_cols(data.frame(sample=row.names(mds.root$cmdscale.out)),.) %>%
+  inner_join(dge.root$samples)
+# V1 vs V2
+p.V1.V2<-mds.root.pl %>% ggplot(aes(x=V1,y=V2, shape=density, color=trt,label=density)) + geom_point(size=3) + ggtitle("root Samples DIM 1 vs 2 bcv")+ facet_grid(density~block)+ theme_gray()
+p.V1.V2
+ggsave(filename="RNA/output/e3.root.mds.bcv.1and2.png",width=6,height=8)
+# V2 vs V3
+p.V2.V3<-mds.root.pl %>% ggplot(aes(x=V2,y=V3, shape=density, color=trt,label=density)) + geom_point(size=3) + ggtitle("root Samples DIM 2 vs 3 bcv")+ facet_grid(density~block)+ theme_gray()
+p.V2.V3
+ggsave(filename="RNA/output/e3.root.mds.bcv.2and3.png",width=6,height=8)
+# V1 vs V3
+p.V1.V3<-mds.root.pl %>% ggplot(aes(x=V1,y=V3, shape=density, color=trt,label=density)) + geom_point(size=3) + ggtitle("root Samples DIM 1 vs 3 bcv")+ facet_grid(density~block)+ theme_gray()
+p.V1.V3
+ggsave(filename="RNA/output/e3.root.mds.bcv.1and3.png",width=6,height=8)
+# V1 vs V4
+p.V1.V4<-mds.root.pl %>% ggplot(aes(x=V1,y=V4, shape=density, color=trt,label=density)) + geom_point(size=3) + ggtitle("root Samples DIM 1 vs 4 bcv")+ facet_grid(density~block)+ theme_gray()
+p.V1.V4
+ggsave(filename="RNA/output/e3.root.mds.bcv.1and4.png",width=6,height=8)
+# V1 vs V5
+p.V1.V5<-mds.root.pl %>% ggplot(aes(x=V1,y=V5, shape=density, color=trt,label=density)) + geom_point(size=3) + ggtitle("root Samples DIM 1 vs 5")+ facet_grid(density~block)+ theme_gray()
+p.V1.V5
+ggsave(filename="RNA/output/e3.root.mds.bcv.1and5.png",width=6,height=8)
+
+```
+
+# root MDS logFC
+```{r}
+mds.root.logFC <- plotMDS(dge.root,method = "logFC",labels=dge.root$samples$group,gene.selection = "pairwise",dim.plot = c(1,2),ndim=5) # changed ndim=3 into 5
+mds.root.pl.logFC <- as_tibble(mds.root.logFC$cmdscale.out) %>% 
+  bind_cols(data.frame(sample=row.names(mds.root.logFC$cmdscale.out)),.) %>%
+  inner_join(dge.root$samples) 
+# adding block info
+# V1 vs V2
+p.V1.V2.logFC <- mds.root.pl.logFC %>% ggplot(aes(x=V1,y=V2, shape=density, color=trt,label=density)) + geom_point(size=3) + ggtitle("root Samples DIM 1 vs 2, logFC") + facet_grid(density~block)+ theme_gray()
+p.V1.V2.logFC
+ggsave(filename="RNA/output/e3.root.mds.logFC.1and2.png",width=6,height=8)
+# V1 vs V3
+p.V1.V3.logFC<-mds.root.pl.logFC %>% ggplot(aes(x=V1,y=V3, shape=density, color=trt,label=density)) + geom_point(size=3) + ggtitle("root Samples DIM 1 vs 3, logFC")+ facet_grid(density~block)+ theme_gray()
+p.V1.V3.logFC
+ggsave(filename="RNA/output/e3.root.mds.logFC.1and3.png",width=6,height=8)
+# V1 vs V4
+p.V1.V4.logFC<-mds.root.pl.logFC %>% ggplot(aes(x=V1,y=V4, shape=density, color=trt,label=density)) + geom_point(size=3) + ggtitle("root Samples DIM 1 vs 4, logFC")+ facet_grid(density~block)+ theme_gray()
+p.V1.V4.logFC
+ggsave(filename="RNA/output/e3.root.mds.logFC.1and4.png",width=6,height=8)
+# V1 vs V5
+p.V1.V5.logFC<-mds.root.pl.logFC %>% ggplot(aes(x=V1,y=V5, shape=density, color=trt,label=density)) + geom_point(size=3) + ggtitle("root Samples DIM 1 vs 5, logFC")+ facet_grid(density~block)+ theme_gray()
+p.V1.V5.logFC
+ggsave(filename="RNA/output/e3.root.mds.logFC.1and5.png",width=6,height=8)
+```
+
+
+# DEGs prep
+```{r}
+# clean working directory
+rm(list=ls())
+knitr::opts_chunk$set(echo = TRUE,error=TRUE)
+library(edgeR);library(tidyverse)
+# annotation file for v3.0annotation
+Br.v3.0.At.BLAST <- read_csv(file.path("annotation","output","Brapa_v3.0_annotated.csv")) 
+# This annotation is redundant with name (Br grene). Eg 
+Br.v3.0.At.BLAST %>% filter(name=="BraA01g040570.3C")
+# reduce the redundancy (112418)
+Br.v3.0anno.At.BLAST.highscore <- Br.v3.0.At.BLAST %>% group_by(name) %>% arrange(desc(score)) %>% slice(1)
+
+# load exp1 v3.0 annotation dge files and sample info
+load(file.path("RNA","output","edgeR_dge_objects.e3.v3.0anno.RData"))
+# for expression pattern graph 
+## I should use root.voom5 and leaf.voom5, not cpm version (modify Expression_pattern_graph2.R below)
+source(file.path("RNA","scripts","Expression_pattern_graph2.R")) # needs to update from Expression_pattern_graph.R (Sep 24, 2021) # under construction
+# "/Volumes/data_work/Data8/NGS_related/Brassica_microbiome/Brapa_microbes/tools"
+
+```
+
+# Interaction model
+# Interaction model, rD.rUN
+```{r}
+# relevel trt and density to "5E_dead" and "FPsc"
+dge.root$samples<-dge.root$samples %>% mutate(trt=fct_relevel(trt,"dead")) #%>% str() 
+dge.root$samples<-dge.root$samples %>% mutate(density=fct_relevel(density,"un")) #%>% str() 
+dge.leaf$samples<-dge.leaf$samples %>% mutate(trt=fct_relevel(trt,"dead")) #%>% str() 
+dge.leaf$samples<-dge.leaf$samples %>% mutate(density=fct_relevel(density,"un")) #%>% str() 
+## dge
+root.design.int <- with(dge.root$samples, model.matrix(~ density*trt + block))
+leaf.design.int <- with(dge.leaf$samples, model.matrix(~ density*trt + block))
+# estimateDisp
+root.dge.int <- estimateDisp(dge.root,design = root.design.int)
+leaf.dge.int <- estimateDisp(dge.leaf,design = leaf.design.int)
+## fit linear model
+root.fit.int <- glmFit(root.dge.int,root.design.int)
+leaf.fit.int <- glmFit(leaf.dge.int,leaf.design.int)
+# get DEGs, trt effects (coef=c("trtlive","densitycr:trtlive"))
+root.trtlive_densitycr.trtlive.lrt <- glmLRT(root.fit.int,coef = c("trtlive","densitycr:trtlive")) # all coeff containing "trt"
+leaf.trtlive_densitycr.trtlive.lrt <- glmLRT(leaf.fit.int,coef = c("trtlive","densitycr:trtlive")) # all coeff containing "trt"
+topTags(root.trtlive_densitycr.trtlive.lrt);topTags(leaf.trtlive_densitycr.trtlive.lrt)
+## all
+root.trtlive_densitycr.trtlive.DEGs.int.all <- topTags(root.trtlive_densitycr.trtlive.lrt,n = Inf,p.value = 1)$table
+leaf.trtlive_densitycr.trtlive.DEGs.int.all <- topTags(leaf.trtlive_densitycr.trtlive.lrt,n = Inf,p.value = 1)$table
+# get DEGs, density effects (coef = c("densitycr","densitycr:trtlive")) 
+root.densitycr_densitycr.trtlive.lrt <- glmLRT(root.fit.int,coef = c("densitycr","densitycr:trtlive"))
+leaf.densitycr_densitycr.trtlive.lrt <- glmLRT(leaf.fit.int,coef = c("densitycr","densitycr:trtlive"))
+topTags(root.densitycr_densitycr.trtlive.lrt);topTags(leaf.densitycr_densitycr.trtlive.lrt)
+## all
+root.densitycr_densitycr.trtlive.DEGs.int.all <- topTags(root.densitycr_densitycr.trtlive.lrt,n = Inf,p.value = 1)$table
+leaf.densitycr_densitycr.trtlive.DEGs.int.all <- topTags(leaf.densitycr_densitycr.trtlive.lrt,n = Inf,p.value = 1)$table
+# get DEGs, density:trt effects (coef = "densitycr:trtlive") 
+root.densitycr.trtlive.lrt <- glmLRT(root.fit.int,coef = "densitycr:trtlive")
+leaf.densitycr.trtlive.lrt <- glmLRT(leaf.fit.int,coef = "densitycr:trtlive")
+topTags(root.densitycr.trtlive.lrt);topTags(leaf.densitycr.trtlive.lrt)
+## all
+root.densitycr.trtlive.DEGs.int.all <- topTags(root.densitycr.trtlive.lrt,n = Inf,p.value = 1)$table
+leaf.densitycr.trtlive.DEGs.int.all <- topTags(leaf.densitycr.trtlive.lrt,n = Inf,p.value = 1)$table
+# get DEGs, trt effects on UN? (rUN) (coef = "trtlive") 
+root.trtlive.lrt <- glmLRT(root.fit.int,coef = "trtlive")
+leaf.trtlive.lrt <- glmLRT(leaf.fit.int,coef = "trtlive")
+topTags(root.trtlive.lrt);topTags(leaf.trtlive.lrt)
+## all
+root.trtlive.DEGs.int.all <- topTags(root.trtlive.lrt,n = Inf,p.value = 1)$table
+leaf.trtlive.DEGs.int.all <- topTags(leaf.trtlive.lrt,n = Inf,p.value = 1)$table
+## FDR<0.05
+nrow(topTags(root.trtlive.lrt,n = Inf,p.value = 0.05)$table) # 357
+nrow(topTags(leaf.trtlive.lrt,n = Inf,p.value = 0.05)$table) # NULL
+# get DEGs, density effects (coef = "densitycr"; single) 
+root.densitycr.lrt <- glmLRT(root.fit.int,coef = "densitycr")
+leaf.densitycr.lrt <- glmLRT(leaf.fit.int,coef = "densitycr")
+topTags(root.densitycr.lrt);topTags(leaf.densitycr.lrt)
+## all
+root.densitycr.DEGs.int.all <- topTags(root.densitycr.lrt,n = Inf,p.value = 1)$table
+leaf.densitycr.DEGs.int.all <- topTags(leaf.densitycr.lrt,n = Inf,p.value = 1)$table
+
+# expression pattern exp1 ad 3, using expression.pattern.Br.graph.exp1and3.v3.0annotation.voom() function in Expression_pattern_graph2.R
+p <- expression.pattern.Br.graph.exp1and3.v3.0annotation.voom(target.genes=head(topTags(root.trtlive.lrt)$table$genes),title="ex1 & 3 v3.0 voom",tissue.type="root",FDR=head(topTags(root.trtlive.lrt)$table),geno="both") # confirming this DEGs is true for only root UN.
+p
+
+```
+
+# Additive model, rD.rCR
+```{r}
+# relevel trt and density to "dead" and "CR"
+dge.root$samples <- dge.root$samples %>% mutate(trt=fct_relevel(trt,"dead")) #%>% str() 
+dge.root$samples <- dge.root$samples %>% mutate(density=fct_relevel(density,"cr")) #%>% str() 
+dge.leaf$samples <- dge.leaf$samples %>% mutate(trt=fct_relevel(trt,"dead")) #%>% str() 
+dge.leaf$samples <- dge.leaf$samples %>% mutate(density=fct_relevel(density,"cr")) #%>% str() 
+## dge
+root.design.add <- with(dge.root$samples, model.matrix(~ density + trt + block))
+leaf.design.add <- with(dge.leaf$samples, model.matrix(~ density + trt + block))
+# estimateDisp
+root.dge.add <- estimateDisp(dge.root,design = root.design.add)
+leaf.dge.add <- estimateDisp(dge.leaf,design = leaf.design.add)
+## fit linear model
+root.fit.add <- glmFit(root.dge.add,root.design.add)
+leaf.fit.add <- glmFit(leaf.dge.add,leaf.design.add)
+# get DEGs, trt effects (coef=c("trtlive"))
+root.trtlive.lrt <- glmLRT(root.fit.add,coef = c("trtlive"))
+leaf.trtlive.lrt <- glmLRT(leaf.fit.add,coef = c("trtlive"))
+topTags(root.trtlive.lrt);topTags(leaf.trtlive.lrt)
+## all
+root.trtlive.DEGs.add.all <- topTags(root.trtlive.lrt,n = Inf,p.value = 1)$table
+leaf.trtlive.DEGs.add.all <- topTags(leaf.trtlive.lrt,n = Inf,p.value = 1)$table 
+# get DEGs, density effects (coef = c("densityun"))
+root.densityun.lrt <- glmLRT(root.fit.add,coef = c("densityun"))
+leaf.densityun.lrt <- glmLRT(leaf.fit.add,coef = c("densityun"))
+topTags(root.densityun.lrt);topTags(leaf.densityun.lrt)
+## all
+root.densityun.DEGs.add.all <- topTags(root.densityun.lrt,n = Inf,p.value = 1)$table
+leaf.densityun.DEGs.add.all <- topTags(leaf.densityun.lrt,n = Inf,p.value = 1)$table
+
+# add annotiona with full name objects (all)
+root.densityun.DEGs.add.all.rD.rCR.v3.0anno <- left_join(root.densityun.DEGs.add.all,Br.v3.0anno.At.BLAST.highscore,by=c(genes="name")) %>%  select(1:6, AGI, At_symbol, At_short_description, perc_ID)
+leaf.densityun.DEGs.add.all.rD.rCR.v3.0anno <- left_join(leaf.densityun.DEGs.add.all,Br.v3.0anno.At.BLAST.highscore,by=c(genes="name")) %>% select(1:6, AGI, At_symbol, At_short_description, perc_ID)
+root.trtlive.DEGs.add.all.rD.rCR.v3.0anno <- left_join(root.trtlive.DEGs.add.all,Br.v3.0anno.At.BLAST.highscore,by=c(genes="name")) %>%  select(1:6, AGI, At_symbol, At_short_description, perc_ID)
+leaf.trtlive.DEGs.add.all.rD.rCR.v3.0anno <- left_join(leaf.trtlive.DEGs.add.all,Br.v3.0anno.At.BLAST.highscore,by=c(genes="name")) %>% select(1:6, AGI, At_symbol, At_short_description, perc_ID)
+
+# write csv (all)
+## density
+write.csv(root.densityun.DEGs.add.all.rD.rCR.v3.0anno,file=file.path("RNA","output","FULLtoptag","e3.root.densityun.DEGs.add.rD.rCR.v3.0anno.csv"))
+write.csv(leaf.densityun.DEGs.add.all.rD.rCR.v3.0anno,file=file.path("RNA","output","FULLtoptag","e3.leaf.densityun.DEGs.add.rD.rCR.v3.0anno.csv"))
+## trtlive
+write.csv(root.trtlive.DEGs.add.all.rD.rCR.v3.0anno,file=file.path("RNA","output","FULLtoptag","e3.root.trtlive.DEGs.add.rD.rCR.v3.0anno.csv"))
+write.csv(leaf.trtlive.DEGs.add.all.rD.rCR.v3.0anno,file=file.path("RNA","output","FULLtoptag","e3.leaf.trtlive.DEGs.add.rD.rCR.v3.0anno.csv"))
+```
+
+# Interaction model, rD.rCR
+```{r}
+# relevel trt and density to "5E_dead" and "FPsc"
+dge.root$samples<-dge.root$samples %>% mutate(trt=fct_relevel(trt,"dead")) #%>% str() 
+dge.root$samples<-dge.root$samples %>% mutate(density=fct_relevel(density,"cr")) #%>% str() 
+dge.leaf$samples<-dge.leaf$samples %>% mutate(trt=fct_relevel(trt,"dead")) #%>% str() 
+dge.leaf$samples<-dge.leaf$samples %>% mutate(density=fct_relevel(density,"cr")) #%>% str() 
+## dge
+root.design.int <- with(dge.root$samples, model.matrix(~ density*trt + block))
+leaf.design.int <- with(dge.leaf$samples, model.matrix(~ density*trt + block))
+# estimateDisp
+root.dge.int <- estimateDisp(dge.root,design = root.design.int)
+leaf.dge.int <- estimateDisp(dge.leaf,design = leaf.design.int)
+## fit linear model
+root.fit.int <- glmFit(root.dge.int,root.design.int)
+leaf.fit.int <- glmFit(leaf.dge.int,leaf.design.int)
+# get DEGs, trt effects (coef=c("trtlive"))
+root.trtlive_densityun.trtlive.lrt <- glmLRT(root.fit.int,coef = c("trtlive","densityun:trtlive")) # all coeff containing "trt"
+leaf.trtlive_densityun.trtlive.lrt <- glmLRT(leaf.fit.int,coef = c("trtlive","densityun:trtlive")) # all coeff containing "trt"
+topTags(root.trtlive_densityun.trtlive.lrt);topTags(leaf.trtlive_densityun.trtlive.lrt)
+## all
+root.trtlive_densityun.trtlive.DEGs.int.all <- topTags(root.trtlive_densityun.trtlive.lrt,n = Inf,p.value = 1)$table
+leaf.trtlive_densityun.trtlive.DEGs.int.all <- topTags(leaf.trtlive_densityun.trtlive.lrt,n = Inf,p.value = 1)$table
+# get DEGs, density:treatment (live) effects
+root.densityun.trtlive.lrt <- glmLRT(root.fit.int,coef = "densityun:trtlive")
+leaf.densityun.trtlive.lrt <- glmLRT(leaf.fit.int,coef = "densityun:trtlive")
+topTags(root.densityun.trtlive.lrt);topTags(leaf.densityun.trtlive.lrt)
+## all
+root.densityun.trtlive.DEGs.int.all <- topTags(root.densityun.trtlive.lrt,n = Inf,p.value = 1)$table 
+leaf.densityun.trtlive.DEGs.int.all <- topTags(leaf.densityun.trtlive.lrt,n = Inf,p.value = 1)$table
+
+
+# get DEGs, density effects (coef = c("densityun","densityun:trtlive"))
+root.densityun_densityun.trtlive.lrt <- glmLRT(root.fit.int,coef = c("densityun","densityun:trtlive"))
+leaf.densityun_densityun.trtlive.lrt <- glmLRT(leaf.fit.int,coef = c("densityun","densityun:trtlive"))
+topTags(root.densityun_densityun.trtlive.lrt);topTags(leaf.densityun_densityun.trtlive.lrt)
+## all
+root.densityun_densityun.trtlive.DEGs.int.all <- topTags(root.densityun_densityun.trtlive.lrt,n = Inf,p.value = 1)$table
+leaf.densityun_densityun.trtlive.DEGs.int.all <- topTags(leaf.densityun_densityun.trtlive.lrt,n = Inf,p.value = 1)$table
+
+# get DEGs, trt effects on CR (rCR) (coef = "trtlive") 
+root.trtlive.lrt <- glmLRT(root.fit.int,coef = "trtlive")
+leaf.trtlive.lrt <- glmLRT(leaf.fit.int,coef = "trtlive")
+topTags(root.trtlive.lrt);topTags(leaf.trtlive.lrt)
+## all
+root.trtlive.DEGs.int.all <- topTags(root.trtlive.lrt,n = Inf,p.value = 1)$table
+leaf.trtlive.DEGs.int.all <- topTags(leaf.trtlive.lrt,n = Inf,p.value = 1)$table
+## FDR<0.05
+nrow(topTags(root.trtlive.lrt,n = Inf,p.value = 0.05)$table) # 3434
+nrow(topTags(leaf.trtlive.lrt,n = Inf,p.value = 0.05)$table) # 370
+# expression pattern
+expression.pattern.Br.graph.exp3(data=counts.exp3.v3.0,target.genes=head(topTags(root.trtlive.lrt)$table$genes),title="exp3 v3.0") # confirming this DEGs is true for only root CR.
+# get DEGs, density effects (coef = "densityun"; single) 
+root.densityun.lrt <- glmLRT(root.fit.int,coef = "densityun")
+leaf.densityun.lrt <- glmLRT(leaf.fit.int,coef = "densityun")
+topTags(root.densityun.lrt);topTags(leaf.densityun.lrt)
+## all
+root.densityun.DEGs.int.all <- topTags(root.densityun.lrt,n = Inf,p.value = 1)$table
+leaf.densityun.DEGs.int.all <- topTags(leaf.densityun.lrt,n = Inf,p.value = 1)$table
+```
+
+# add annotiona with full name objects (all)
+```{r}
+## density effects (densityun_densityun.trtlive)
+root.densityun_densityun.trtlive.DEGs.int.all.rD.rCR.v3.0anno <- left_join(root.densityun_densityun.trtlive.DEGs.int.all,Br.v3.0anno.At.BLAST.highscore,by=c(genes="name")) %>%  select(1:7, AGI, At_symbol, At_short_description, perc_ID)
+leaf.densityun_densityun.trtlive.DEGs.int.all.rD.rCR.v3.0anno <- left_join(leaf.densityun_densityun.trtlive.DEGs.int.all,Br.v3.0anno.At.BLAST.highscore,by=c(genes="name")) %>% select(1:7, AGI, At_symbol, At_short_description, perc_ID)
+# treatment effects (trtlive_densityun.trtlive)
+root.trtlive_densityun.trtlive.DEGs.int.all.rD.rCR.v3.0anno <- left_join(root.trtlive_densityun.trtlive.DEGs.int.all,Br.v3.0anno.At.BLAST.highscore,by=c(genes="name")) %>%  select(1:7, AGI, At_symbol, At_short_description, perc_ID)
+leaf.trtlive_densityun.trtlive.DEGs.int.all.rD.rCR.v3.0anno <- left_join(leaf.trtlive_densityun.trtlive.DEGs.int.all,Br.v3.0anno.At.BLAST.highscore,by=c(genes="name")) %>% select(1:7, AGI, At_symbol, At_short_description, perc_ID)
+# treatment:density effects (densityun.trtlive)
+root.densityun.trtlive.DEGs.int.all.rD.rCR.v3.0anno <- left_join(root.densityun.trtlive.DEGs.int.all,Br.v3.0anno.At.BLAST.highscore,by=c(genes="name")) %>%  select(1:6, AGI, At_symbol, At_short_description, perc_ID)
+leaf.densityun.trtlive.DEGs.int.all.rD.rCR.v3.0anno <- left_join(leaf.densityun.trtlive.DEGs.int.all,Br.v3.0anno.At.BLAST.highscore,by=c(genes="name")) %>% select(1:6, AGI, At_symbol, At_short_description, perc_ID)
+# treatment effects (trtlive)
+root.trtlive.DEGs.int.all.rD.rCR.v3.0anno <- left_join(root.trtlive.DEGs.int.all,Br.v3.0anno.At.BLAST.highscore,by=c(genes="name")) %>%  select(1:6, AGI, At_symbol, At_short_description, perc_ID)
+leaf.trtlive.DEGs.int.all.rD.rCR.v3.0anno <- left_join(leaf.trtlive.DEGs.int.all,Br.v3.0anno.At.BLAST.highscore,by=c(genes="name")) %>% select(1:6, AGI, At_symbol, At_short_description, perc_ID)
+## densityun (new)
+root.densityun.DEGs.int.all.rD.rCR.v3.0anno <- left_join(root.densityun.DEGs.int.all,Br.v3.0anno.At.BLAST.highscore,by=c(genes="name")) %>%  select(1:7, AGI, At_symbol, At_short_description, perc_ID)
+leaf.densityun.DEGs.int.all.rD.rCR.v3.0anno <- left_join(leaf.densityun.DEGs.int.all,Br.v3.0anno.At.BLAST.highscore,by=c(genes="name")) %>% select(1:7, AGI, At_symbol, At_short_description, perc_ID)
+```
+
+# write csv (naming: "tissue"."coef1"_"coef2"_"coef3"."DEGs"."model"."reference for soil (D,dead;L,live)"."reference for density"."annotation version") if there are triple coefs (all)
+```{r}
+## density
+write.csv(root.densityun_densityun.trtlive.DEGs.int.all.rD.rCR.v3.0anno,file=file.path("RNA","output","FULLtoptag","e3.root.densityun_densityun.trtlive.DEGs.int.rD.rCR.v3.0anno.csv"))
+write.csv(leaf.densityun_densityun.trtlive.DEGs.int.all.rD.rCR.v3.0anno,file=file.path("RNA","output","FULLtoptag","e3.leaf.densityun_densityun.trtlive.DEGs.int.rD.rCR.v3.0anno.csv"))
+## trtlive
+write.csv(root.trtlive_densityun.trtlive.DEGs.int.all.rD.rCR.v3.0anno,file=file.path("RNA","output","FULLtoptag","e3.root.trtlive_densityun.trtlive.DEGs.int.rD.rCR.v3.0anno.csv"))
+write.csv(leaf.trtlive_densityun.trtlive.DEGs.int.all.rD.rCR.v3.0anno,file=file.path("RNA","output","FULLtoptag","e3.leaf.trtlive_densityun.trtlive.DEGs.int.rD.rCR.v3.0anno.csv"))
+## density:trtlive
+write.csv(root.densityun.trtlive.DEGs.int.all.rD.rCR.v3.0anno,file=file.path("RNA","output","FULLtoptag","e3.root.densityun.trtlive.DEGs.int.rD.rCR.v3.0anno.csv"))
+write.csv(leaf.densityun.trtlive.DEGs.int.all.rD.rCR.v3.0anno,file=file.path("RNA","output","FULLtoptag","e3.leaf.densityun.trtlive.DEGs.int.rD.rCR.v3.0anno.csv"))
+## trtlive
+write.csv(root.trtlive.DEGs.int.all.rD.rCR.v3.0anno,file=file.path("RNA","output","FULLtoptag","e3.root.trtlive.DEGs.int.rD.rCR.v3.0anno.csv"))
+write.csv(leaf.trtlive.DEGs.int.all.rD.rCR.v3.0anno,file=file.path("RNA","output","FULLtoptag","e3.leaf.trtlive.DEGs.int.rD.rCR.v3.0anno.csv"))
+## density (single; new)
+write.csv(root.densityun.DEGs.int.all.rD.rCR.v3.0anno,file=file.path("RNA","output","FULLtoptag","e3.root.densityun.DEGs.int.rD.rCR.v3.0anno.csv"))
+write.csv(leaf.densityun.DEGs.int.all.rD.rCR.v3.0anno,file=file.path("RNA","output","FULLtoptag","e3.leaf.densityun.DEGs.int.rD.rCR.v3.0anno.csv"))
+```
+
+
+
