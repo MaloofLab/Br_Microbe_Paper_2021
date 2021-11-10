@@ -105,9 +105,9 @@ dim(counts)
 write_csv(counts,"../../output/20170830_V3.0_raw_counts_.csv.gz")
 ```
 
-
 ## make sample description data frame
 
+#CONTINUE FROM HERE
 
 ```{r}
 sample.description <- tibble(sample=colnames(counts)[-1]) %>%
