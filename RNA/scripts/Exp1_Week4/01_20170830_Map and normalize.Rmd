@@ -40,22 +40,21 @@ Move the counts to my local computer
 ### NEED TO MODIFY BELOW
 
 ```{r, engine='bash', eval=FALSE}
-cd ~/git/Brapa_microbes/20170617-samples/input/
+cd /Users/jmaloof/git/Br_Microbe_Paper_2021/RNA/input/20170830-samples
 lftp sftp://whitney.plb.ucdavis.edu
-  cd 2017/Wyoming-microbiome/20170617-samples/20170617-data
+  cd 2017/Wyoming-microbiome/20170830-samples/20170830-data
   mirror kallisto_out_V3.0
 ```
 
 remove unused files
 ```{r, engine='bash', eval=FALSE}
-cd ~/git/Brapa_microbes/20170617-samples/input/kallisto_out_V3.0
+cd /Users/jmaloof/git/Br_Microbe_Paper_2021/RNA/input/20170830-samples/kallisto_out_V3.0
 rm */*.json
 ```
 
 compress tsv files
-
 ```{r, engine='bash', eval=FALSE}
-cd ~/git/Brapa_microbes/20170617-samples/input/kallisto_out_V3.0
+cd /Users/jmaloof/git/Br_Microbe_Paper_2021/RNA/input/20170830-samples/kallisto_out_V3.0
 gzip */abundance.tsv
 ```
 
@@ -68,28 +67,42 @@ library(stringr)
 library(edgeR)
 ```
 
-```{r}
-kallisto_files <- dir(path = "../input/20170617-samples/kallisto_out_V3.0",pattern="abundance.tsv",recursive = TRUE,full.names = TRUE)
-kallisto_names <- str_split(kallisto_files,"/",simplify=TRUE)[,5]
-```
-
-```{r, message=FALSE}
-counts.list <- lapply(kallisto_files,read_tsv)
-names(counts.list) <- kallisto_names
-counts.list[[1]]
-```
-
-```{r}
-counts <- sapply(counts.list, select, est_counts) %>% 
-  bind_cols(counts.list[[1]][,"target_id"],.)
-counts[is.na(counts)] <- 0
-colnames(counts) <- sub(".est_counts","",colnames(counts),fixed = TRUE)
-counts
-```
 
 
 ```{r}
-write_csv(counts,"../output/20170617_V3.0_raw_counts_.csv.gz")
+kallisto_files <- dir(path = "../../input/20170830-samples/kallisto_out_V3.0",pattern="abundance.tsv",recursive = TRUE,full.names = TRUE)
+kallisto_names <- str_split(kallisto_files,"/",simplify=TRUE)[,6]
+head(kallisto_names)
+```
+
+```{r}
+counts <- tibble(sample = kallisto_names, file = kallisto_files) %>%
+  mutate(countdata = map(kallisto_files, read_tsv)) %>%
+  select(-file)
+
+head(counts)
+```
+
+reformat into rows = genes and columns = samples
+```{r}
+counts <- counts %>% unnest(countdata) %>%
+  mutate(sample = str_remove(sample, "_L.*")) %>% 
+  select(sample, target_id, est_counts) %>%
+  group_by(sample, target_id) %>%
+  summarize(est_counts=sum(est_counts)) %>% # sum up counts from multiple lanes
+  ungroup() %>%
+  pivot_wider(id_cols = target_id,
+              names_from = sample,
+              values_from = est_counts)
+```
+
+```{r}
+head(counts)
+dim(counts)
+```
+
+```{r}
+write_csv(counts,"../../output/20170830_V3.0_raw_counts_.csv.gz")
 ```
 
 
