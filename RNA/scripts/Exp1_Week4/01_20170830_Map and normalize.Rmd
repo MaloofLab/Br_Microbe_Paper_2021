@@ -118,7 +118,7 @@ sample.description <- tibble(sample=colnames(counts)[-1]) %>%
 head(sample.description)
 
 ## get additional metadata
-sample.info <- readxl::read_excel("../input/wy001_RNAseq.xlsx",sheet = 1)
+sample.info <- readxl::read_excel("../../input/wy001_RNAseq.xlsx",sheet = 1)
 head(sample.info)
 
 ##combine
@@ -160,7 +160,6 @@ ggplot(dge$samples,aes(x=sample,y=norm.factors,fill=as.factor(block))) + geom_co
   theme(axis.text.x  = element_text(angle=90, vjust=0.5,size = 7)) 
 ```
 
-Looks like we should normalize separately for root and leaf
 
 # do separately for leaf and root values
 
@@ -194,7 +193,7 @@ dge.root <- calcNormFactors(dge.root)
 ```
 
 ```{r}
-save(dge.leaf,dge.root,sample.description.leaf,sample.description.root,file="../output/edgeR_dge_objects.Rdata")
+save(dge.leaf,dge.root,sample.description.leaf,sample.description.root,file="../../output/edgeR_dge_objects_exp1_week4.Rdata")
 ```
 
 
@@ -203,13 +202,13 @@ save(dge.leaf,dge.root,sample.description.leaf,sample.description.root,file="../
 ```{r}
 cpm.leaf.w <- bind_cols(dge.leaf$gene,as_tibble(cpm(dge.leaf))) %>% as_tibble() %>% rename(transcript_ID=genes)
 head(cpm.leaf.w)
-write_csv(cpm.leaf.w,"../output/cpm_wide_20170617_leaf_samples.csv.gz")
+write_csv(cpm.leaf.w,"../../output/cpm_wide_exp1_week4_leaf_samples.csv.gz")
 ```
 
 ```{r}
 cpm.root.w <- bind_cols(dge.root$gene,as_tibble(cpm(dge.root))) %>% as_tibble() %>% rename(transcript_ID=genes)
 head(cpm.root.w)
-write_csv(cpm.root.w,"../output/cpm_wide_20170617_root_samples.csv.gz")
+write_csv(cpm.root.w,"../../output/cpm_wide_exp1_week4_root_samples.csv.gz")
 ```
 
 
@@ -220,7 +219,7 @@ cpm.leaf.long <- cpm.leaf.w %>%
   gather(-transcript_ID,key = sample,value=cpm) %>%
   left_join(sample.description.leaf)
 head(cpm.leaf.long)
-write_csv(cpm.leaf.long,"../output/cpm_long_with_metadata_20170617_leaf_samples.csv.gz")
+write_csv(cpm.leaf.long,"../../output/cpm_long_with_metadata_exp1_week4_leaf_samples.csv.gz")
 ```
 
 ```{r}
@@ -228,7 +227,7 @@ cpm.root.long <- cpm.root.w %>%
   gather(-transcript_ID,key = sample,value=cpm) %>%
   left_join(sample.description.root)
 head(cpm.root.long)
-write_csv(cpm.root.long,"../output/cpm_long_with_metadata_20170617_root_samples.csv.gz")
+write_csv(cpm.root.long,"../../output/cpm_long_with_metadata_exp1_week4_root_samples.csv.gz")
 ```
 
 
@@ -242,7 +241,7 @@ data.voom.leaf <- voom(dge4voom.leaf,design = design.leaf)
 data.voom.exp.leaf <- bind_cols(data.voom.leaf$genes,as_tibble(data.voom.leaf$E)) %>%
   rename(transcript_ID=genes) %>% as_tibble()
 head(data.voom.exp.leaf)
-write_csv(data.voom.exp.leaf, "../output/voom_expression_20170617_T6_leaf_samples.csv.gz")
+write_csv(data.voom.exp.leaf, "../../output/voom_expression_exp1_week4_T6_leaf_samples.csv.gz")
 ```
 
 
@@ -252,7 +251,7 @@ voom.long.leaf <- data.voom.exp.leaf %>%
   left_join(sample.description.leaf)
 head(voom.long.leaf)
 hist(voom.long.leaf$expression)
-write_csv(voom.long.leaf,"../output/voom_long_with_metadata_20170617_T6_leaf_samples.csv.gz")
+write_csv(voom.long.leaf,"../../output/voom_long_with_metadata_exp1_week4_T6_leaf_samples.csv.gz")
 ```
 
 
@@ -264,7 +263,7 @@ data.voom.root <- voom(dge4voom.root,design = design.root)
 data.voom.exp.root <- bind_cols(data.voom.root$genes,as_tibble(data.voom.root$E)) %>%
   rename(transcript_ID=genes) %>% as_tibble()
 head(data.voom.exp.root)
-write_csv(data.voom.exp.root, "../output/voom_expression_20170617_T6_root_samples.csv.gz")
+write_csv(data.voom.exp.root, "../../output/voom_expression_exp1_week4_T6_root_samples.csv.gz")
 ```
 
 
@@ -274,77 +273,5 @@ voom.long.root <- data.voom.exp.root %>%
   left_join(sample.description.root)
 head(voom.long.root)
 hist(voom.long.root$expression)
-write_csv(voom.long.root,"../output/voom_long_with_metadata_20170617_T6_root_samples.csv.gz")
-```
-
-write it to irods
-
-Need to run this yourself in terminal
-
-```{r, engine='bash', eval=FALSE}
-iinit
-icd /iplant/home/shared/ucd.brassica/analyses/Brapa_Microbiome_RNAseq/
-for f in (ls cpm*)
-    echo $f
-    iput -vf $f
-end
-for f in (ls voom*)
-    echo $f
-    iput -vf $f
-end
-```
-
-## read distribution
-
-Mike asked if the difference in normalization factors in leafs vs roots was due to high abundance of photosynthesis transcripts in leafs.  (Although leafs have lower normalization factor)
-
-Start by doing a simplistic normalization just by library size.  Then look at distribution of most abundant counts.
-
-```{r}
-counts.leaf.norm <- counts.leaf %>% 
-  mutate_at(-1,funs(./sum(.))) %>% 
-  transmute(target_id=target_id,mean= {select(.,-target_id) %>% rowMeans()}) %>%
-  arrange(desc(mean)) %>% mutate(cumsum=cumsum(mean),rank=row_number(),sample="leaf")
-counts.leaf.norm
-```
-```{r}
-counts.root.norm <- counts.root %>% 
-  mutate_at(-1,funs(./sum(.))) %>% 
-  transmute(target_id=target_id,mean= {select(.,-target_id) %>% rowMeans()}) %>%
-  arrange(desc(mean)) %>% mutate(cumsum=cumsum(mean),rank=row_number(),sample="root")
-counts.root.norm
-```
-
-```{r}
-rbind(counts.leaf.norm,counts.root.norm) %>%
-  ggplot(aes(x=rank,y=cumsum,color=sample)) +
-  geom_line() +xlim(0,20000)
-```
-
-```{r}
-rbind(counts.leaf.norm,counts.root.norm) %>%
-  ggplot(aes(x=rank,y=mean,color=sample)) +
-  geom_line()  + scale_y_log10()
-```
-
-```{r}
-rbind(counts.leaf.norm,counts.root.norm) %>% filter(rank < 41) %>%
-  ggplot(aes(x=rank,y=mean,fill=sample)) +
-  geom_col(position = "dodge") 
-```
-
-```{r}
-annotation <- read_csv("../../../Annotation/output/v3.0annotation/Brapa_V3.0_annotated.csv")
-```
-
-```{r}
-top.expressed.leaf <- counts.leaf.norm %>% filter(rank<21) %>% left_join(annotation,by=c("target_id"="name")) %>% select("target_id","mean","rank","AGI","At_symbol","At_description") %>% arrange(rank)
-top.expressed.leaf
-write_csv(top.expressed.leaf,"../output/top.expressed.leaf.csv")
-```
-
-```{r}
-top.expressed.root <- counts.root.norm %>% filter(rank<21) %>% left_join(annotation,by=c("target_id"="name")) %>% select("target_id","mean","rank","AGI","At_symbol","At_description") %>% arrange(rank)
-top.expressed.root
-write_csv(top.expressed.root,"../output/top.expressed.root.csv")
+write_csv(voom.long.root,"../../output/voom_long_with_metadata_exp1_week4_T6_root_samples.csv.gz")
 ```
