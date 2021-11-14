@@ -58,40 +58,21 @@ voom.leaf <- voom(dge.leaf, design = leaf.design, block = as.factor(dge.leaf$sam
 
 # MODIFY BELOW
 
-## alternative: take residuals.
+## alternative: take residuals to remove block.
 ```{r}
 
-leaf.resid <- t(apply(e1and3.voom.leaf$E, 1, getResid,  e1and3.dge.leaf$samples$exp, e1and3.dge.leaf$samples$block)) %>%
+leaf.resid <- t(apply(voom.leaf$E, 1, getResid, dge.leaf$samples$block)) %>%
   as.data.frame() %>%
-  mutate(genes=e1and3.voom.leaf$genes$genes) %>%
+  mutate(genes=voom.leaf$genes$genes) %>%
   select(genes, everything())
 
-root.resid <- t(apply(e1and3.voom.root$E, 1, getResid,  e1and3.dge.root$samples$exp, e1and3.dge.root$samples$block)) %>%
+root.resid <- t(apply(voom.root$E, 1, getResid, dge.root$samples$block)) %>%
   as.data.frame() %>%
-  mutate(genes=e1and3.voom.root$genes$genes) %>%
+  mutate(genes=voom.root$genes$genes) %>%
   select(genes, everything())
 
-write_tsv(root.resid, "../output/voom_expression.e1and3.resid.root.plusR500.txt.gz")
-write_tsv(leaf.resid, "../output/voom_expression.e1and3.resid.leaf.plusR500.txt.gz")
+write_tsv(root.resid, "../../output/voom_expression.e1_week4.resid.root.txt.gz")
+write_tsv(leaf.resid, "../../output/voom_expression.e1_week4.resid.leaf.txt.gz")
 
 ```
 
-
-## residuals remove experiment AND genotupe AND block
-
-```{r}
-
-leaf.resid.gt.exp.block <- t(apply(e1and3.voom.leaf$E, 1, getResid,  e1and3.dge.leaf$samples$exp, e1and3.dge.leaf$samples$genotype, e1and3.dge.leaf$samples$block)) %>%
-  as.data.frame() %>%
-  mutate(genes=e1and3.voom.leaf$genes$genes) %>%
-  select(genes, everything())
-
-root.resid.gt.exp.block <- t(apply(e1and3.voom.root$E, 1, getResid,  e1and3.dge.root$samples$exp, e1and3.dge.root$samples$genotype, e1and3.dge.leaf$samples$block )) %>%
-  as.data.frame() %>%
-  mutate(genes=e1and3.voom.root$genes$genes) %>%
-  select(genes, everything())
-
-write_tsv(root.resid.gt.exp.block, "../output/voom_expression.e1and3.resid.exp_gt_block.root.plusR500.txt.gz")
-write_tsv(leaf.resid.gt.exp.block, "../output/voom_expression.e1and3.resid.exp_gt_block.leaf.plusR500.txt.gz")
-
-```
