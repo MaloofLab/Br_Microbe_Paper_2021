@@ -289,8 +289,11 @@ d %>% ggplot(aes(x=MEivory_root, y=leaf_avg_std)) +
 ```{r, fig.asp=1}
 d %>% dplyr::select(all_of(vars)) %>%
   pivot_longer(cols = !leaf_avg_std, names_to = "module", values_to ="eigenGene") %>%
+  mutate(module=str_remove(module,"ME")) %>%
+  
   ggplot(aes(x=eigenGene, y=leaf_avg_std)) +
   geom_point() +
   facet_wrap(~module, ncol = 3, scales = "free")
+ggsave("../../_Paper_Figures/Eigen_leaf_length.pdf")
 ```
 

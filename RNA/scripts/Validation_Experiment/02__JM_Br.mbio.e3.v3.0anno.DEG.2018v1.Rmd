@@ -1,0 +1,1147 @@
+---
+title: "Br.microbiom.exp3.v3.0.annotationDEG.2018v1"
+author: "Kazu"
+date: "9/25/2018"
+output: 
+  html_document: 
+    keep_md: yes
+editor_options: 
+  chunk_output_type: inline
+---
+# purpose: Raw count files to DEGs
+# History
+* For reorganization, create this script from scratch. (092518)
+* Adding MDS plot with block info (090619)
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE,error=TRUE)
+```
+
+```{r}
+library(edgeR);library(tidyverse);library(readr);library(readxl)
+```
+# For Mapping reads with Kalisto see "Map and normalize.Rmd" in "./v3.0annotation/20170617-samples/scripts" 
+# load reads mapped to v3.0 Brassica genome
+```{r}
+getwd()
+counts <- readr::read_csv(file.path("..","input","20180202_V3.0_raw_counts.csv.gz"))
+counts # make sure this is v3.0 annotation (look target_id column)
+```
+
+## make sample description data frame (modified from Juiln's script "Map and normalize.Rmd"
+```{r}
+# separate() is useful (like split() in Base package. See "R for data science" pg157)
+sample.description <- tibble(sample=colnames(counts)[-1]) %>%
+  separate(sample,
+           c("location","soil","trt","density","block","pot","unknown2"),
+           remove=FALSE,
+           convert=FALSE) %>% unite(sample2,c("location","soil","trt","density","block","pot"),remove=FALSE)
+head(sample.description) 
+#type_convert(sample.description[,-3]) # to keep "unknown" column as character type.
+#sample.description$block<-as.integer(sample.description$block)
+# change lowercases into uppercases in soil column and character into integer in block
+sample.description<-sample.description %>% mutate(soil=toupper(soil)) %>% mutate(block=str_c("b", as.integer(block))) ## get additional metadata. (Oct 14, 2019) Block effects have to be character, not integer!!!!
+
+sample.info <- read_tsv(file.path("..","input","20180202-data","wy003-metadata.txt"), col_names=c("sample2","tissue","soil","trt","density","block","pot"),skip=1) # do I need to add thi info? Yes for tissue info.
+head(sample.info)
+#sample.info %>% mutate(block=as.integer(block))
+##combine
+sample.description2 <- left_join(sample.description, dplyr::select(sample.info,c(sample2,tissue))) %>% dplyr::select(-sample2) #
+sample.description2 <- sample.description2 %>% 
+  mutate(group=paste(trt,density,tissue,sep="_")) 
+head(sample.description2)
+sample.description2 %>% summarize(n_distinct(group)) # n_distinct()
+write_csv(sample.description2,path=file.path("..","output","Br.mbio.e3.sample.description.csv")) # change file name 
+# data.frame version
+sample.description2.DF<-data.frame(sample.description2)
+```
+
+
+## summarize counts
+```{r eval=FALSE, include=FALSE}
+pl.orig <- counts[,-1] %>% colSums() %>% tibble(sample=names(.),count=.) %>%
+  ggplot(aes(x=sample,y=count)) + 
+  geom_col() +
+  theme(axis.text.x  = element_text(angle=90, vjust=0.5,size = 7)) 
+pl.orig
+```
+
+## load to edgeR, normalize
+```{r eval=FALSE, include=FALSE}
+#confirm that everthing is in the right order
+all(colnames(counts)[-1]==sample.description2$sample)
+dge <- DGEList(counts[,-1],
+               group=sample.description2$group,
+               samples=sample.description2,
+               genes=counts$target_id)
+```
+ 
+```{r eval=FALSE, include=FALSE}
+dge <- calcNormFactors(dge)
+barplot(dge$samples$lib.size)
+ggplot(dge$samples,aes(x=sample,y=norm.factors,fill=tissue)) + geom_col() + 
+  theme(axis.text.x  = element_text(angle=90, vjust=0.5,size = 7)) 
+ggplot(dge$samples,aes(x=sample,y=norm.factors,fill=density)) + geom_col() + 
+  theme(axis.text.x  = element_text(angle=90, vjust=0.5,size = 7)) 
+ggplot(dge$samples,aes(x=sample,y=norm.factors,fill=as.factor(block))) + geom_col() +
+  theme(axis.text.x  = element_text(angle=90, vjust=0.5,size = 7)) 
+```
+Looks like we should normalize separately for root and leaf
+# do separately for leaf and root values
+```{r eval=FALSE, include=FALSE}
+sample.description2.leaf <- sample.description2 %>% filter(tissue=="leaf")
+sample.description2.root <- sample.description2 %>% filter(tissue=="root")
+
+counts.leaf <- counts %>% select(target_id, sample.description2.leaf$sample)
+counts.root <- counts %>% select(target_id, sample.description2.root$sample)
+```
+
+# Leaf
+```{r eval=FALSE, include=FALSE}
+#confirm that everthing is in the right order
+all(colnames(counts.leaf)[-1]==sample.description2.leaf$sample)
+dge.leaf <- DGEList(counts.leaf[,-1],
+                    group=sample.description2.leaf$group,
+                    samples=sample.description2.leaf,
+                    genes=counts.leaf$target_id)
+# dge.leaf <- calcNormFactors(dge.leaf)
+# # remove genes with low expression level
+# dge.leaf<-dge.leaf[rowSums(cpm(dge.leaf)>1) >= 6,,keep.lib.sizes=FALSE]
+# Kazu's new way:  keep > normalize (012319)
+# Prevent repeated normalization
+ifelse(all(dge.leaf$samples$norm.factors==1),"Normalization has not yet done","Normalization has been done already.") # 
+dge.leaf$samples$norm.factors<-1 # No matter which case, non-normalize libraries.
+# remove genes with low expression level
+dge.leaf<-dge.leaf[rowSums(cpm(dge.leaf)>1) >= 6,keep.lib.sizes=FALSE]
+# normalize
+dge.leaf <- calcNormFactors(dge.leaf)
+
+
+```
+
+# Root
+```{r eval=FALSE, include=FALSE}
+#confirm that everthing is in the right order
+all(colnames(counts.root)[-1]==sample.description2.root$sample)
+dge.root <- DGEList(counts.root[,-1],
+                    group=sample.description2.root$group,
+                    samples=sample.description2.root,
+                    genes=counts.root$target_id)
+# dge.root <- calcNormFactors(dge.root)
+# # remove genes with low expression level
+# dge.root<-dge.root[rowSums(cpm(dge.root)>1) >= 6,,keep.lib.sizes=FALSE]
+# Kazu's new way:  keep > normalize (012319)
+# Prevent repeated normalization
+ifelse(all(dge.root$samples$norm.factors==1),"Normalization has not yet done","Normalization has been done already.") # 
+dge.root$samples$norm.factors<-1 # No matter which case, non-normalize libraries.
+# remove genes with low expression level
+dge.root<-dge.root[rowSums(cpm(dge.root)>1) >= 6,,keep.lib.sizes=FALSE]
+# normalize
+dge.root <- calcNormFactors(dge.root)
+```
+# save edgeR objects
+```{r eval=FALSE, include=FALSE}
+save(dge.leaf,dge.root,sample.description2.leaf,sample.description2.root,file=file.path("..","output","edgeR_dge_objects.e3.v3.0anno.RData")) # Question: dge has sample info.  (092718), block became chracter (101419)
+```
+
+# Interaction model
+
+## table to hold # of DEGs
+```{r}
+n.DEGs.leaf <- matrix(NA, nrow=4, ncol=5, dimnames = list(ref=c("Dead.UN", "Dead.Cr", "Live.UN", "Live.Cr"), term=c("trt+int", "dens+int","int","trt","dens"))) %>% as.data.frame()
+n.DEGs.root <- n.DEGs.leaf
+```
+
+
+# clean working directory
+```{r}
+rm(list={ls() %>% str_subset("^n\\.DEGs", negate = TRUE)})
+knitr::opts_chunk$set(echo = TRUE,error=TRUE)
+library(edgeR);library(tidyverse)
+# annotation file for v3.0annotation
+Br.v3.0.At.BLAST <- read_csv(file.path("..","..","..","Annotation","output","v3.0annotation","Brapa_v3.0_annotated.csv")) 
+# This annotation is redundant with name (Br grene). Eg 
+Br.v3.0.At.BLAST %>% filter(name=="BraA01g040570.3C")
+# reduce the redundancy (112418)
+Br.v3.0anno.At.BLAST.highscore <- Br.v3.0.At.BLAST %>% group_by(name) %>% arrange(desc(score)) %>% dplyr::slice(1)
+
+# load exp1 v3.0 annotation dge files and sample info
+load(file.path("..","output","edgeR_dge_objects.e3.v3.0anno.RData"))
+# for expression pattern graph
+source("../../../tools/Expression_pattern_graph.R",chdir=TRUE)
+# "/Volumes/data_work/Data8/NGS_related/Brassica_microbiome/Brapa_microbes/tools"
+
+```
+# Interaction model, rD.rUN
+```{r}
+# relevel trt and density to "5E_dead" and "FPsc"
+dge.root$samples<-dge.root$samples %>% mutate(trt=fct_relevel(trt,"dead")) #%>% str() 
+dge.root$samples<-dge.root$samples %>% mutate(density=fct_relevel(density,"un")) #%>% str() 
+dge.leaf$samples<-dge.leaf$samples %>% mutate(trt=fct_relevel(trt,"dead")) #%>% str() 
+dge.leaf$samples<-dge.leaf$samples %>% mutate(density=fct_relevel(density,"un")) #%>% str()
+```
+
+
+```{r}
+## dge
+root.design.int <- with(dge.root$samples, model.matrix(~ density*trt + block))
+leaf.design.int <- with(dge.leaf$samples, model.matrix(~ density*trt + block))
+# estimateDisp
+root.dge.int <- estimateDisp(dge.root,design = root.design.int)
+leaf.dge.int <- estimateDisp(dge.leaf,design = leaf.design.int)
+## fit linear model
+root.fit.int <- glmFit(root.dge.int,root.design.int)
+leaf.fit.int <- glmFit(leaf.dge.int,leaf.design.int)
+```
+
+
+```{r}
+# get DEGs, trt effects (coef=c("trtlive","densitycr:trtlive"))
+root.trtlive_densitycr.trtlive.lrt <- glmLRT(root.fit.int,coef = c("trtlive","densitycr:trtlive")) # all coeff containing "trt"
+leaf.trtlive_densitycr.trtlive.lrt <- glmLRT(leaf.fit.int,coef = c("trtlive","densitycr:trtlive")) # all coeff containing "trt"
+
+## all
+root.trtlive_densitycr.trtlive.DEGs.int.all <- topTags(root.trtlive_densitycr.trtlive.lrt,n = Inf,p.value = 1)$table
+leaf.trtlive_densitycr.trtlive.DEGs.int.all <- topTags(leaf.trtlive_densitycr.trtlive.lrt,n = Inf,p.value = 1)$table
+
+
+#DEGs in leaf
+sum(root.trtlive_densitycr.trtlive.DEGs.int.all$FDR <0.05)
+sum(leaf.trtlive_densitycr.trtlive.DEGs.int.all$FDR <0.05)
+
+n.DEGs.root["Dead.UN", "trt+int"] <- sum(root.trtlive_densitycr.trtlive.DEGs.int.all$FDR <0.05)
+n.DEGs.leaf["Dead.UN", "trt+int"] <- sum(leaf.trtlive_densitycr.trtlive.DEGs.int.all$FDR <0.05)
+```
+
+
+```{r}
+# get DEGs, density effects (coef = c("densitycr","densitycr:trtlive")) 
+root.densitycr_densitycr.trtlive.lrt <- glmLRT(root.fit.int,coef = c("densitycr","densitycr:trtlive"))
+leaf.densitycr_densitycr.trtlive.lrt <- glmLRT(leaf.fit.int,coef = c("densitycr","densitycr:trtlive"))
+
+## all
+root.densitycr_densitycr.trtlive.DEGs.int.all <- topTags(root.densitycr_densitycr.trtlive.lrt,n = Inf,p.value = 1)$table
+leaf.densitycr_densitycr.trtlive.DEGs.int.all <- topTags(leaf.densitycr_densitycr.trtlive.lrt,n = Inf,p.value = 1)$table
+
+#DEGs 
+sum(root.densitycr_densitycr.trtlive.DEGs.int.all$FDR <0.05)
+sum(leaf.densitycr_densitycr.trtlive.DEGs.int.all$FDR <0.05)
+
+n.DEGs.root["Dead.UN", "dens+int"] <- sum(root.densitycr_densitycr.trtlive.DEGs.int.all$FDR <0.05)
+n.DEGs.leaf["Dead.UN", "dens+int"] <- sum(leaf.densitycr_densitycr.trtlive.DEGs.int.all$FDR <0.05)
+```
+
+
+```{r}
+# get DEGs, density:trt effects (coef = "densitycr:trtlive") 
+root.densitycr.trtlive.lrt <- glmLRT(root.fit.int,coef = "densitycr:trtlive")
+leaf.densitycr.trtlive.lrt <- glmLRT(leaf.fit.int,coef = "densitycr:trtlive")
+
+root.densitycr.trtlive.DEGs.int.all <- topTags(root.densitycr.trtlive.lrt,n = Inf,p.value = 1)$table
+leaf.densitycr.trtlive.DEGs.int.all <- topTags(leaf.densitycr.trtlive.lrt,n = Inf,p.value = 1)$table
+
+#DEGs 
+sum(root.densitycr.trtlive.DEGs.int.all$FDR <0.05)
+sum(leaf.densitycr.trtlive.DEGs.int.all$FDR <0.05)
+
+n.DEGs.root["Dead.UN", "int"] <- sum(root.densitycr.trtlive.DEGs.int.all$FDR <0.05)
+n.DEGs.leaf["Dead.UN", "int"] <- sum(leaf.densitycr.trtlive.DEGs.int.all$FDR <0.05)
+```
+
+
+```{r}
+# get DEGs, trt effects on UN? (rUN) (coef = "trtlive") 
+root.trtlive.lrt <- glmLRT(root.fit.int,coef = "trtlive")
+leaf.trtlive.lrt <- glmLRT(leaf.fit.int,coef = "trtlive")
+
+## all
+root.trtlive.DEGs.int.all <- topTags(root.trtlive.lrt,n = Inf,p.value = 1)$table
+leaf.trtlive.DEGs.int.all <- topTags(leaf.trtlive.lrt,n = Inf,p.value = 1)$table
+## FDR<0.05
+nrow(topTags(root.trtlive.lrt,n = Inf,p.value = 0.05)$table) # 357
+nrow(topTags(leaf.trtlive.lrt,n = Inf,p.value = 0.05)$table) # NULL
+
+n.DEGs.root["Dead.UN", "trt"] <- sum(root.trtlive.DEGs.int.all$FDR <0.05)
+n.DEGs.leaf["Dead.UN", "trt"] <- sum(leaf.trtlive.DEGs.int.all$FDR <0.05)
+```
+
+
+```{r}
+# get DEGs, density effects (coef = "densitycr"; single) 
+root.densitycr.lrt <- glmLRT(root.fit.int,coef = "densitycr")
+leaf.densitycr.lrt <- glmLRT(leaf.fit.int,coef = "densitycr")
+## all
+root.densitycr.DEGs.int.all <- topTags(root.densitycr.lrt,n = Inf,p.value = 1)$table
+leaf.densitycr.DEGs.int.all <- topTags(leaf.densitycr.lrt,n = Inf,p.value = 1)$table
+
+#number of DEGS
+sum(root.densitycr.DEGs.int.all$FDR < 0.05)
+sum(leaf.densitycr.DEGs.int.all$FDR < 0.05)
+
+n.DEGs.root["Dead.UN", "dens"] <- sum(root.densitycr.DEGs.int.all$FDR < 0.05)
+n.DEGs.leaf["Dead.UN", "dens"] <- sum(leaf.densitycr.DEGs.int.all$FDR < 0.05)
+```
+
+# clean working directory
+```{r}
+rm(list={ls() %>% str_subset("^n\\.DEGs", negate = TRUE)})
+knitr::opts_chunk$set(echo = TRUE,error=TRUE)
+library(edgeR);library(tidyverse)
+# annotation file for v3.0annotation
+Br.v3.0.At.BLAST <- read_csv(file.path("..","..","..","Annotation","output","v3.0annotation","Brapa_v3.0_annotated.csv")) 
+# This annotation is redundant with name (Br grene). Eg 
+Br.v3.0.At.BLAST %>% filter(name=="BraA01g040570.3C")
+# reduce the redundancy (112418)
+Br.v3.0anno.At.BLAST.highscore <- Br.v3.0.At.BLAST %>% group_by(name) %>% arrange(desc(score)) %>% dplyr::slice(1)
+
+# load exp1 v3.0 annotation dge files and sample info
+load(file.path("..","output","edgeR_dge_objects.e3.v3.0anno.RData"))
+# for expression pattern graph
+source("../../../tools/Expression_pattern_graph.R",chdir=TRUE)
+# "/Volumes/data_work/Data8/NGS_related/Brassica_microbiome/Brapa_microbes/tools"
+
+```
+
+# Interaction model, rD.rCR
+```{r}
+# relevel trt and density to "5E_dead" and "FPsc"
+dge.root$samples<-dge.root$samples %>% mutate(trt=fct_relevel(trt,"dead")) #%>% str() 
+dge.root$samples<-dge.root$samples %>% mutate(density=fct_relevel(density,"cr")) #%>% str() 
+dge.leaf$samples<-dge.leaf$samples %>% mutate(trt=fct_relevel(trt,"dead")) #%>% str() 
+dge.leaf$samples<-dge.leaf$samples %>% mutate(density=fct_relevel(density,"cr")) #%>% str() 
+## dge
+root.design.int <- with(dge.root$samples, model.matrix(~ density*trt + block))
+leaf.design.int <- with(dge.leaf$samples, model.matrix(~ density*trt + block))
+# estimateDisp
+root.dge.int <- estimateDisp(dge.root,design = root.design.int)
+leaf.dge.int <- estimateDisp(dge.leaf,design = leaf.design.int)
+## fit linear model
+root.fit.int <- glmFit(root.dge.int,root.design.int)
+leaf.fit.int <- glmFit(leaf.dge.int,leaf.design.int)
+```
+
+
+```{r}
+root.trtlive_densityun.trtlive.lrt <- glmLRT(root.fit.int,coef = c("trtlive","densityun:trtlive")) # all coeff containing "trt"
+leaf.trtlive_densityun.trtlive.lrt <- glmLRT(leaf.fit.int,coef = c("trtlive","densityun:trtlive")) # all coeff containing "trt"
+## all
+root.trtlive_densityun.trtlive.DEGs.int.all <- topTags(root.trtlive_densityun.trtlive.lrt,n = Inf,p.value = 1)$table
+leaf.trtlive_densityun.trtlive.DEGs.int.all <- topTags(leaf.trtlive_densityun.trtlive.lrt,n = Inf,p.value = 1)$table
+
+sum(root.trtlive_densityun.trtlive.DEGs.int.all$FDR < 0.05)
+sum(leaf.trtlive_densityun.trtlive.DEGs.int.all$FDR < 0.05)
+
+n.DEGs.root["Dead.Cr", "trt+int"] <- sum(root.trtlive_densityun.trtlive.DEGs.int.all$FDR < 0.05)
+n.DEGs.leaf["Dead.Cr", "trt+int"] <- sum(leaf.trtlive_densityun.trtlive.DEGs.int.all$FDR < 0.05)
+```
+
+
+```{r}
+# get DEGs, density:treatment (live) effects
+root.densityun.trtlive.lrt <- glmLRT(root.fit.int,coef = "densityun:trtlive")
+leaf.densityun.trtlive.lrt <- glmLRT(leaf.fit.int,coef = "densityun:trtlive")
+## all
+root.densityun.trtlive.DEGs.int.all <- topTags(root.densityun.trtlive.lrt,n = Inf,p.value = 1)$table 
+leaf.densityun.trtlive.DEGs.int.all <- topTags(leaf.densityun.trtlive.lrt,n = Inf,p.value = 1)$table
+
+sum(root.densityun.trtlive.DEGs.int.all$FDR < 0.05)
+sum(leaf.densityun.trtlive.DEGs.int.all$FDR < 0.05)
+
+n.DEGs.root["Dead.Cr", "int"] <- sum(root.densityun.trtlive.DEGs.int.all$FDR < 0.05)
+n.DEGs.leaf["Dead.Cr", "int"] <- sum(leaf.densityun.trtlive.DEGs.int.all$FDR < 0.05)
+```
+
+
+```{r}
+# get DEGs, density effects (coef = c("densityun","densityun:trtlive"))
+root.densityun_densityun.trtlive.lrt <- glmLRT(root.fit.int,coef = c("densityun","densityun:trtlive"))
+leaf.densityun_densityun.trtlive.lrt <- glmLRT(leaf.fit.int,coef = c("densityun","densityun:trtlive"))
+## all
+root.densityun_densityun.trtlive.DEGs.int.all <- topTags(root.densityun_densityun.trtlive.lrt,n = Inf,p.value = 1)$table
+leaf.densityun_densityun.trtlive.DEGs.int.all <- topTags(leaf.densityun_densityun.trtlive.lrt,n = Inf,p.value = 1)$table
+
+sum(root.densityun_densityun.trtlive.DEGs.int.all$FDR < 0.05)
+sum(leaf.densityun_densityun.trtlive.DEGs.int.all$FDR < 0.05)
+
+n.DEGs.root["Dead.Cr", "dens+int"] <- sum(root.densityun_densityun.trtlive.DEGs.int.all$FDR < 0.05)
+n.DEGs.leaf["Dead.Cr", "dens+int"] <- sum(leaf.densityun_densityun.trtlive.DEGs.int.all$FDR < 0.05)
+```
+
+
+```{r}
+# get DEGs, trt effects on CR (rCR) (coef = "trtlive") 
+root.trtlive.lrt <- glmLRT(root.fit.int,coef = "trtlive")
+leaf.trtlive.lrt <- glmLRT(leaf.fit.int,coef = "trtlive")
+## all
+root.trtlive.DEGs.int.all <- topTags(root.trtlive.lrt,n = Inf,p.value = 1)$table
+leaf.trtlive.DEGs.int.all <- topTags(leaf.trtlive.lrt,n = Inf,p.value = 1)$table
+## FDR<0.05
+nrow(topTags(root.trtlive.lrt,n = Inf,p.value = 0.05)$table) 
+nrow(topTags(leaf.trtlive.lrt,n = Inf,p.value = 0.05)$table) 
+
+n.DEGs.root["Dead.Cr", "trt"] <- sum(root.trtlive.DEGs.int.all$FDR < 0.05)
+n.DEGs.leaf["Dead.Cr", "trt"] <- sum(leaf.trtlive.DEGs.int.all$FDR < 0.05)
+```
+
+
+```{r}
+# get DEGs, density effects (coef = "densityun"; single) 
+root.densityun.lrt <- glmLRT(root.fit.int,coef = "densityun")
+leaf.densityun.lrt <- glmLRT(leaf.fit.int,coef = "densityun")
+## all
+root.densityun.DEGs.int.all <- topTags(root.densityun.lrt,n = Inf,p.value = 1)$table
+leaf.densityun.DEGs.int.all <- topTags(leaf.densityun.lrt,n = Inf,p.value = 1)$table
+
+sum(root.densityun.DEGs.int.all$FDR < 0.05)
+sum(leaf.densityun.DEGs.int.all$FDR < 0.05)
+
+n.DEGs.root["Dead.Cr", "dens"] <- sum(root.densityun.DEGs.int.all$FDR < 0.05)
+n.DEGs.leaf["Dead.Cr", "dens"] <- sum(leaf.densityun.DEGs.int.all$FDR < 0.05)
+```
+
+
+# clean working directory
+```{r}
+rm(list={ls() %>% str_subset("^n\\.DEGs", negate = TRUE)})
+knitr::opts_chunk$set(echo = TRUE,error=TRUE)
+library(edgeR);library(tidyverse)
+# annotation file for v3.0annotation
+Br.v3.0.At.BLAST <- read_csv(file.path("..","..","..","Annotation","output","v3.0annotation","Brapa_v3.0_annotated.csv")) 
+# This annotation is redundant with name (Br grene). Eg 
+Br.v3.0.At.BLAST %>% filter(name=="BraA01g040570.3C")
+# reduce the redundancy (112418)
+Br.v3.0anno.At.BLAST.highscore <- Br.v3.0.At.BLAST %>% group_by(name) %>% arrange(desc(score)) %>% dplyr::slice(1)
+
+# load exp1 v3.0 annotation dge files and sample info
+load(file.path("..","output","edgeR_dge_objects.e3.v3.0anno.RData"))
+# for expression pattern graph
+source("../../../tools/Expression_pattern_graph.R",chdir=TRUE)
+# "/Volumes/data_work/Data8/NGS_related/Brassica_microbiome/Brapa_microbes/tools"
+
+```
+
+# rL.rUN
+```{r}
+# relevel trt and density to "live" and "un"
+dge.root$samples<-dge.root$samples %>% mutate(trt=fct_relevel(trt,"live")) #%>% str() 
+dge.root$samples<-dge.root$samples %>% mutate(density=fct_relevel(density,"un")) #%>% str() 
+dge.leaf$samples<-dge.leaf$samples %>% mutate(trt=fct_relevel(trt,"live")) #%>% str() 
+dge.leaf$samples<-dge.leaf$samples %>% mutate(density=fct_relevel(density,"un")) #%>% str()
+```
+
+
+```{r}
+## dge
+root.design.int <- with(dge.root$samples, model.matrix(~ density*trt + block))
+leaf.design.int <- with(dge.leaf$samples, model.matrix(~ density*trt + block))
+# estimateDisp
+root.dge.int <- estimateDisp(dge.root,design = root.design.int)
+leaf.dge.int <- estimateDisp(dge.leaf,design = leaf.design.int)
+## fit linear model
+root.fit.int <- glmFit(root.dge.int,root.design.int)
+leaf.fit.int <- glmFit(leaf.dge.int,leaf.design.int)
+```
+
+
+```{r}
+# get DEGs, trt effects (coef=c("trtdead","densitycr:trtdead"))
+root.trtdead_densitycr.trtdead.lrt <- glmLRT(root.fit.int,coef = c("trtdead","densitycr:trtdead")) # all coeff containing "trt"
+leaf.trtdead_densitycr.trtdead.lrt <- glmLRT(leaf.fit.int,coef = c("trtdead","densitycr:trtdead")) # all coeff containing "trt"
+## all
+root.trtdead_densitycr.trtdead.DEGs.int.all <- topTags(root.trtdead_densitycr.trtdead.lrt,n = Inf,p.value = 1)$table
+leaf.trtdead_densitycr.trtdead.DEGs.int.all <- topTags(leaf.trtdead_densitycr.trtdead.lrt,n = Inf,p.value = 1)$table
+sum(root.trtdead_densitycr.trtdead.DEGs.int.all$FDR < 0.05)
+sum(leaf.trtdead_densitycr.trtdead.DEGs.int.all$FDR < 0.05)
+
+n.DEGs.root["Live.UN", "trt+int"] <- sum(root.trtdead_densitycr.trtdead.DEGs.int.all$FDR < 0.05)
+n.DEGs.leaf["Live.UN", "trt+int"] <- sum(leaf.trtdead_densitycr.trtdead.DEGs.int.all$FDR < 0.05)
+```
+
+
+```{r}
+# get DEGs, density effects (coef = c("densitycr","densitycr:trtdead"))
+root.densitycr_densitycr.trtdead.lrt <- glmLRT(root.fit.int,coef = c("densitycr","densitycr:trtdead"))
+leaf.densitycr_densitycr.trtdead.lrt <- glmLRT(leaf.fit.int,coef = c("densitycr","densitycr:trtdead"))
+# all
+root.densitycr_densitycr.trtdead.DEGs.int.all <- topTags(root.densitycr_densitycr.trtdead.lrt,n = Inf,p.value = 1)$table
+leaf.densitycr_densitycr.trtdead.DEGs.int.all <- topTags(leaf.densitycr_densitycr.trtdead.lrt,n = Inf,p.value = 1)$table
+sum(root.densitycr_densitycr.trtdead.DEGs.int.all$FDR < 0.05)
+sum(leaf.densitycr_densitycr.trtdead.DEGs.int.all$FDR < 0.05)
+
+n.DEGs.root["Live.UN", "dens+int"] <- sum(root.densitycr_densitycr.trtdead.DEGs.int.all$FDR < 0.05)
+n.DEGs.leaf["Live.UN", "dens+int"] <- sum(leaf.densitycr_densitycr.trtdead.DEGs.int.all$FDR < 0.05)
+```
+
+
+```{r}
+# get DEGs, density:genotype effects (coef = "densitycr:trtdead"))
+root.densitycr.trtdead.lrt <- glmLRT(root.fit.int,coef = "densitycr:trtdead")
+leaf.densitycr.trtdead.lrt <- glmLRT(leaf.fit.int,coef = "densitycr:trtdead")
+# all
+root.densitycr.trtdead.DEGs.int.all <- topTags(root.densitycr.trtdead.lrt,n = Inf,p.value = 1)$table
+leaf.densitycr.trtdead.DEGs.int.all <- topTags(leaf.densitycr.trtdead.lrt,n = Inf,p.value = 1)$table
+sum(root.densitycr.trtdead.DEGs.int.all$FDR < 0.05)
+sum(leaf.densitycr.trtdead.DEGs.int.all$FDR < 0.05)
+
+n.DEGs.root["Live.UN", "int"] <- sum(root.densitycr.trtdead.DEGs.int.all$FDR < 0.05)
+n.DEGs.leaf["Live.UN", "int"] <- sum(leaf.densitycr.trtdead.DEGs.int.all$FDR < 0.05)
+
+```
+
+
+```{r}
+# get DEGs, trt effects on UN? (rUN) (coef = "trtdead") 
+root.trtdead.lrt <- glmLRT(root.fit.int,coef = "trtdead")
+leaf.trtdead.lrt <- glmLRT(leaf.fit.int,coef = "trtdead")
+## all
+root.trtdead.DEGs.int.all <- topTags(root.trtdead.lrt,n = Inf,p.value = 1)$table
+leaf.trtdead.DEGs.int.all <- topTags(leaf.trtdead.lrt,n = Inf,p.value = 1)$table
+## FDR<0.05
+#nrow(topTags(root.trtdead.lrt,n = Inf,p.value = 0.05)$table) # 3434
+#nrow(topTags(leaf.trtdead.lrt,n = Inf,p.value = 0.05)$table) # 370
+sum(root.trtdead.DEGs.int.all$FDR < 0.05)
+sum(leaf.trtdead.DEGs.int.all$FDR < 0.05)
+
+n.DEGs.root["Live.UN", "trt"] <- sum(root.trtdead.DEGs.int.all$FDR < 0.05)
+n.DEGs.leaf["Live.UN", "trt"] <- sum(leaf.trtdead.DEGs.int.all$FDR < 0.05)
+```
+
+
+```{r}
+# get DEGs, density effects (coef = "densitycr") (new)
+root.densitycr.lrt <- glmLRT(root.fit.int,coef = "densitycr")
+leaf.densitycr.lrt <- glmLRT(leaf.fit.int,coef = "densitycr")
+# all
+root.densitycr.DEGs.int.all <- topTags(root.densitycr.lrt,n = Inf,p.value = 1)$table
+leaf.densitycr.DEGs.int.all <- topTags(leaf.densitycr.lrt,n = Inf,p.value = 1)$table
+sum(root.densitycr.DEGs.int.all$FDR < 0.05)
+sum(leaf.densitycr.DEGs.int.all$FDR < 0.05)
+
+n.DEGs.root["Live.UN", "dens"] <- sum(root.densitycr.DEGs.int.all$FDR < 0.05)
+n.DEGs.leaf["Live.UN", "dens"] <- sum(leaf.densitycr.DEGs.int.all$FDR < 0.05)
+```
+
+# clean working directory
+```{r}
+rm(list={ls() %>% str_subset("^n\\.DEGs", negate = TRUE)})
+knitr::opts_chunk$set(echo = TRUE,error=TRUE)
+library(edgeR);library(tidyverse)
+# annotation file for v3.0annotation
+Br.v3.0.At.BLAST <- read_csv(file.path("..","..","..","Annotation","output","v3.0annotation","Brapa_v3.0_annotated.csv")) 
+# This annotation is redundant with name (Br grene). Eg 
+Br.v3.0.At.BLAST %>% filter(name=="BraA01g040570.3C")
+# reduce the redundancy (112418)
+Br.v3.0anno.At.BLAST.highscore <- Br.v3.0.At.BLAST %>% group_by(name) %>% arrange(desc(score)) %>% dplyr::slice(1)
+
+# load exp1 v3.0 annotation dge files and sample info
+load(file.path("..","output","edgeR_dge_objects.e3.v3.0anno.RData"))
+# for expression pattern graph
+source("../../../tools/Expression_pattern_graph.R",chdir=TRUE)
+# "/Volumes/data_work/Data8/NGS_related/Brassica_microbiome/Brapa_microbes/tools"
+
+```
+
+# rL.rCR
+```{r}
+# relevel trt and density to "live" and "un"
+dge.root$samples<-dge.root$samples %>% mutate(trt=fct_relevel(trt,"live")) #%>% str() 
+dge.root$samples<-dge.root$samples %>% mutate(density=fct_relevel(density,"cr")) #%>% str() 
+dge.leaf$samples<-dge.leaf$samples %>% mutate(trt=fct_relevel(trt,"live")) #%>% str() 
+dge.leaf$samples<-dge.leaf$samples %>% mutate(density=fct_relevel(density,"cr")) #%>% str() 
+## dge
+root.design.int <- with(dge.root$samples, model.matrix(~ density*trt + block))
+leaf.design.int <- with(dge.leaf$samples, model.matrix(~ density*trt + block))
+# estimateDisp
+root.dge.int <- estimateDisp(dge.root,design = root.design.int)
+leaf.dge.int <- estimateDisp(dge.leaf,design = leaf.design.int)
+## fit linear model
+root.fit.int <- glmFit(root.dge.int,root.design.int)
+leaf.fit.int <- glmFit(leaf.dge.int,leaf.design.int)
+```
+
+
+```{r}
+# get DEGs, trt effects (coef=c("trtdead","densityun:trtdead"))
+root.trtdead_densityun.trtdead.lrt <- glmLRT(root.fit.int,coef = c("trtdead","densityun:trtdead")) # all coeff containing "trt"
+leaf.trtdead_densityun.trtdead.lrt <- glmLRT(leaf.fit.int,coef = c("trtdead","densityun:trtdead")) # all coeff containing "trt"
+## all
+root.trtdead_densityun.trtdead.DEGs.int.all <- topTags(root.trtdead_densityun.trtdead.lrt,n = Inf,p.value = 1)$table
+leaf.trtdead_densityun.trtdead.DEGs.int.all <- topTags(leaf.trtdead_densityun.trtdead.lrt,n = Inf,p.value = 1)$table
+sum(root.trtdead_densityun.trtdead.DEGs.int.all$FDR<0.05)
+sum(leaf.trtdead_densityun.trtdead.DEGs.int.all$FDR<0.05)
+
+n.DEGs.root["Live.Cr", "trt+int"] <- sum(root.trtdead_densityun.trtdead.DEGs.int.all$FDR < 0.05)
+n.DEGs.leaf["Live.Cr", "trt+int"] <- sum(leaf.trtdead_densityun.trtdead.DEGs.int.all$FDR < 0.05)
+```
+
+
+```{r}
+# get DEGs, density effects (coef = c("densityun","densityun:trtdead"))
+root.densityun_densityun.trtdead.lrt <- glmLRT(root.fit.int,coef = c("densityun","densityun:trtdead"))
+leaf.densityun_densityun.trtdead.lrt <- glmLRT(leaf.fit.int,coef = c("densityun","densityun:trtdead"))
+## all
+root.densityun_densityun.trtdead.DEGs.int.all <- topTags(root.densityun_densityun.trtdead.lrt,n = Inf,p.value = 1)$table
+leaf.densityun_densityun.trtdead.DEGs.int.all <- topTags(leaf.densityun_densityun.trtdead.lrt,n = Inf,p.value = 1)$table
+sum(root.densityun_densityun.trtdead.DEGs.int.all$FDR<0.05)
+sum(leaf.densityun_densityun.trtdead.DEGs.int.all$FDR<0.05)
+
+n.DEGs.root["Live.Cr", "dens+int"] <- sum(root.densityun_densityun.trtdead.DEGs.int.all$FDR < 0.05)
+n.DEGs.leaf["Live.Cr", "dens+int"] <- sum(leaf.densityun_densityun.trtdead.DEGs.int.all$FDR < 0.05)
+```
+
+
+```{r}
+# get DEGs, density:treatment effects (coef = "densityun:trtdead")
+root.densityun.trtdead.lrt <- glmLRT(root.fit.int,coef = "densityun:trtdead")
+leaf.densityun.trtdead.lrt <- glmLRT(leaf.fit.int,coef = "densityun:trtdead")
+## all
+root.densityun.trtdead.DEGs.int.all <- topTags(root.densityun.trtdead.lrt,n = Inf,p.value = 1)$table
+leaf.densityun.trtdead.DEGs.int.all <- topTags(leaf.densityun.trtdead.lrt,n = Inf,p.value = 1)$table
+sum(root.densityun.trtdead.DEGs.int.all$FDR<0.05)
+sum(leaf.densityun.trtdead.DEGs.int.all$FDR<0.05)
+
+n.DEGs.root["Live.Cr", "int"] <- sum(root.densityun.trtdead.DEGs.int.all$FDR < 0.05)
+n.DEGs.leaf["Live.Cr", "int"] <- sum(leaf.densityun.trtdead.DEGs.int.all$FDR < 0.05)
+```
+
+
+```{r}
+# get DEGs, trt effects on CR? (rCR) (coef = "trtdead") 
+root.trtdead.lrt <- glmLRT(root.fit.int,coef = "trtdead")
+leaf.trtdead.lrt <- glmLRT(leaf.fit.int,coef = "trtdead")
+## all
+root.trtdead.DEGs.int.all <- topTags(root.trtdead.lrt,n = Inf,p.value = 1)$table
+leaf.trtdead.DEGs.int.all <- topTags(leaf.trtdead.lrt,n = Inf,p.value = 1)$table
+sum(root.trtdead.DEGs.int.all$FDR<0.05)
+sum(leaf.trtdead.DEGs.int.all$FDR<0.05)
+
+n.DEGs.root["Live.Cr", "trt"] <- sum(root.trtdead.DEGs.int.all$FDR < 0.05)
+n.DEGs.leaf["Live.Cr", "trt"] <- sum(leaf.trtdead.DEGs.int.all$FDR < 0.05)
+```
+
+
+```{r}
+# get DEGs, density effects (coef = "densityun") (single, new)
+root.densityun.lrt <- glmLRT(root.fit.int,coef = "densityun")
+leaf.densityun.lrt <- glmLRT(leaf.fit.int,coef = "densityun")
+## all
+root.densityun.DEGs.int.all <- topTags(root.densityun.lrt,n = Inf,p.value = 1)$table
+leaf.densityun.DEGs.int.all <- topTags(leaf.densityun.lrt,n = Inf,p.value = 1)$table
+sum(root.densityun.DEGs.int.all$FDR<0.05)
+sum(leaf.densityun.DEGs.int.all$FDR<0.05)
+
+n.DEGs.root["Live.Cr", "dens"] <- sum(root.densityun.DEGs.int.all$FDR < 0.05)
+n.DEGs.leaf["Live.Cr", "dens"] <- sum(leaf.densityun.DEGs.int.all$FDR < 0.05)
+```
+
+```{r}
+n.DEGs.leaf
+write.csv(n.DEGs.leaf, "../output/e3.v3.0anno.interaction.n.DEGS.leaf.csv")
+```
+
+```{r}
+n.DEGs.root
+write.csv(n.DEGs.root, "../output/e3.v3.0anno.interaction.n.DEGS.root.csv")
+
+```
+
+
+# Interaction model WITH NO BLOCK EFFECTS!
+
+## table to hold # of DEGs
+```{r}
+n.DEGs.leaf.NOBLOCK <- matrix(NA, nrow=4, ncol=5, dimnames = list(ref=c("Dead.UN", "Dead.Cr", "Live.UN", "Live.Cr"), term=c("trt+int", "dens+int","int","trt","dens"))) %>% as.data.frame()
+n.DEGs.root.NOBLOCK <- n.DEGs.leaf.NOBLOCK
+```
+
+
+# clean working directory
+```{r}
+rm(list={ls() %>% str_subset("^n\\.DEGs", negate = TRUE)})
+knitr::opts_chunk$set(echo = TRUE,error=TRUE)
+library(edgeR);library(tidyverse)
+# annotation file for v3.0annotation
+Br.v3.0.At.BLAST <- read_csv(file.path("..","..","..","Annotation","output","v3.0annotation","Brapa_v3.0_annotated.csv")) 
+# This annotation is redundant with name (Br grene). Eg 
+Br.v3.0.At.BLAST %>% filter(name=="BraA01g040570.3C")
+# reduce the redundancy (112418)
+Br.v3.0anno.At.BLAST.highscore <- Br.v3.0.At.BLAST %>% group_by(name) %>% arrange(desc(score)) %>% dplyr::slice(1)
+
+# load exp1 v3.0 annotation dge files and sample info
+load(file.path("..","output","edgeR_dge_objects.e3.v3.0anno.RData"))
+# for expression pattern graph
+source("../../../tools/Expression_pattern_graph.R",chdir=TRUE)
+# "/Volumes/data_work/Data8/NGS_related/Brassica_microbiome/Brapa_microbes/tools"
+
+```
+# Interaction model, rD.rUN
+```{r}
+# relevel trt and density to "5E_dead" and "FPsc"
+dge.root$samples<-dge.root$samples %>% mutate(trt=fct_relevel(trt,"dead")) #%>% str() 
+dge.root$samples<-dge.root$samples %>% mutate(density=fct_relevel(density,"un")) #%>% str() 
+dge.leaf$samples<-dge.leaf$samples %>% mutate(trt=fct_relevel(trt,"dead")) #%>% str() 
+dge.leaf$samples<-dge.leaf$samples %>% mutate(density=fct_relevel(density,"un")) #%>% str()
+```
+
+
+```{r}
+## dge
+root.design.int <- with(dge.root$samples, model.matrix(~ density*trt))
+leaf.design.int <- with(dge.leaf$samples, model.matrix(~ density*trt))
+# estimateDisp
+root.dge.int <- estimateDisp(dge.root,design = root.design.int)
+leaf.dge.int <- estimateDisp(dge.leaf,design = leaf.design.int)
+## fit linear model
+root.fit.int <- glmFit(root.dge.int,root.design.int)
+leaf.fit.int <- glmFit(leaf.dge.int,leaf.design.int)
+```
+
+
+```{r}
+# get DEGs, trt effects (coef=c("trtlive","densitycr:trtlive"))
+root.trtlive_densitycr.trtlive.lrt <- glmLRT(root.fit.int,coef = c("trtlive","densitycr:trtlive")) # all coeff containing "trt"
+leaf.trtlive_densitycr.trtlive.lrt <- glmLRT(leaf.fit.int,coef = c("trtlive","densitycr:trtlive")) # all coeff containing "trt"
+
+## all
+root.trtlive_densitycr.trtlive.DEGs.int.all <- topTags(root.trtlive_densitycr.trtlive.lrt,n = Inf,p.value = 1)$table
+leaf.trtlive_densitycr.trtlive.DEGs.int.all <- topTags(leaf.trtlive_densitycr.trtlive.lrt,n = Inf,p.value = 1)$table
+
+
+#DEGs in leaf
+sum(root.trtlive_densitycr.trtlive.DEGs.int.all$FDR <0.05)
+sum(leaf.trtlive_densitycr.trtlive.DEGs.int.all$FDR <0.05)
+
+n.DEGs.root.NOBLOCK["Dead.UN", "trt+int"] <- sum(root.trtlive_densitycr.trtlive.DEGs.int.all$FDR <0.05)
+n.DEGs.leaf.NOBLOCK["Dead.UN", "trt+int"] <- sum(leaf.trtlive_densitycr.trtlive.DEGs.int.all$FDR <0.05)
+```
+
+
+```{r}
+# get DEGs, density effects (coef = c("densitycr","densitycr:trtlive")) 
+root.densitycr_densitycr.trtlive.lrt <- glmLRT(root.fit.int,coef = c("densitycr","densitycr:trtlive"))
+leaf.densitycr_densitycr.trtlive.lrt <- glmLRT(leaf.fit.int,coef = c("densitycr","densitycr:trtlive"))
+
+## all
+root.densitycr_densitycr.trtlive.DEGs.int.all <- topTags(root.densitycr_densitycr.trtlive.lrt,n = Inf,p.value = 1)$table
+leaf.densitycr_densitycr.trtlive.DEGs.int.all <- topTags(leaf.densitycr_densitycr.trtlive.lrt,n = Inf,p.value = 1)$table
+
+#DEGs 
+sum(root.densitycr_densitycr.trtlive.DEGs.int.all$FDR <0.05)
+sum(leaf.densitycr_densitycr.trtlive.DEGs.int.all$FDR <0.05)
+
+n.DEGs.root.NOBLOCK["Dead.UN", "dens+int"] <- sum(root.densitycr_densitycr.trtlive.DEGs.int.all$FDR <0.05)
+n.DEGs.leaf.NOBLOCK["Dead.UN", "dens+int"] <- sum(leaf.densitycr_densitycr.trtlive.DEGs.int.all$FDR <0.05)
+```
+
+
+```{r}
+# get DEGs, density:trt effects (coef = "densitycr:trtlive") 
+root.densitycr.trtlive.lrt <- glmLRT(root.fit.int,coef = "densitycr:trtlive")
+leaf.densitycr.trtlive.lrt <- glmLRT(leaf.fit.int,coef = "densitycr:trtlive")
+
+root.densitycr.trtlive.DEGs.int.all <- topTags(root.densitycr.trtlive.lrt,n = Inf,p.value = 1)$table
+leaf.densitycr.trtlive.DEGs.int.all <- topTags(leaf.densitycr.trtlive.lrt,n = Inf,p.value = 1)$table
+
+#DEGs 
+sum(root.densitycr.trtlive.DEGs.int.all$FDR <0.05)
+sum(leaf.densitycr.trtlive.DEGs.int.all$FDR <0.05)
+
+n.DEGs.root.NOBLOCK["Dead.UN", "int"] <- sum(root.densitycr.trtlive.DEGs.int.all$FDR <0.05)
+n.DEGs.leaf.NOBLOCK["Dead.UN", "int"] <- sum(leaf.densitycr.trtlive.DEGs.int.all$FDR <0.05)
+```
+
+
+```{r}
+# get DEGs, trt effects on UN? (rUN) (coef = "trtlive") 
+root.trtlive.lrt <- glmLRT(root.fit.int,coef = "trtlive")
+leaf.trtlive.lrt <- glmLRT(leaf.fit.int,coef = "trtlive")
+
+## all
+root.trtlive.DEGs.int.all <- topTags(root.trtlive.lrt,n = Inf,p.value = 1)$table
+leaf.trtlive.DEGs.int.all <- topTags(leaf.trtlive.lrt,n = Inf,p.value = 1)$table
+## FDR<0.05
+nrow(topTags(root.trtlive.lrt,n = Inf,p.value = 0.05)$table) # 357
+nrow(topTags(leaf.trtlive.lrt,n = Inf,p.value = 0.05)$table) # NULL
+
+n.DEGs.root.NOBLOCK["Dead.UN", "trt"] <- sum(root.trtlive.DEGs.int.all$FDR <0.05)
+n.DEGs.leaf.NOBLOCK["Dead.UN", "trt"] <- sum(leaf.trtlive.DEGs.int.all$FDR <0.05)
+```
+
+
+```{r}
+# get DEGs, density effects (coef = "densitycr"; single) 
+root.densitycr.lrt <- glmLRT(root.fit.int,coef = "densitycr")
+leaf.densitycr.lrt <- glmLRT(leaf.fit.int,coef = "densitycr")
+## all
+root.densitycr.DEGs.int.all <- topTags(root.densitycr.lrt,n = Inf,p.value = 1)$table
+leaf.densitycr.DEGs.int.all <- topTags(leaf.densitycr.lrt,n = Inf,p.value = 1)$table
+
+#number of DEGS
+sum(root.densitycr.DEGs.int.all$FDR < 0.05)
+sum(leaf.densitycr.DEGs.int.all$FDR < 0.05)
+
+n.DEGs.root.NOBLOCK["Dead.UN", "dens"] <- sum(root.densitycr.DEGs.int.all$FDR < 0.05)
+n.DEGs.leaf.NOBLOCK["Dead.UN", "dens"] <- sum(leaf.densitycr.DEGs.int.all$FDR < 0.05)
+```
+
+# clean working directory
+```{r}
+rm(list={ls() %>% str_subset("^n\\.DEGs", negate = TRUE)})
+knitr::opts_chunk$set(echo = TRUE,error=TRUE)
+library(edgeR);library(tidyverse)
+# annotation file for v3.0annotation
+Br.v3.0.At.BLAST <- read_csv(file.path("..","..","..","Annotation","output","v3.0annotation","Brapa_v3.0_annotated.csv")) 
+# This annotation is redundant with name (Br grene). Eg 
+Br.v3.0.At.BLAST %>% filter(name=="BraA01g040570.3C")
+# reduce the redundancy (112418)
+Br.v3.0anno.At.BLAST.highscore <- Br.v3.0.At.BLAST %>% group_by(name) %>% arrange(desc(score)) %>% dplyr::slice(1)
+
+# load exp1 v3.0 annotation dge files and sample info
+load(file.path("..","output","edgeR_dge_objects.e3.v3.0anno.RData"))
+# for expression pattern graph
+source("../../../tools/Expression_pattern_graph.R",chdir=TRUE)
+# "/Volumes/data_work/Data8/NGS_related/Brassica_microbiome/Brapa_microbes/tools"
+
+```
+
+# Interaction model, rD.rCR
+```{r}
+# relevel trt and density to "5E_dead" and "FPsc"
+dge.root$samples<-dge.root$samples %>% mutate(trt=fct_relevel(trt,"dead")) #%>% str() 
+dge.root$samples<-dge.root$samples %>% mutate(density=fct_relevel(density,"cr")) #%>% str() 
+dge.leaf$samples<-dge.leaf$samples %>% mutate(trt=fct_relevel(trt,"dead")) #%>% str() 
+dge.leaf$samples<-dge.leaf$samples %>% mutate(density=fct_relevel(density,"cr")) #%>% str() 
+## dge
+root.design.int <- with(dge.root$samples, model.matrix(~ density*trt))
+leaf.design.int <- with(dge.leaf$samples, model.matrix(~ density*trt))
+# estimateDisp
+root.dge.int <- estimateDisp(dge.root,design = root.design.int)
+leaf.dge.int <- estimateDisp(dge.leaf,design = leaf.design.int)
+## fit linear model
+root.fit.int <- glmFit(root.dge.int,root.design.int)
+leaf.fit.int <- glmFit(leaf.dge.int,leaf.design.int)
+```
+
+
+```{r}
+root.trtlive_densityun.trtlive.lrt <- glmLRT(root.fit.int,coef = c("trtlive","densityun:trtlive")) # all coeff containing "trt"
+leaf.trtlive_densityun.trtlive.lrt <- glmLRT(leaf.fit.int,coef = c("trtlive","densityun:trtlive")) # all coeff containing "trt"
+## all
+root.trtlive_densityun.trtlive.DEGs.int.all <- topTags(root.trtlive_densityun.trtlive.lrt,n = Inf,p.value = 1)$table
+leaf.trtlive_densityun.trtlive.DEGs.int.all <- topTags(leaf.trtlive_densityun.trtlive.lrt,n = Inf,p.value = 1)$table
+
+sum(root.trtlive_densityun.trtlive.DEGs.int.all$FDR < 0.05)
+sum(leaf.trtlive_densityun.trtlive.DEGs.int.all$FDR < 0.05)
+
+n.DEGs.root.NOBLOCK["Dead.Cr", "trt+int"] <- sum(root.trtlive_densityun.trtlive.DEGs.int.all$FDR < 0.05)
+n.DEGs.leaf.NOBLOCK["Dead.Cr", "trt+int"] <- sum(leaf.trtlive_densityun.trtlive.DEGs.int.all$FDR < 0.05)
+```
+
+
+```{r}
+# get DEGs, density:treatment (live) effects
+root.densityun.trtlive.lrt <- glmLRT(root.fit.int,coef = "densityun:trtlive")
+leaf.densityun.trtlive.lrt <- glmLRT(leaf.fit.int,coef = "densityun:trtlive")
+## all
+root.densityun.trtlive.DEGs.int.all <- topTags(root.densityun.trtlive.lrt,n = Inf,p.value = 1)$table 
+leaf.densityun.trtlive.DEGs.int.all <- topTags(leaf.densityun.trtlive.lrt,n = Inf,p.value = 1)$table
+
+sum(root.densityun.trtlive.DEGs.int.all$FDR < 0.05)
+sum(leaf.densityun.trtlive.DEGs.int.all$FDR < 0.05)
+
+n.DEGs.root.NOBLOCK["Dead.Cr", "int"] <- sum(root.densityun.trtlive.DEGs.int.all$FDR < 0.05)
+n.DEGs.leaf.NOBLOCK["Dead.Cr", "int"] <- sum(leaf.densityun.trtlive.DEGs.int.all$FDR < 0.05)
+```
+
+
+```{r}
+# get DEGs, density effects (coef = c("densityun","densityun:trtlive"))
+root.densityun_densityun.trtlive.lrt <- glmLRT(root.fit.int,coef = c("densityun","densityun:trtlive"))
+leaf.densityun_densityun.trtlive.lrt <- glmLRT(leaf.fit.int,coef = c("densityun","densityun:trtlive"))
+## all
+root.densityun_densityun.trtlive.DEGs.int.all <- topTags(root.densityun_densityun.trtlive.lrt,n = Inf,p.value = 1)$table
+leaf.densityun_densityun.trtlive.DEGs.int.all <- topTags(leaf.densityun_densityun.trtlive.lrt,n = Inf,p.value = 1)$table
+
+sum(root.densityun_densityun.trtlive.DEGs.int.all$FDR < 0.05)
+sum(leaf.densityun_densityun.trtlive.DEGs.int.all$FDR < 0.05)
+
+n.DEGs.root.NOBLOCK["Dead.Cr", "dens+int"] <- sum(root.densityun_densityun.trtlive.DEGs.int.all$FDR < 0.05)
+n.DEGs.leaf.NOBLOCK["Dead.Cr", "dens+int"] <- sum(leaf.densityun_densityun.trtlive.DEGs.int.all$FDR < 0.05)
+```
+
+
+```{r}
+# get DEGs, trt effects on CR (rCR) (coef = "trtlive") 
+root.trtlive.lrt <- glmLRT(root.fit.int,coef = "trtlive")
+leaf.trtlive.lrt <- glmLRT(leaf.fit.int,coef = "trtlive")
+## all
+root.trtlive.DEGs.int.all <- topTags(root.trtlive.lrt,n = Inf,p.value = 1)$table
+leaf.trtlive.DEGs.int.all <- topTags(leaf.trtlive.lrt,n = Inf,p.value = 1)$table
+## FDR<0.05
+nrow(topTags(root.trtlive.lrt,n = Inf,p.value = 0.05)$table) 
+nrow(topTags(leaf.trtlive.lrt,n = Inf,p.value = 0.05)$table) 
+
+n.DEGs.root.NOBLOCK["Dead.Cr", "trt"] <- sum(root.trtlive.DEGs.int.all$FDR < 0.05)
+n.DEGs.leaf.NOBLOCK["Dead.Cr", "trt"] <- sum(leaf.trtlive.DEGs.int.all$FDR < 0.05)
+```
+
+
+```{r}
+# get DEGs, density effects (coef = "densityun"; single) 
+root.densityun.lrt <- glmLRT(root.fit.int,coef = "densityun")
+leaf.densityun.lrt <- glmLRT(leaf.fit.int,coef = "densityun")
+## all
+root.densityun.DEGs.int.all <- topTags(root.densityun.lrt,n = Inf,p.value = 1)$table
+leaf.densityun.DEGs.int.all <- topTags(leaf.densityun.lrt,n = Inf,p.value = 1)$table
+
+sum(root.densityun.DEGs.int.all$FDR < 0.05)
+sum(leaf.densityun.DEGs.int.all$FDR < 0.05)
+
+n.DEGs.root.NOBLOCK["Dead.Cr", "dens"] <- sum(root.densityun.DEGs.int.all$FDR < 0.05)
+n.DEGs.leaf.NOBLOCK["Dead.Cr", "dens"] <- sum(leaf.densityun.DEGs.int.all$FDR < 0.05)
+```
+
+
+# clean working directory
+```{r}
+rm(list={ls() %>% str_subset("^n\\.DEGs", negate = TRUE)})
+knitr::opts_chunk$set(echo = TRUE,error=TRUE)
+library(edgeR);library(tidyverse)
+# annotation file for v3.0annotation
+Br.v3.0.At.BLAST <- read_csv(file.path("..","..","..","Annotation","output","v3.0annotation","Brapa_v3.0_annotated.csv")) 
+# This annotation is redundant with name (Br grene). Eg 
+Br.v3.0.At.BLAST %>% filter(name=="BraA01g040570.3C")
+# reduce the redundancy (112418)
+Br.v3.0anno.At.BLAST.highscore <- Br.v3.0.At.BLAST %>% group_by(name) %>% arrange(desc(score)) %>% dplyr::slice(1)
+
+# load exp1 v3.0 annotation dge files and sample info
+load(file.path("..","output","edgeR_dge_objects.e3.v3.0anno.RData"))
+# for expression pattern graph
+source("../../../tools/Expression_pattern_graph.R",chdir=TRUE)
+# "/Volumes/data_work/Data8/NGS_related/Brassica_microbiome/Brapa_microbes/tools"
+
+```
+
+# rL.rUN
+```{r}
+# relevel trt and density to "live" and "un"
+dge.root$samples<-dge.root$samples %>% mutate(trt=fct_relevel(trt,"live")) #%>% str() 
+dge.root$samples<-dge.root$samples %>% mutate(density=fct_relevel(density,"un")) #%>% str() 
+dge.leaf$samples<-dge.leaf$samples %>% mutate(trt=fct_relevel(trt,"live")) #%>% str() 
+dge.leaf$samples<-dge.leaf$samples %>% mutate(density=fct_relevel(density,"un")) #%>% str()
+```
+
+
+```{r}
+## dge
+root.design.int <- with(dge.root$samples, model.matrix(~ density*trt))
+leaf.design.int <- with(dge.leaf$samples, model.matrix(~ density*trt))
+# estimateDisp
+root.dge.int <- estimateDisp(dge.root,design = root.design.int)
+leaf.dge.int <- estimateDisp(dge.leaf,design = leaf.design.int)
+## fit linear model
+root.fit.int <- glmFit(root.dge.int,root.design.int)
+leaf.fit.int <- glmFit(leaf.dge.int,leaf.design.int)
+```
+
+
+```{r}
+# get DEGs, trt effects (coef=c("trtdead","densitycr:trtdead"))
+root.trtdead_densitycr.trtdead.lrt <- glmLRT(root.fit.int,coef = c("trtdead","densitycr:trtdead")) # all coeff containing "trt"
+leaf.trtdead_densitycr.trtdead.lrt <- glmLRT(leaf.fit.int,coef = c("trtdead","densitycr:trtdead")) # all coeff containing "trt"
+## all
+root.trtdead_densitycr.trtdead.DEGs.int.all <- topTags(root.trtdead_densitycr.trtdead.lrt,n = Inf,p.value = 1)$table
+leaf.trtdead_densitycr.trtdead.DEGs.int.all <- topTags(leaf.trtdead_densitycr.trtdead.lrt,n = Inf,p.value = 1)$table
+sum(root.trtdead_densitycr.trtdead.DEGs.int.all$FDR < 0.05)
+sum(leaf.trtdead_densitycr.trtdead.DEGs.int.all$FDR < 0.05)
+
+n.DEGs.root.NOBLOCK["Live.UN", "trt+int"] <- sum(root.trtdead_densitycr.trtdead.DEGs.int.all$FDR < 0.05)
+n.DEGs.leaf.NOBLOCK["Live.UN", "trt+int"] <- sum(leaf.trtdead_densitycr.trtdead.DEGs.int.all$FDR < 0.05)
+```
+
+
+```{r}
+# get DEGs, density effects (coef = c("densitycr","densitycr:trtdead"))
+root.densitycr_densitycr.trtdead.lrt <- glmLRT(root.fit.int,coef = c("densitycr","densitycr:trtdead"))
+leaf.densitycr_densitycr.trtdead.lrt <- glmLRT(leaf.fit.int,coef = c("densitycr","densitycr:trtdead"))
+# all
+root.densitycr_densitycr.trtdead.DEGs.int.all <- topTags(root.densitycr_densitycr.trtdead.lrt,n = Inf,p.value = 1)$table
+leaf.densitycr_densitycr.trtdead.DEGs.int.all <- topTags(leaf.densitycr_densitycr.trtdead.lrt,n = Inf,p.value = 1)$table
+sum(root.densitycr_densitycr.trtdead.DEGs.int.all$FDR < 0.05)
+sum(leaf.densitycr_densitycr.trtdead.DEGs.int.all$FDR < 0.05)
+
+n.DEGs.root.NOBLOCK["Live.UN", "dens+int"] <- sum(root.densitycr_densitycr.trtdead.DEGs.int.all$FDR < 0.05)
+n.DEGs.leaf.NOBLOCK["Live.UN", "dens+int"] <- sum(leaf.densitycr_densitycr.trtdead.DEGs.int.all$FDR < 0.05)
+```
+
+
+```{r}
+# get DEGs, density:genotype effects (coef = "densitycr:trtdead"))
+root.densitycr.trtdead.lrt <- glmLRT(root.fit.int,coef = "densitycr:trtdead")
+leaf.densitycr.trtdead.lrt <- glmLRT(leaf.fit.int,coef = "densitycr:trtdead")
+# all
+root.densitycr.trtdead.DEGs.int.all <- topTags(root.densitycr.trtdead.lrt,n = Inf,p.value = 1)$table
+leaf.densitycr.trtdead.DEGs.int.all <- topTags(leaf.densitycr.trtdead.lrt,n = Inf,p.value = 1)$table
+sum(root.densitycr.trtdead.DEGs.int.all$FDR < 0.05)
+sum(leaf.densitycr.trtdead.DEGs.int.all$FDR < 0.05)
+
+n.DEGs.root.NOBLOCK["Live.UN", "int"] <- sum(root.densitycr.trtdead.DEGs.int.all$FDR < 0.05)
+n.DEGs.leaf.NOBLOCK["Live.UN", "int"] <- sum(leaf.densitycr.trtdead.DEGs.int.all$FDR < 0.05)
+
+```
+
+
+```{r}
+# get DEGs, trt effects on UN? (rUN) (coef = "trtdead") 
+root.trtdead.lrt <- glmLRT(root.fit.int,coef = "trtdead")
+leaf.trtdead.lrt <- glmLRT(leaf.fit.int,coef = "trtdead")
+## all
+root.trtdead.DEGs.int.all <- topTags(root.trtdead.lrt,n = Inf,p.value = 1)$table
+leaf.trtdead.DEGs.int.all <- topTags(leaf.trtdead.lrt,n = Inf,p.value = 1)$table
+## FDR<0.05
+#nrow(topTags(root.trtdead.lrt,n = Inf,p.value = 0.05)$table) # 3434
+#nrow(topTags(leaf.trtdead.lrt,n = Inf,p.value = 0.05)$table) # 370
+sum(root.trtdead.DEGs.int.all$FDR < 0.05)
+sum(leaf.trtdead.DEGs.int.all$FDR < 0.05)
+
+n.DEGs.root.NOBLOCK["Live.UN", "trt"] <- sum(root.trtdead.DEGs.int.all$FDR < 0.05)
+n.DEGs.leaf.NOBLOCK["Live.UN", "trt"] <- sum(leaf.trtdead.DEGs.int.all$FDR < 0.05)
+```
+
+
+```{r}
+# get DEGs, density effects (coef = "densitycr") (new)
+root.densitycr.lrt <- glmLRT(root.fit.int,coef = "densitycr")
+leaf.densitycr.lrt <- glmLRT(leaf.fit.int,coef = "densitycr")
+# all
+root.densitycr.DEGs.int.all <- topTags(root.densitycr.lrt,n = Inf,p.value = 1)$table
+leaf.densitycr.DEGs.int.all <- topTags(leaf.densitycr.lrt,n = Inf,p.value = 1)$table
+sum(root.densitycr.DEGs.int.all$FDR < 0.05)
+sum(leaf.densitycr.DEGs.int.all$FDR < 0.05)
+
+n.DEGs.root.NOBLOCK["Live.UN", "dens"] <- sum(root.densitycr.DEGs.int.all$FDR < 0.05)
+n.DEGs.leaf.NOBLOCK["Live.UN", "dens"] <- sum(leaf.densitycr.DEGs.int.all$FDR < 0.05)
+```
+
+# clean working directory
+```{r}
+rm(list={ls() %>% str_subset("^n\\.DEGs", negate = TRUE)})
+knitr::opts_chunk$set(echo = TRUE,error=TRUE)
+library(edgeR);library(tidyverse)
+# annotation file for v3.0annotation
+Br.v3.0.At.BLAST <- read_csv(file.path("..","..","..","Annotation","output","v3.0annotation","Brapa_v3.0_annotated.csv")) 
+# This annotation is redundant with name (Br grene). Eg 
+Br.v3.0.At.BLAST %>% filter(name=="BraA01g040570.3C")
+# reduce the redundancy (112418)
+Br.v3.0anno.At.BLAST.highscore <- Br.v3.0.At.BLAST %>% group_by(name) %>% arrange(desc(score)) %>% dplyr::slice(1)
+
+# load exp1 v3.0 annotation dge files and sample info
+load(file.path("..","output","edgeR_dge_objects.e3.v3.0anno.RData"))
+# for expression pattern graph
+source("../../../tools/Expression_pattern_graph.R",chdir=TRUE)
+# "/Volumes/data_work/Data8/NGS_related/Brassica_microbiome/Brapa_microbes/tools"
+
+```
+
+# rL.rCR
+```{r}
+# relevel trt and density to "live" and "un"
+dge.root$samples<-dge.root$samples %>% mutate(trt=fct_relevel(trt,"live")) #%>% str() 
+dge.root$samples<-dge.root$samples %>% mutate(density=fct_relevel(density,"cr")) #%>% str() 
+dge.leaf$samples<-dge.leaf$samples %>% mutate(trt=fct_relevel(trt,"live")) #%>% str() 
+dge.leaf$samples<-dge.leaf$samples %>% mutate(density=fct_relevel(density,"cr")) #%>% str() 
+## dge
+root.design.int <- with(dge.root$samples, model.matrix(~ density*trt))
+leaf.design.int <- with(dge.leaf$samples, model.matrix(~ density*trt))
+# estimateDisp
+root.dge.int <- estimateDisp(dge.root,design = root.design.int)
+leaf.dge.int <- estimateDisp(dge.leaf,design = leaf.design.int)
+## fit linear model
+root.fit.int <- glmFit(root.dge.int,root.design.int)
+leaf.fit.int <- glmFit(leaf.dge.int,leaf.design.int)
+```
+
+
+```{r}
+# get DEGs, trt effects (coef=c("trtdead","densityun:trtdead"))
+root.trtdead_densityun.trtdead.lrt <- glmLRT(root.fit.int,coef = c("trtdead","densityun:trtdead")) # all coeff containing "trt"
+leaf.trtdead_densityun.trtdead.lrt <- glmLRT(leaf.fit.int,coef = c("trtdead","densityun:trtdead")) # all coeff containing "trt"
+## all
+root.trtdead_densityun.trtdead.DEGs.int.all <- topTags(root.trtdead_densityun.trtdead.lrt,n = Inf,p.value = 1)$table
+leaf.trtdead_densityun.trtdead.DEGs.int.all <- topTags(leaf.trtdead_densityun.trtdead.lrt,n = Inf,p.value = 1)$table
+sum(root.trtdead_densityun.trtdead.DEGs.int.all$FDR<0.05)
+sum(leaf.trtdead_densityun.trtdead.DEGs.int.all$FDR<0.05)
+
+n.DEGs.root.NOBLOCK["Live.Cr", "trt+int"] <- sum(root.trtdead_densityun.trtdead.DEGs.int.all$FDR < 0.05)
+n.DEGs.leaf.NOBLOCK["Live.Cr", "trt+int"] <- sum(leaf.trtdead_densityun.trtdead.DEGs.int.all$FDR < 0.05)
+```
+
+
+```{r}
+# get DEGs, density effects (coef = c("densityun","densityun:trtdead"))
+root.densityun_densityun.trtdead.lrt <- glmLRT(root.fit.int,coef = c("densityun","densityun:trtdead"))
+leaf.densityun_densityun.trtdead.lrt <- glmLRT(leaf.fit.int,coef = c("densityun","densityun:trtdead"))
+## all
+root.densityun_densityun.trtdead.DEGs.int.all <- topTags(root.densityun_densityun.trtdead.lrt,n = Inf,p.value = 1)$table
+leaf.densityun_densityun.trtdead.DEGs.int.all <- topTags(leaf.densityun_densityun.trtdead.lrt,n = Inf,p.value = 1)$table
+sum(root.densityun_densityun.trtdead.DEGs.int.all$FDR<0.05)
+sum(leaf.densityun_densityun.trtdead.DEGs.int.all$FDR<0.05)
+
+n.DEGs.root.NOBLOCK["Live.Cr", "dens+int"] <- sum(root.densityun_densityun.trtdead.DEGs.int.all$FDR < 0.05)
+n.DEGs.leaf.NOBLOCK["Live.Cr", "dens+int"] <- sum(leaf.densityun_densityun.trtdead.DEGs.int.all$FDR < 0.05)
+```
+
+
+```{r}
+# get DEGs, density:treatment effects (coef = "densityun:trtdead")
+root.densityun.trtdead.lrt <- glmLRT(root.fit.int,coef = "densityun:trtdead")
+leaf.densityun.trtdead.lrt <- glmLRT(leaf.fit.int,coef = "densityun:trtdead")
+## all
+root.densityun.trtdead.DEGs.int.all <- topTags(root.densityun.trtdead.lrt,n = Inf,p.value = 1)$table
+leaf.densityun.trtdead.DEGs.int.all <- topTags(leaf.densityun.trtdead.lrt,n = Inf,p.value = 1)$table
+sum(root.densityun.trtdead.DEGs.int.all$FDR<0.05)
+sum(leaf.densityun.trtdead.DEGs.int.all$FDR<0.05)
+
+n.DEGs.root.NOBLOCK["Live.Cr", "int"] <- sum(root.densityun.trtdead.DEGs.int.all$FDR < 0.05)
+n.DEGs.leaf.NOBLOCK["Live.Cr", "int"] <- sum(leaf.densityun.trtdead.DEGs.int.all$FDR < 0.05)
+```
+
+
+```{r}
+# get DEGs, trt effects on CR? (rCR) (coef = "trtdead") 
+root.trtdead.lrt <- glmLRT(root.fit.int,coef = "trtdead")
+leaf.trtdead.lrt <- glmLRT(leaf.fit.int,coef = "trtdead")
+## all
+root.trtdead.DEGs.int.all <- topTags(root.trtdead.lrt,n = Inf,p.value = 1)$table
+leaf.trtdead.DEGs.int.all <- topTags(leaf.trtdead.lrt,n = Inf,p.value = 1)$table
+sum(root.trtdead.DEGs.int.all$FDR<0.05)
+sum(leaf.trtdead.DEGs.int.all$FDR<0.05)
+
+n.DEGs.root.NOBLOCK["Live.Cr", "trt"] <- sum(root.trtdead.DEGs.int.all$FDR < 0.05)
+n.DEGs.leaf.NOBLOCK["Live.Cr", "trt"] <- sum(leaf.trtdead.DEGs.int.all$FDR < 0.05)
+```
+
+
+```{r}
+# get DEGs, density effects (coef = "densityun") (single, new)
+root.densityun.lrt <- glmLRT(root.fit.int,coef = "densityun")
+leaf.densityun.lrt <- glmLRT(leaf.fit.int,coef = "densityun")
+## all
+root.densityun.DEGs.int.all <- topTags(root.densityun.lrt,n = Inf,p.value = 1)$table
+leaf.densityun.DEGs.int.all <- topTags(leaf.densityun.lrt,n = Inf,p.value = 1)$table
+sum(root.densityun.DEGs.int.all$FDR<0.05)
+sum(leaf.densityun.DEGs.int.all$FDR<0.05)
+
+n.DEGs.root.NOBLOCK["Live.Cr", "dens"] <- sum(root.densityun.DEGs.int.all$FDR < 0.05)
+n.DEGs.leaf.NOBLOCK["Live.Cr", "dens"] <- sum(leaf.densityun.DEGs.int.all$FDR < 0.05)
+```
+
+```{r}
+n.DEGs.leaf.NOBLOCK
+write.csv(n.DEGs.leaf.NOBLOCK, "../output/e3.v3.0anno.interaction.n.DEGs.leaf.NOBLOCK.csv")
+```
+
+```{r}
+n.DEGs.root.NOBLOCK
+write.csv(n.DEGs.root.NOBLOCK, "../output/e3.v3.0anno.interaction.n.DEGs.root.NOBLOCK.csv")
+```
