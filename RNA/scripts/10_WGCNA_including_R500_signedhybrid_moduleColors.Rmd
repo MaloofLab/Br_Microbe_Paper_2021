@@ -2,13 +2,13 @@
 title: "10_WGCNA_including_R500_signedhybrid_moduleColors"
 author: "Kazu"
 date: "7/19/2021"
-output: 
-  flexdashboard::flex_dashboard:
-    css: libs/my-theme.css
-    orientation: columns
-    vertical_layout: scroll
+output: html_document
+  #flexdashboard::flex_dashboard:
+  #  css: libs/my-theme.css
+  #  orientation: columns
+  #  vertical_layout: scroll
     #social: menu
-    source_code: embed
+  #  source_code: embed
     #theme: default
 editor_options: 
   chunk_output_type: console
@@ -25,6 +25,7 @@ background:
 * Switched to ""signed hybrid" in ,networkType (041621), which will results all WGCNA module related analysis.
 * see blog posts for [signed vs unsigned1](https://peterlangfelder.com/2018/11/25/signed-or-unsigned-which-network-type-is-preferable/]), [signed vs unsigned2](https://peterlangfelder.com/2018/11/25/__trashed/) (referred from Julin)
 * replace dynamicColors into moduleColors to match modules in MEs (that affect ORA and others?, 071921)
+* Change output format from flex_dashboard to html (Nov 15, 2021)
 
 ```{r setup}
 rm(list=ls())
@@ -42,25 +43,20 @@ disableWGCNAThreads()
 ```
 
 
-load normalized log2 expression data (Brassica genome v3.0 annotation) {data-navmenu="Data import"}
-=================================
-Row
------------------------
+load normalized log2 expression data (Brassica genome v3.0 annotation) 
 ```{r}
 # plus R500 in residual
 root.voom5 <- readr::read_tsv(file.path("RNA","output","voom_expression.e1and3.resid.exp_gt.root.plusR500.txt.gz"))
 leaf.voom5 <- readr::read_tsv(file.path("RNA","output","voom_expression.e1and3.resid.exp_gt.leaf.plusR500.txt.gz"))
 ```
 
-Row
-------------------------------------
 ### check if voom is log2 transformed
 ```{r}
 root.voom5[1:1000,-1] %>% gather() %>% ggplot(aes(x=value))+geom_histogram() # yes. log2 transformed
 ```
 
-make sample description data frame {data-navmenu="Data import"}
-=====================
+make sample description data frame
+
 ```{r}
 sample.description.e1 <- read_csv(file.path("plant","output","Br.mbio.e1.sample.description.csv"))
 sample.description.e3 <- read_csv(file.path("plant","output","Br.mbio.e3.sample.description.csv"))
@@ -115,12 +111,21 @@ cat(Live.Dead,file=file.path("plant","output","leaf.voom5.cls"),append=TRUE)
 ```
 
 
-Checking data for excessive missing values and identification of outlier samples {data-navmenu="Data import"}
-=======================
+Checking data for excessive missing values and identification of outlier samples 
+(revised, Nov 15, 2021)
 ```{r eval=FALSE, include=FALSE}
-dim(datExpr.root) # [1]    28 25682
+# root
+datExpr.root <- t(root.voom5[,-1]) 
 gsg<-goodSamplesGenes(datExpr.root,verbose=3)
 gsg$allOK # TRUE. If the this is "TRUE", all genes have passed the cuts. If not, we remove the offending genes and samples from the data.
+
+# leaf
+datExpr.leaf <- t(leaf.voom5[,-1]) 
+dim(datExpr.leaf) # [1]    28 25682 
+# no more datExpr.root (Nov 15, 2021)
+gsg<-goodSamplesGenes(datExpr.leaf,verbose=3)
+gsg$allOK # TRUE. If the this is "TRUE", all genes have passed the cuts. If not, we remove the offending genes and samples from the data.
+
 # if (!gsg$allOK)
 # {
 # # Optionally, print the gene and sample names that were removed:
@@ -134,12 +139,12 @@ gsg$allOK # TRUE. If the this is "TRUE", all genes have passed the cuts. If not,
 dim(datExpr.root) 
 ```
 
-sample outliers? {data-navmenu="Data import"}
-===========================
-Row
--------------------
+sample outliers? 
 ```{r eval=FALSE, include=FALSE}
+#sampleTree.root = hclust(dist(datExpr.root), method = "average")
 sampleTree.root = hclust(dist(datExpr.root), method = "average")
+sampleTree.leaf = hclust(dist(datExpr.leaf), method = "average")
+
 # Plot the sample tree: Open a graphic output window of size 12 by 9 inches
 # The user should change the dimensions if the window is too large or too small.
 #sizeGrWindow(12,9)
@@ -148,18 +153,16 @@ sampleTree.root = hclust(dist(datExpr.root), method = "average")
 #par(mar = c(0,4,2,0))
 ```
 
-Row
----------------
 ```{r eval=FALSE, include=FALSE}
-plot(sampleTree.root, main = "Sample clustering to detect outliers", sub="", xlab="", cex.lab = 1.5,
+plot(sampleTree.root, main = "Sample clustering to detect outliers (root)", sub="", xlab="", cex.lab = 1.5,
 cex.axis = 1.5, cex.main = 2)
-
+plot(sampleTree.leaf, main = "Sample clustering to detect outliers (leaf)", sub="", xlab="", cex.lab = 1.5,
+cex.axis = 1.5, cex.main = 2)
 # no need to eliminate samples 
 ```
 
 
-Network construction and module detection by WGCNA {data-navmenu="WGCNA"}
-========================
+Network construction and module detection by WGCNA 
 ```{r eval=FALSE, include=FALSE}
 voom.WGCNA.signedhybrid <- function(voom.data="",datname="") {
   
