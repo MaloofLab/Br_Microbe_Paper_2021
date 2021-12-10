@@ -1,0 +1,450 @@
+---
+title: "PCA take 2"
+author: "Julin Maloof"
+date: "11/14/2021"
+output: html_document
+---
+
+Goal: Calculate PCA on 2 week data and use it to project 4 week data to look at the trends.  This version of the script takes a more restrained approach to centering the data so as to not obliterate the signal.
+
+If week 4 data is centered on its own then it will necessarily split evenly across PC1.
+
+A few possibilities:
+
+1. Do not calculate regression residuals.  Instead, just do PCA on all the samples together (center and scale as we do PCA).  This might not work because of the genotype and experimental variance.
+2. Do as above but only for experiment 1 R500 samples
+3. include week4 in the regression residual calculation.
+
+```{r}
+library(edgeR)
+library(tidyverse)
+library(readxl)
+```
+
+
+## Option three: combined and then take residuals
+
+### get the data
+
+helper function to get residuals
+```{r}
+getResid <- function(gene_expression, block1, block2=NA, block3=NA, verbose = FALSE) { #
+  if(is.na(block2[1])) lm1 <- lm(gene_expression ~ block1)
+  else if(is.na(block3[1])) lm1 <- lm(gene_expression ~ block1 + block2)
+  else lm1 <- lm(gene_expression ~ block1 + block2 + block3)
+  if (verbose) print(summary(lm1))
+residuals(lm1)
+}
+```
+
+get dge objects week2
+```{r}
+# exp1 
+load(file.path("..","..","output","edgeR_dge_objects.e1.v3.0anno.RData"))
+e1.w2.dge.leaf <- dge.leaf
+e1.w2.dge.root <- dge.root
+rm(dge.leaf, dge.root,sample.description.leaf,sample.description.root)
+# exp3 (20180202-samples)
+load(file.path("..","..","output","edgeR_dge_objects.e3.v3.0anno.RData"))
+e3.w2.dge.leaf <- dge.leaf
+e3.w2.dge.root <- dge.root
+rm(dge.leaf, dge.root,sample.description2.leaf,sample.description2.root)
+```
+
+get dge objects week4
+```{r}
+load(file.path("..", "..", "output", "edgeR_dge_objects_exp1_week4.Rdata"))
+e1.w4.dge.leaf <- dge.leaf
+e1.w4.dge.root <- dge.root
+e1.w4.sample.description.leaf <- sample.description.leaf
+e1.w4.sample.description.root <- sample.description.root
+rm(dge.leaf, dge.root, sample.description.leaf, sample.description.root)
+```
+
+combine and format (root)
+```{r}
+# exp1 w2 samples
+e1.w2.samples <- e1.w2.dge.root$samples %>% 
+  filter(!trt=="BLANK_NA") %>% 
+  mutate(trt=str_remove(trt,"5E_")) %>% 
+  mutate(exp="exp1", week="week2") %>% 
+  mutate(block=str_c(block,exp)) %>% #ensure unique block names
+  unite(group.e1and3,genotype,trt,tissue,week,remove=FALSE) %>%
+  dplyr::select(sample,group.e1and3,genotype,trt,block,exp,week)
+
+e1.w4.samples <- e1.w4.dge.root$samples %>%
+  mutate(exp="exp1", week="week4") %>%
+  mutate(block=str_c(block,exp)) %>% #ensure unique block names
+  rename(trt=autoclave) %>%
+  unite(group.e1and3,genotype,trt,tissue,week,remove=FALSE) %>%
+  dplyr::select(sample,group.e1and3,genotype,trt,block,exp,week)
+
+# exp3 w2 sample
+e3.w2.samples <- e3.w2.dge.root$samples %>% 
+  filter(density=="cr") %>% 
+  mutate(exp="exp3", genotype="FPsc", week="week2") %>% 
+  mutate(block=str_c(block,exp)) %>% #ensure unique block names 
+  unite(group.e1and3, genotype,trt,tissue,week,remove=FALSE) %>%
+  dplyr::select(sample,group.e1and3,genotype,trt,block,exp,week)
+
+
+# combine exp1 and exp3 sample
+e1and3.samples.root <- e1.w2.samples %>% 
+  bind_rows(e1.w4.samples, e3.w2.samples) 
+
+e1and3.samples.root
+```
+
+```{r}
+dim(e1.w4.dge.root$counts) 
+dim(e1.w4.dge.root$counts) 
+dim(e3.w2.dge.root$counts) 
+# combine counts
+e1ande3.counts <- e1.w2.dge.root$genes %>%
+  bind_cols(as_tibble(e1.w2.dge.root$counts)) %>%
+  inner_join(
+    {e1.w4.dge.root$genes %>% bind_cols(as_tibble(e1.w4.dge.root$counts))},
+    by="genes") %>%
+  inner_join(
+    {e3.w2.dge.root$genes %>% bind_cols(as_tibble(e3.w2.dge.root$counts))},
+    by="genes") 
+dim(e1ande3.counts) 
+# select samples (only exp1 FPsc and live/dead soil, exp3 crowd)
+e1ande3.counts <- e1ande3.counts %>% dplyr::select(genes, e1and3.samples.root$sample)
+dim(e1ande3.counts) #[1] 
+# construct DGEList
+e1and3.dge.root <- DGEList(e1ande3.counts[,-1],
+               group=e1and3.samples.root$group.e1and3,
+               samples=e1and3.samples.root,
+               genes=e1ande3.counts$genes) 
+```
+
+combine and format (leaf)
+```{r}
+# exp1 w2 samples
+e1.w2.samples <- e1.w2.dge.leaf$samples %>% 
+  filter(!trt=="BLANK_NA") %>% 
+  mutate(trt=str_remove(trt,"5E_")) %>% 
+  mutate(exp="exp1", week="week2") %>% 
+  mutate(block=str_c(block,exp)) %>% #ensure unique block names
+  unite(group.e1and3,genotype,trt,tissue,week,remove=FALSE) %>%
+  dplyr::select(sample,group.e1and3,genotype,trt,block,exp,week)
+
+e1.w4.samples <- e1.w4.dge.leaf$samples %>%
+  mutate(exp="exp1", week="week4") %>%
+  mutate(block=str_c(block,exp)) %>% #ensure unique block names
+  rename(trt=autoclave) %>%
+  unite(group.e1and3,genotype,trt,tissue,week,remove=FALSE) %>%
+  dplyr::select(sample,group.e1and3,genotype,trt,block,exp,week)
+
+# exp3 w2 sample
+e3.w2.samples <- e3.w2.dge.leaf$samples %>% 
+  filter(density=="cr") %>% 
+  mutate(exp="exp3", genotype="FPsc", week="week2") %>% 
+  mutate(block=str_c(block,exp)) %>% #ensure unique block names 
+  unite(group.e1and3, genotype,trt,tissue,week,remove=FALSE) %>%
+  dplyr::select(sample,group.e1and3,genotype,trt,block,exp,week)
+
+
+# combine exp1 and exp3 sample
+e1and3.samples.leaf <- e1.w2.samples %>% 
+  bind_rows(e1.w4.samples, e3.w2.samples) 
+
+e1and3.samples.leaf
+```
+
+```{r}
+dim(e1.w4.dge.leaf$counts) 
+dim(e1.w4.dge.leaf$counts) 
+dim(e3.w2.dge.leaf$counts) 
+# combine counts
+e1ande3.counts <- e1.w2.dge.leaf$genes %>%
+  bind_cols(as_tibble(e1.w2.dge.leaf$counts)) %>%
+ inner_join(
+   {e1.w4.dge.leaf$genes %>% bind_cols(as_tibble(e1.w4.dge.leaf$counts))},
+   by="genes") %>%
+  inner_join(
+    {e3.w2.dge.leaf$genes %>% bind_cols(as_tibble(e3.w2.dge.leaf$counts))},
+    by="genes") 
+dim(e1ande3.counts) 
+# select samples (only exp1 FPsc and live/dead soil, exp3 crowd)
+e1ande3.counts <- e1ande3.counts %>% dplyr::select(genes, e1and3.samples.leaf$sample)
+dim(e1ande3.counts) #[1] 
+# construct DGEList
+e1and3.dge.leaf <- DGEList(e1ande3.counts[,-1],
+               group=e1and3.samples.leaf$group.e1and3,
+               samples=e1and3.samples.leaf,
+               genes=e1ande3.counts$genes)
+```
+
+### voom transformation
+```{r}
+## dge
+root.design.add <- with(e1and3.dge.root$samples, model.matrix(~ 0 + genotype + trt  + exp + week))
+leaf.design.add <- with(e1and3.dge.leaf$samples, model.matrix(~ 0 + genotype + trt  + exp + week))
+
+#root.design.add <- with(e1and3.dge.root$samples, model.matrix(~ 0 + group))
+#leaf.design.add <- with(e1and3.dge.leaf$samples, model.matrix(~ 0 + group))
+
+## 
+e1and3.dge.root.voom <- e1and3.dge.root[rowSums(cpm(e1and3.dge.root)>1) >= 6,,keep.lib.sizes=FALSE]
+e1and3.dge.root.voom <- calcNormFactors(e1and3.dge.root.voom)
+#
+e1and3.dge.leaf.voom <- e1and3.dge.leaf[rowSums(cpm(e1and3.dge.leaf)>1) >= 6,,keep.lib.sizes=FALSE]
+e1and3.dge.leaf.voom <- calcNormFactors(e1and3.dge.leaf.voom)
+
+#
+e1and3.voom.root <- voom(e1and3.dge.root.voom,design = root.design.add, block = e1and3.dge.root.voom$samples$block)
+e1and3.voom.leaf <- voom(e1and3.dge.leaf.voom,design = leaf.design.add, block = e1and3.dge.leaf.voom$samples$block)
+```
+
+### residuals
+
+```{r}
+leaf.resid.gt.exp <- t(apply(e1and3.voom.leaf$E, 1, getResid,  e1and3.dge.leaf$samples$exp, e1and3.dge.leaf$samples$genotype)) %>%
+  as.data.frame() %>%
+  mutate(genes=e1and3.voom.leaf$genes$genes) %>%
+  select(genes, everything())
+
+root.resid.gt.exp <- t(apply(e1and3.voom.root$E, 1, getResid,  e1and3.dge.root$samples$exp, e1and3.dge.root$samples$genotype)) %>%
+  as.data.frame() %>%
+  mutate(genes=e1and3.voom.root$genes$genes) %>%
+  select(genes, everything())
+```
+
+## now get module labels
+
+```{r}
+load("../../output/voom_expression.e1and3.resid.exp_gt.root.plusR500.signedhybrid.txt.gz.WGCNA.softthresh10.signedhybrid.RData")
+MEs.root <- MEs
+dynamicColors.root <- dynamicColors
+moduleColors.root <- moduleColors
+moduleLabels.root <- moduleLabels
+geneTree.root <- geneTree
+rm(dynamicColors, moduleColors, moduleLabels, geneTree, MEs)
+
+load("../../output/voom_expression.e1and3.resid.exp_gt.leaf.plusR500.signedhybrid.txt.gz.WGCNA.softthresh10.signedhybrid.RData")
+MEs.leaf <- MEs
+dynamicColors.leaf <- dynamicColors
+moduleColors.leaf <- moduleColors
+moduleLabels.leaf <- moduleLabels
+geneTree.leaf <- geneTree
+rm(dynamicColors, moduleColors, moduleLabels, geneTree, MEs)
+```
+
+load original week2 data so that I can associate module colors with gene names
+
+```{r}
+week2.genes <-  readr::read_tsv("../../output/voom_expression.e1and3.resid.exp_gt.root.plusR500.txt.gz") %>%
+  select(genes) 
+
+root.resid.gt.exp <- left_join(week2.genes, root.resid.gt.exp) #get gene order to match
+```
+
+
+```{r}
+rootivory.resid <- root.resid.gt.exp %>% filter(moduleColors.root=="ivory")
+dim(rootivory.resid)
+head(rootivory.resid)
+```
+
+## PCA
+
+```{r}
+ivory.pca.resid <- prcomp(t(rootivory.resid[,-1]), center = FALSE, scale = TRUE)
+```
+
+## plotit
+```{r}
+bind_cols(sample=rownames(ivory.pca.resid$x), as.tibble(ivory.pca.resid$x) ) %>%
+  inner_join(e1and3.samples.root) %>%
+  ggplot(aes(x=week, y=PC1, color=trt)) +
+  geom_boxplot() +
+  ggtitle("PC1")
+```
+
+```{r}
+bind_cols(sample=rownames(ivory.pca.resid$x), as.tibble(ivory.pca.resid$x) ) %>%
+  inner_join(e1and3.samples.root) %>%
+  ggplot(aes(x=week, y=PC2, color=trt)) +
+  geom_boxplot() +
+  ggtitle("PC2")
+```
+
+week 4 more similar to week 2 dead
+
+```{r}
+bind_cols(sample=rownames(ivory.pca.resid$x), as.tibble(ivory.pca.resid$x) ) %>%
+  inner_join(e1and3.samples.root) %>%
+  ggplot(aes(x=PC1, y=PC2, color=trt, shape=week)) +
+  geom_point() 
+```
+```{r}
+bind_cols(sample=rownames(ivory.pca.resid$x), as.tibble(ivory.pca.resid$x) ) %>%
+  inner_join(e1and3.samples.root) %>%
+  ggplot(aes(x=PC2, y=PC3, color=trt, shape=week)) +
+  geom_point() 
+```
+
+
+```{r}
+bind_cols(sample=rownames(ivory.pca.resid$x), as.tibble(ivory.pca.resid$x) ) %>%
+  inner_join(e1and3.samples.root) %>% 
+  group_by(week, trt) %>%
+  summarize(avg=mean(PC2))
+```
+## what about with voom? (non resid)
+
+```{r}
+root.voomE <- cbind(e1and3.voom.root$genes, e1and3.voom.root$E) %>%
+  left_join(week2.genes, .) #get gene order to match
+
+root.voomE[1:10,1:5]
+```
+
+
+
+```{r}
+rootivory.voom <- root.voomE %>% filter(moduleColors.root=="ivory")
+dim(rootivory.voom)
+head(rootivory.voom)
+```
+
+## PCA
+
+```{r}
+ivory.pca.voom <- prcomp(t(rootivory.voom[,-1]), center = TRUE, scale = TRUE)
+```
+
+## plotit
+```{r}
+bind_cols(sample=rownames(ivory.pca.voom$x), as.tibble(ivory.pca.voom$x) ) %>%
+  inner_join(e1and3.samples.root) %>%
+  ggplot(aes(x=week, y=PC2, color=trt)) +
+  geom_boxplot() 
+```
+
+```{r}
+sum(ivory.pca.voom$rotation[,"PC1"])
+```
+
+
+```{r}
+bind_cols(sample=rownames(ivory.pca.voom$x), as.tibble(ivory.pca.voom$x) ) %>%
+  inner_join(e1and3.samples.root) %>% 
+  group_by(week, trt) %>%
+  summarize(avg=mean(PC2))
+```
+## Summary
+
+Voom in or resid without week are similar.  Resids are better because it gets rid of noise due to experiment or genotype.  The trt effect goes to PC2, at least for root ivory
+
+## All modules
+
+repeat this looking at all modules.
+
+helper functions
+```{r}
+calcPCA <-function(x){
+  x <- x[,-1] %>% na.omit()
+  prcomp(t(x[,-1]), center = FALSE, scale = TRUE)
+}
+
+getPCs <- function(PCA, sampleinfo) {
+  bind_cols(sample=rownames(PCA$x), as.tibble(PCA$x) ) %>%
+    inner_join(sampleinfo) 
+}
+```
+
+### root 
+Create a tibble of modules and gene expression
+
+```{r}
+root.keep <- c("ivory", "darkred", "bisque4", "blue", "brown", "darkgrey", "floralwhite", "lightsteelblue1", "turquoise") # those that show sig microbe response, from other analysis.
+
+modules.tib.root <- tibble(module=moduleColors.root, root.resid.gt.exp) %>%
+  filter(module %in% root.keep) %>% 
+  group_by(module) %>%
+  nest()
+
+modules.tib.root <- modules.tib.root %>%
+  mutate(PCA = map(data, calcPCA))  %>% 
+  mutate(PCs = map(PCA, getPCs, e1and3.samples.root))
+```
+
+```{r}
+modules.tib.root %>% select(module, PCs) %>% unnest(PCs) %>% 
+  ggplot(aes(x=week, y=PC1, color=trt)) +
+  geom_boxplot() +
+  facet_wrap(~module, scales = "free_y") + 
+  ggtitle("Root PC1")
+```
+
+```{r}
+modules.tib.root %>% select(module, PCs) %>% unnest(PCs) %>% 
+  ggplot(aes(x=week, y=PC2, color=trt)) +
+  geom_boxplot() +
+  facet_wrap(~module, scales = "free_y") + 
+  ggtitle("Root PC2")
+```
+```{r}
+modules.tib.root %>% select(module, PCs) %>% unnest(PCs) %>% 
+  ggplot(aes(x=week, y=PC3, color=trt)) +
+  geom_boxplot() +
+  facet_wrap(~module, scales = "free_y") + 
+  ggtitle("Root PC3")
+```
+
+```{r}
+modules.tib.root %>% select(module, PCs) %>% unnest(PCs) %>% 
+  ggplot(aes(x=PC1, y=PC2, color=trt, shape=week)) +
+  geom_point() +
+  facet_wrap(~module, scales = "free") + 
+  ggtitle("Root PC1 vs PC2")
+```
+
+### leaf
+
+```{r}
+leaf.keep <- c("lightcyan1", "darkgrey", "darkorange", "darkseagreen4", "mediumorchid", "palevioletred3", "plum2") # those that show sig microbe response, from other analysis.
+
+modules.tib.leaf <- tibble(module=moduleColors.leaf, leaf.resid.gt.exp) %>%
+  filter(module %in% leaf.keep) %>% 
+  group_by(module) %>%
+  nest()
+
+modules.tib.leaf <- modules.tib.leaf %>%
+  mutate(PCA = map(data, calcPCA))  %>% 
+  mutate(PCs = map(PCA, getPCs, e1and3.samples.leaf))
+```
+
+```{r}
+modules.tib.leaf %>% select(module, PCs) %>% unnest(PCs) %>% 
+  ggplot(aes(x=week, y=PC1, color=trt)) +
+  geom_boxplot() +
+  facet_wrap(~module, scales = "free_y") + 
+  ggtitle("leaf PC1")
+```
+
+```{r}
+modules.tib.leaf %>% select(module, PCs) %>% unnest(PCs) %>% 
+  ggplot(aes(x=week, y=PC2, color=trt)) +
+  geom_boxplot() +
+  facet_wrap(~module, scales = "free_y") + 
+  ggtitle("leaf PC2")
+```
+```{r}
+modules.tib.leaf %>% select(module, PCs) %>% unnest(PCs) %>% 
+  ggplot(aes(x=week, y=PC3, color=trt)) +
+  geom_boxplot() +
+  facet_wrap(~module, scales = "free_y") + 
+  ggtitle("leaf PC3")
+```
+
+```{r}
+modules.tib.leaf %>% select(module, PCs) %>% unnest(PCs) %>% 
+  ggplot(aes(x=PC1, y=PC2, color=trt, shape=week)) +
+  geom_point() +
+  facet_wrap(~module, scales = "free") + 
+  ggtitle("leaf PC1 vs PC2")
+```

@@ -1,0 +1,417 @@
+---
+title: "Calculate Eigen Genes for 4 weeks"
+author: "Julin Maloof"
+date: "11/14/2021"
+output: html_document
+---
+
+Goal: use 2 week WGCNA eigen genes to calcualte eigen gene values for 4 week data
+
+Will require back-calculating the rotation, since WGCNA does not give that
+
+```{r}
+library(tidyverse)
+```
+
+
+## Testing
+
+play around with some simulated data to understand
+
+```{r}
+m <- matrix(rnorm(200), ncol=10)
+```
+
+```{r}
+pca <- prcomp(m)
+```
+
+```{r}
+str(pca)
+```
+
+center my matrix.  Then can I recreate the PCs by multiplying by the rotation? Yes
+```{r}
+mc <- scale(m, scale = FALSE)
+
+mc %*% pca$rotation[,"PC1"]
+```
+
+```{r}
+pca$x[,"PC1"]
+```
+
+How do I get the rotation from the PC and scaled matrix?  Note: requires square matrix
+```{r}
+solve(mc[1:10,1:10], pca$x[1:10,"PC1"])
+```
+```{r}
+pca$rotation[,"PC1"]
+```
+
+```{r}
+load("../../output/voom_expression.e1and3.resid.exp_gt.root.plusR500.signedhybrid.txt.gz.WGCNA.softthresh10.signedhybrid.RData")
+MEs.root <- MEs
+dynamicColors.root <- dynamicColors
+moduleColors.root <- moduleColors
+moduleLabels.root <- moduleLabels
+geneTree.root <- geneTree
+rm(dynamicColors, moduleColors, moduleLabels, geneTree, MEs)
+```
+
+Does PCA give me the same thing as eigen genes?  Try it for Ivory...
+
+```{r}
+root.week2 <- readr::read_tsv("../../output/voom_expression.e1and3.resid.exp_gt.root.plusR500.txt.gz")
+dim(root.week2)
+colnames(root.week2)
+```
+
+```{r}
+rootivory <- root.week2 %>% filter(moduleColors.root=="ivory")
+dim(rootivory)
+head(rootivory)
+```
+
+```{r}
+rootivory.sc <- rootivory %>% select(-genes) %>% as.matrix() %>% t() %>% scale()
+head(rootivory.sc[,1:10])
+```
+
+```{r}
+ivory.pca <- prcomp(rootivory.sc, center = FALSE, scale. = FALSE)
+str(ivory.pca)
+```
+
+```{r}
+ivory.pca$rotation[,"PC1"]
+```
+
+```{r}
+ivory.pca$x[,"PC1"]
+```
+
+
+```{r}
+MEs.root$MEivory
+```
+
+```{r}
+cor(ivory.pca$x[,"PC1"], MEs.root$MEivory)
+```
+
+So these are scale differently, but otherwise the same
+
+```{r}
+ivory.pca$x[,"PC1"] / MEs.root$MEivory
+```
+
+```{r}
+ivorysv <- svd(t(rootivory.sc))$v[,1]
+ivorysv # matches eigen gene exactly 
+```
+
+## Calculate Eigen gene values for 4 week samples
+
+### root
+
+For each module, back-calculate rotation
+
+Then apply rotation to new data.
+
+Load expression data
+
+```{r}
+root.week4 <- read_tsv("../../output/voom_expression.e1_week4.resid.root.txt.gz")
+```
+
+
+Get MEs in tibble form
+```{r}
+MEs.tib.root <- tibble(id = str_remove(colnames(MEs.root), "ME"), MEs = as.list(MEs.root))
+MEs.tib.root
+```
+
+Add gene expression data
+
+Some genes are missing in week 4, need to fill in those with zero (or NA)
+
+```{r}
+root.week4 <- root.week2 %>% select(genes) %>% left_join(root.week4)
+root.week4
+```
+
+
+```{r}
+root.week4[is.na(root.week4)] <- 0
+root.week4
+```
+
+```{r}
+MEs.tib.root <- MEs.tib.root %>%
+  mutate(genes = map(id, ~root.week2$genes[moduleColors.root==.x])) %>%
+  mutate(week4 = map(genes, ~ {
+    filter(root.week4, genes %in% .x) %>%
+      select(-genes) %>%
+      as.matrix() %>%
+      t() %>%
+      scale() %>%
+      magrittr::inset(is.na(.),0)
+  }
+    )) %>%
+    mutate(week2 = map(genes, ~ {
+      filter(root.week2, genes %in% .x) %>%
+        select(-genes) %>%
+        as.matrix() %>%
+        t() %>%
+        scale()
+    }))
+
+```
+
+
+Calculate rotation:
+*error*
+```{r, eval=FALSE}
+MEs.tib.root <- MEs.tib.root[5,] %>% 
+  filter(id != "grey") %>%
+  mutate(rotation = map2(MEs, week2, ~ 
+                           solve(.y[,1:length(.x)], .x)))
+```
+
+Do PCA calculation instead
+
+```{r}
+MEs.tib.root <- MEs.tib.root %>%
+  mutate(PCs = map(week2, ~ prcomp(.x, center=FALSE))) %>% # already centered
+  mutate(PC.cor = map2_dbl(MEs, PCs, ~ cor(.x, .y$x[,"PC1"])))
+MEs.tib.root
+```
+
+now calculate Eigen gene for week 4
+
+```{r}
+MEs.tib.root <- MEs.tib.root %>%
+  mutate(PC1_week2 = map(PCs, ~ tibble(sample=rownames(.x$x), 
+                                       PC1=.x$x[,"PC1"],
+                                       time_point = "wk2")),
+         PC1_week4 = map2(week4, PCs, ~ tibble(sample=rownames(.x), 
+                                               PC1=as.vector( .x %*% .y$rotation[,"PC1"]),
+                                               time_point = "wk4")),
+         PC1_week2_calc = map2(week2, PCs, ~ .x %*% .y$rotation[,"PC1"] )) %>%
+  mutate(PC1_week2_cor2 = map2_dbl(PC1_week2_calc, PC1_week2, ~ cor(.x, .y$PC1))) # reality check
+MEs.tib.root
+```
+Next: consolidate into data frame for plotting, add labels.
+
+
+load dge objects so that we can get sample data frame
+
+```{r}
+# week 2 exp1
+load("../../output/edgeR_dge_objects.e1.v3.0anno.RData")
+
+sample.description.root.week2.1 <- sample.description.root %>%
+  mutate(pot=as.character(pot))
+sample.description.leaf.week2.1 <- sample.description.leaf %>%
+  mutate(pot=as.character(pot))
+
+# week 2 exp3
+# load("../../output/edgeR_dge_objects.e3.v3.0anno.RData")
+# 
+# sample.description.root.week2.3 <- sample.description2.root %>%
+#   mutate(time_point="wk2",
+#          genoptype="FPsc")
+# sample.description.leaf.week2.3 <- sample.description2.leaf %>%
+#   mutate(time_point="wk2",
+#          genotype="FPsc")
+
+# week 4
+
+load("../../output/edgeR_dge_objects_exp1_week4.Rdata")
+
+sample.description.root.week4 <- sample.description.root %>%
+  mutate(block=str_c("b",block)) %>%
+  mutate(pot=as.character(pot)) %>% 
+  rename(trt=autoclave)
+sample.description.leaf.week4 <- sample.description.leaf %>%
+  mutate(block=str_c("b",block)) %>%
+  mutate(pot=as.character(pot))%>% 
+  rename(trt=autoclave)
+
+rm(sample.description.leaf, sample.description.root, dge.leaf, dge.root)
+```
+
+```{r}
+sample.description.root <- bind_rows(sample.description.root.week2.1, sample.description.root.week4) %>%
+  select(sample, tissue, genotype, trt, time_point, group)
+
+sample.description.leaf <- bind_rows(sample.description.leaf.week2.1, sample.description.leaf.week4) %>%
+  select(sample, tissue, genotype, trt, time_point, group)
+
+```
+
+```{r}
+root.keep <- c("ivory", "darkred", "bisque4", "blue", "brown", "darkgrey", "floralwhite", "lightsteelblue1", "turquoise") # those that show sig microbe response, from other analysis.
+
+plot.tib.root <- MEs.tib.root  %>% 
+  mutate(PC1_week2_4 = map2(PC1_week2, PC1_week4, ~ bind_rows(.x, .y))) %>% 
+  select(id, PC1_week2_4) %>%
+unnest(PC1_week2_4)
+
+plot.tib.root <- plot.tib.root %>% inner_join(sample.description.root) %>%
+  filter(id %in% root.keep)
+```
+
+```{r}
+plot.tib.root %>% mutate(trt=str_remove(trt, "5E_")) %>%
+  ggplot(aes(x=time_point, y=PC1, color=trt)) +
+  geom_boxplot() +
+  facet_wrap(~id, scales = "free_y")
+```
+
+```{r}
+plot.tib.root %>% mutate(trt=str_remove(trt, "5E_")) %>%
+  filter(genotype=="R500") %>%
+  ggplot(aes(x=time_point, y=PC1, color=trt)) +
+  geom_boxplot() +
+  facet_wrap(~id, scales = "free_y")
+```
+
+# leaf
+
+
+### leaf
+
+For each module, back-calculate rotation
+
+Then apply rotation to new data.
+
+Load  data
+
+
+```{r}
+load("../../output/voom_expression.e1and3.resid.exp_gt.leaf.plusR500.signedhybrid.txt.gz.WGCNA.softthresh10.signedhybrid.RData")
+MEs.leaf <- MEs
+dynamicColors.leaf <- dynamicColors
+moduleColors.leaf <- moduleColors
+moduleLabels.leaf <- moduleLabels
+geneTree.leaf <- geneTree
+rm(dynamicColors, moduleColors, moduleLabels, geneTree, MEs)
+```
+
+```{r}
+leaf.week2 <- readr::read_tsv("../../output/voom_expression.e1and3.resid.exp_gt.leaf.plusR500.txt.gz")
+dim(leaf.week2)
+colnames(leaf.week2)
+```
+
+```{r}
+leaf.week4 <- read_tsv("../../output/voom_expression.e1_week4.resid.leaf.txt.gz")
+```
+
+
+Get MEs in tibble form
+```{r}
+MEs.tib.leaf <- tibble(id = str_remove(colnames(MEs.leaf), "ME"), MEs = as.list(MEs.leaf))
+MEs.tib.leaf
+```
+
+Add gene expression data
+
+Some genes are missing in week 4, need to fill in those with zero (or NA)
+
+```{r}
+leaf.week4 <- leaf.week2 %>% select(genes) %>% left_join(leaf.week4)
+leaf.week4
+```
+
+
+```{r}
+leaf.week4[is.na(leaf.week4)] <- 0
+leaf.week4
+```
+
+```{r}
+MEs.tib.leaf <- MEs.tib.leaf %>%
+  mutate(genes = map(id, ~leaf.week2$genes[moduleColors.leaf==.x])) %>%
+  mutate(week4 = map(genes, ~ {
+    filter(leaf.week4, genes %in% .x) %>%
+      select(-genes) %>%
+      as.matrix() %>%
+      t() %>%
+      scale() %>%
+      magrittr::inset(is.na(.),0)
+  }
+    )) %>%
+    mutate(week2 = map(genes, ~ {
+      filter(leaf.week2, genes %in% .x) %>%
+        select(-genes) %>%
+        as.matrix() %>%
+        t() %>%
+        scale()
+    }))
+
+```
+
+
+Calculate rotation:
+*error*
+```{r, eval=FALSE}
+MEs.tib.leaf <- MEs.tib.leaf[5,] %>% 
+  filter(id != "grey") %>%
+  mutate(rotation = map2(MEs, week2, ~ 
+                           solve(.y[,1:length(.x)], .x)))
+```
+
+Do PCA calculation instead
+
+```{r}
+MEs.tib.leaf <- MEs.tib.leaf %>%
+  mutate(PCs = map(week2, ~ prcomp(.x, center=FALSE))) %>% # already centered
+  mutate(PC.cor = map2_dbl(MEs, PCs, ~ cor(.x, .y$x[,"PC1"])))
+MEs.tib.leaf
+```
+
+now calculate Eigen gene for week 4
+
+```{r}
+MEs.tib.leaf <- MEs.tib.leaf %>%
+  mutate(PC1_week2 = map(PCs, ~ tibble(sample=rownames(.x$x), 
+                                       PC1=.x$x[,"PC1"],
+                                       time_point = "wk2")),
+         PC1_week4 = map2(week4, PCs, ~ tibble(sample=rownames(.x), 
+                                               PC1=as.vector( .x %*% .y$rotation[,"PC1"]),
+                                               time_point = "wk4")),
+         PC1_week2_calc = map2(week2, PCs, ~ .x %*% .y$rotation[,"PC1"] )) %>%
+  mutate(PC1_week2_cor2 = map2_dbl(PC1_week2_calc, PC1_week2, ~ cor(.x, .y$PC1))) # reality check
+MEs.tib.leaf
+```
+Next: consolidate into data frame for plotting, add labels.
+
+```{r}
+leaf.keep <- c("lightcyan1", "darkgrey", "darkorange", "darkseagreen4", "mediumorchid", "palevioletred3", "plum2") # those that show sig microbe response, from other analysis.
+
+plot.tib.leaf <- MEs.tib.leaf  %>% 
+  mutate(PC1_week2_4 = map2(PC1_week2, PC1_week4, ~ bind_rows(.x, .y))) %>% 
+  select(id, PC1_week2_4) %>%
+unnest(PC1_week2_4)
+
+plot.tib.leaf <- plot.tib.leaf %>% inner_join(sample.description.leaf) %>%
+  filter(id %in% leaf.keep)
+```
+
+```{r}
+plot.tib.leaf %>% mutate(trt=str_remove(trt, "5E_")) %>%
+  ggplot(aes(x=time_point, y=PC1, color=trt)) +
+  geom_boxplot() +
+  facet_wrap(~id, scales = "free_y")
+```
+
+```{r}
+plot.tib.leaf %>% mutate(trt=str_remove(trt, "5E_")) %>%
+  filter(genotype=="R500") %>%
+  ggplot(aes(x=time_point, y=PC1, color=trt)) +
+  geom_boxplot() +
+  facet_wrap(~id, scales = "free_y")
+```
