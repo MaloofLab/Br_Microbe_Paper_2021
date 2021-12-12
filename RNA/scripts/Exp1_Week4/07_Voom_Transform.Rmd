@@ -17,9 +17,7 @@ Here I will take a similar approach, but factor out block.  (alternate would be 
 knitr::opts_chunk$set(echo = TRUE,error=TRUE)
 library(edgeR)
 library(tidyverse)
-library(readr)
 library(readxl)
-library(scales) # for muted function
 ```
 
 
@@ -36,7 +34,7 @@ residuals(lm1)
 
 # read dge objects 
 ```{r}
-load("../../RNA/output/edgeR_dge_objects_exp1_week4.Rdata")
+load("../../output/edgeR_dge_objects_exp1_week4.Rdata")
 ```
 
 ## voom transformation
@@ -45,18 +43,16 @@ load("../../RNA/output/edgeR_dge_objects_exp1_week4.Rdata")
 root.design <- with(dge.root$samples, model.matrix(~ autoclave))
 leaf.design <- with(dge.leaf$samples, model.matrix(~ autoclave))
 ## 
-dge.root <- dge.root[rowSums(cpm(dge.root)>1) >= 6,,keep.lib.sizes=FALSE]
+dge.root <- dge.root[rowSums(cpm(dge.root)>1) >= 1,,keep.lib.sizes=FALSE]
 dge.root <- calcNormFactors(dge.root)
 #
-dge.leaf <- dge.leaf[rowSums(cpm(dge.leaf)>1) >= 6,,keep.lib.sizes=FALSE]
+dge.leaf <- dge.leaf[rowSums(cpm(dge.leaf)>1) >= 1,,keep.lib.sizes=FALSE]
 dge.leaf <- calcNormFactors(dge.leaf)
 
 #
 voom.root <- voom(dge.root, design = root.design, block = as.factor(dge.root$samples$block))
 voom.leaf <- voom(dge.leaf, design = leaf.design, block = as.factor(dge.leaf$samples$block))
 ```
-
-# MODIFY BELOW
 
 ## alternative: take residuals to remove block.
 ```{r}

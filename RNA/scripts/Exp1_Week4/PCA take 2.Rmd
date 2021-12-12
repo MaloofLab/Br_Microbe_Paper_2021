@@ -155,7 +155,7 @@ e1and3.samples.leaf
 
 ```{r}
 dim(e1.w4.dge.leaf$counts) 
-dim(e1.w4.dge.leaf$counts) 
+dim(e1.w2.dge.leaf$counts) 
 dim(e3.w2.dge.leaf$counts) 
 # combine counts
 e1ande3.counts <- e1.w2.dge.leaf$genes %>%
@@ -235,10 +235,16 @@ rm(dynamicColors, moduleColors, moduleLabels, geneTree, MEs)
 load original week2 data so that I can associate module colors with gene names
 
 ```{r}
-week2.genes <-  readr::read_tsv("../../output/voom_expression.e1and3.resid.exp_gt.root.plusR500.txt.gz") %>%
+week2.genes.root <-  readr::read_tsv("../../output/voom_expression.e1and3.resid.exp_gt.root.plusR500.txt.gz") %>%
   select(genes) 
 
-root.resid.gt.exp <- left_join(week2.genes, root.resid.gt.exp) #get gene order to match
+week2.genes.leaf <-  readr::read_tsv("../../output/voom_expression.e1and3.resid.exp_gt.leaf.plusR500.txt.gz") %>%
+  select(genes) 
+
+root.resid.gt.exp <- left_join(week2.genes.root, root.resid.gt.exp) #get gene order to match
+
+leaf.resid.gt.exp <- left_join(week2.genes.leaf, leaf.resid.gt.exp) #get gene order to match
+
 ```
 
 
@@ -248,13 +254,13 @@ dim(rootivory.resid)
 head(rootivory.resid)
 ```
 
-## PCA
+## PCA Test on Root Ivory
 
 ```{r}
 ivory.pca.resid <- prcomp(t(rootivory.resid[,-1]), center = FALSE, scale = TRUE)
 ```
 
-## plotit
+### plot it
 ```{r}
 bind_cols(sample=rownames(ivory.pca.resid$x), as.tibble(ivory.pca.resid$x) ) %>%
   inner_join(e1and3.samples.root) %>%
@@ -297,12 +303,15 @@ bind_cols(sample=rownames(ivory.pca.resid$x), as.tibble(ivory.pca.resid$x) ) %>%
 
 ```{r}
 root.voomE <- cbind(e1and3.voom.root$genes, e1and3.voom.root$E) %>%
-  left_join(week2.genes, .) #get gene order to match
+  left_join(week2.genes.root, .) #get gene order to match
+
+leaf.voomE <- cbind(e1and3.voom.leaf$genes, e1and3.voom.leaf$E) %>%
+  left_join(week2.genes.leaf, .) #get gene order to match
 
 root.voomE[1:10,1:5]
 ```
 
-
+### test on root Ivory
 
 ```{r}
 rootivory.voom <- root.voomE %>% filter(moduleColors.root=="ivory")
@@ -310,13 +319,13 @@ dim(rootivory.voom)
 head(rootivory.voom)
 ```
 
-## PCA
+## PCA test voom on root Ivory
 
 ```{r}
 ivory.pca.voom <- prcomp(t(rootivory.voom[,-1]), center = TRUE, scale = TRUE)
 ```
 
-## plotit
+### plotit
 ```{r}
 bind_cols(sample=rownames(ivory.pca.voom$x), as.tibble(ivory.pca.voom$x) ) %>%
   inner_join(e1and3.samples.root) %>%
@@ -433,6 +442,7 @@ modules.tib.leaf %>% select(module, PCs) %>% unnest(PCs) %>%
   facet_wrap(~module, scales = "free_y") + 
   ggtitle("leaf PC2")
 ```
+
 ```{r}
 modules.tib.leaf %>% select(module, PCs) %>% unnest(PCs) %>% 
   ggplot(aes(x=week, y=PC3, color=trt)) +

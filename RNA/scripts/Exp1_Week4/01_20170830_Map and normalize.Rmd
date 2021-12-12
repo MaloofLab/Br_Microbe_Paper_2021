@@ -37,8 +37,6 @@ end
 
 Move the counts to my local computer
 
-### NEED TO MODIFY BELOW
-
 ```{r, engine='bash', eval=FALSE}
 cd /Users/jmaloof/git/Br_Microbe_Paper_2021/RNA/input/20170830-samples
 lftp sftp://whitney.plb.ucdavis.edu
@@ -107,12 +105,10 @@ write_csv(counts,"../../output/20170830_V3.0_raw_counts_.csv.gz")
 
 ## make sample description data frame
 
-#CONTINUE FROM HERE
-
 ```{r}
 sample.description <- tibble(sample=colnames(counts)[-1]) %>%
   separate(sample,
-           c("location","tissue","genotype","block","pot"),
+           c("location","tissue","genotype","block","pot", "sample_id"),
            remove=FALSE,
            convert=TRUE) 
 head(sample.description)
