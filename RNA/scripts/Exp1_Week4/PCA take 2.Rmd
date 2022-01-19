@@ -261,7 +261,7 @@ ivory.pca.resid <- prcomp(t(rootivory.resid[,-1]), center = FALSE, scale = TRUE)
 ```
 
 ### plot it
-```{r}
+```{r, fig.width=4}
 bind_cols(sample=rownames(ivory.pca.resid$x), as.tibble(ivory.pca.resid$x) ) %>%
   inner_join(e1and3.samples.root) %>%
   ggplot(aes(x=week, y=PC1, color=trt)) +
@@ -269,7 +269,7 @@ bind_cols(sample=rownames(ivory.pca.resid$x), as.tibble(ivory.pca.resid$x) ) %>%
   ggtitle("PC1")
 ```
 
-```{r}
+```{r, fig.width=4}
 bind_cols(sample=rownames(ivory.pca.resid$x), as.tibble(ivory.pca.resid$x) ) %>%
   inner_join(e1and3.samples.root) %>%
   ggplot(aes(x=week, y=PC2, color=trt)) +
