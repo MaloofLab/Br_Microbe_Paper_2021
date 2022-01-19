@@ -15,6 +15,7 @@ We have leaf growth data for Mark.  I want to bring this in and get it associate
 library(tidyverse)
 library(readxl)
 library(GGally)
+library(cowplot)
 ```
 
 ## experiment 1
@@ -69,8 +70,15 @@ plot it
 ```{r}
 leafrnaexp1 %>%
   mutate(group=str_c(soil, str_replace_na(autoclave))) %>%
-  ggplot(aes(x=group, y=leaf_avg, color=genotype)) +
-  geom_boxplot()
+  mutate(group={str_replace(group, "5Edead", "Disrupted") %>%
+      str_replace("BLANKNA", "No inoculation") %>%
+      str_replace("5Elive", "Live") %>%
+      factor(levels=c("No inoculation", "Disrupted", "Live"))}) %>%
+  ggplot(aes(x=group, y=leaf_avg, fill=group)) +
+  facet_wrap(~genotype) +
+  scale_fill_manual(values = c('#0D2C54','#0D7F96','#ADD12A')) +
+  geom_boxplot(color="grey50") +
+  theme_bw() 
 ```
 
 looks good!
@@ -148,6 +156,47 @@ leafrna %>%
   facet_wrap(~exp)
 ```
 
+for paper
+```{r}
+figS1A <- leafrna %>%
+  mutate(exp=factor(exp, levels=c("exp1", "exp_density"), labels = c("PGP Exp.", "Validation Exp."))) %>%
+  mutate(treatment=str_c(soil, str_replace_na(autoclave))) %>%
+  mutate(treatment={str_replace(treatment, "5Edead", "Disrupted") %>%
+      str_replace("BLANKNA", "No inoculation") %>%
+      str_replace("5Elive", "Live") %>%
+      factor(levels=c("No inoculation", "Disrupted", "Live"))}) %>%
+  ggplot(aes(x=treatment, y=leaf_avg, fill=treatment)) +
+  facet_grid(genotype~exp) +
+  scale_fill_manual(values = c('#0D2C54','#0D7F96','#ADD12A'), guide=FALSE) +
+  geom_boxplot(color="grey50") +
+  xlab("Soil Treatment") +
+  ylab("Leaf Length (cm)") +
+  theme_bw() 
+
+figS1A
+```
+
+```{r}
+FigS1A.alt <- leafrna %>%
+  mutate(exp=factor(exp, levels=c("exp1", "exp_density"), labels = c("PGP Exp.", "Validation Exp."))) %>%
+  mutate(treatment=str_c(soil, str_replace_na(autoclave))) %>%
+  mutate(treatment={str_replace(treatment, "5Edead", "Disrupted") %>%
+      str_replace("BLANKNA", "No inoculation") %>%
+      str_replace("5Elive", "Live") %>%
+      factor(levels=c("No inoculation", "Disrupted", "Live"))}) %>%
+  mutate(group=str_c(exp," ", genotype)) %>%
+  ggplot(aes(x=treatment, y=leaf_avg, fill=treatment)) +
+  facet_wrap(~group) +
+  scale_fill_manual(values = c('#0D2C54','#0D7F96','#ADD12A'), guide=FALSE) +
+  geom_boxplot(color="grey50") +
+  xlab("Soil Treatment") +
+  ylab("Leaf Length (cm)") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle=45, hjust=1))
+FigS1A.alt
+```
+
+
 standardize for each group
 ```{r}
 leafrna <- leafrna %>%
@@ -164,6 +213,60 @@ leafrna %>%
   geom_boxplot() +
   facet_wrap(~exp)
 ```
+
+For paper
+```{r}
+figS1B <- leafrna %>%
+  mutate(exp=factor(exp, levels=c("exp1", "exp_density"), labels = c("PGP Exp.", "Validation Exp."))) %>%
+  mutate(treatment=str_c(soil, str_replace_na(autoclave))) %>%
+  mutate(treatment={str_replace(treatment, "5Edead", "Disrupted") %>%
+      str_replace("BLANKNA", "No inoculation") %>%
+      str_replace("5Elive", "Live") %>%
+      factor(levels=c("No inoculation", "Disrupted", "Live"))}) %>%
+  ggplot(aes(x=treatment, y=leaf_avg_std, fill=treatment)) +
+  facet_grid(genotype~exp, ) +
+  scale_fill_manual(values = c('#0D2C54','#0D7F96','#ADD12A'), guide=FALSE) +
+  geom_boxplot(color="grey50") +
+  xlab("Soil Treatment") +
+  ylab("Standardized Leaf Length") +
+  theme_bw() 
+
+figS1B
+```
+
+```{r}
+FigS1B.alt <- leafrna %>%
+  mutate(exp=factor(exp, levels=c("exp1", "exp_density"), labels = c("PGP Exp.", "Validation Exp."))) %>%
+  mutate(treatment=str_c(soil, str_replace_na(autoclave))) %>%
+  mutate(treatment={str_replace(treatment, "5Edead", "Disrupted") %>%
+      str_replace("BLANKNA", "No inoculation") %>%
+      str_replace("5Elive", "Live") %>%
+      factor(levels=c("No inoculation", "Disrupted", "Live"))}) %>%
+  mutate(group=str_c(exp," ", genotype)) %>%
+  ggplot(aes(x=treatment, y=leaf_avg_std, fill=treatment)) +
+  facet_wrap(~group) +
+  scale_fill_manual(values = c('#0D2C54','#0D7F96','#ADD12A'), guide=FALSE) +
+  geom_boxplot(color="grey50") +
+  xlab("Soil Treatment") +
+  ylab("Standardized Leaf Length") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle=45, hjust=1))
+FigS1B.alt
+```
+
+```{r, fig.asp=.5}
+figS1 <- plot_grid(figS1A, figS1B, labels = "AUTO")
+figS1
+```
+
+```{r, fig.height=6, fig.width=5}
+figS1.alt <- plot_grid(FigS1A.alt, FigS1B.alt, labels="AUTO", ncol = 1)
+figS1.alt
+```
+```{r}
+save_plot("../../_Paper_Figures/FigS1.pdf", figS1.alt, base_height = 6, base_width = 5)
+```
+
 
 Do I get a similar result if I use residuals to remove gt and exp?
 
