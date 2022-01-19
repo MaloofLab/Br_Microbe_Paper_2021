@@ -62,7 +62,7 @@ Br.v3.0anno.At.BLAST.highscore <- Br.v3.0.At.BLAST %>% group_by(name) %>% arrang
 ```{r message=FALSE, warning=TRUE, error=TRUE}
 custom.categories <- list.files(path=file.path("annotation","input","custom_categories"),pattern="(FC.csv.gz|FC.WT.csv.gz|DEGs.all.anno.csv.gz|DEGs.all.anno.csv|DEGs.csv.gz|Fe_def_KIM_2019_pnas.1916892116.sd01.csv)",full.names = TRUE) # not working, why??????? 061221
 #
-custom.categories.filename <- list.files(path=file.path("annotation","input","custom_categories"),pattern="(FC.csv.gz|FC.WT.csv.gz|DEGs.all.anno.csv.gz|DEGs.all.anno.csv|DEGs.csv.gz|Fe_def_KIM_2019_pnas.1916892116.sd01.csv)",full.names = FALSE)
+custom.categories.filename <- list.files(path=file.path("annotation","input","custom_categories"),pattern="(FC.csv.gz|FC.WT.csv.gz|DEGs.all.anno.csv.gz|DEGs.all.anno.csv|DEGs.csv.gz|Fe_def_KIM_2019_pnas.1916892116.sd01.csv)",full.names = FALSE) # 39 data, 15 publications
 # read all csv.gz files
 custom.categoreis.map <- custom.categories %>% map(read_csv) # tidyverse (or purr) way of lapply
 # using file name for each data.frame

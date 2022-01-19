@@ -1147,6 +1147,7 @@ WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- WGCNA.voom
 
 WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison
 ggsave(path=file.path("RNA","output"),filename="WGCNA.customcatv5.consolidated1.GOseq.plot.InXcomparison.allmodules.soilFC.pdf",height=200,width=20,limitsize=FALSE) 
+#return(WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison)
 }
 
 # test
