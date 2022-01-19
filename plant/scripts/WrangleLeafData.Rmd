@@ -265,6 +265,8 @@ figS1.alt
 ```
 ```{r}
 save_plot("../../_Paper_Figures/FigS1.pdf", figS1.alt, base_height = 6, base_width = 5)
+save_plot("/Volumes/GoogleDrive/Shared drives/BrassicaMicrobeRNAseq/Figs and Tables/FigS1.pdf", figS1.alt, base_height = 6, base_width = 5)
+save_plot("/Volumes/GoogleDrive/Shared drives/BrassicaMicrobeRNAseq/Figs and Tables/FigS1.png", figS1.alt, base_height = 6, base_width = 5)
 ```
 
 
