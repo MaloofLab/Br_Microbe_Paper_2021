@@ -287,13 +287,28 @@ d %>% ggplot(aes(x=MEivory_root, y=leaf_avg_std)) +
 ```
 
 ```{r, fig.asp=1}
-d %>% dplyr::select(all_of(vars)) %>%
+d.plot <- d %>% dplyr::select(all_of(vars)) %>%
   pivot_longer(cols = !leaf_avg_std, names_to = "module", values_to ="eigenGene") %>%
   mutate(module=str_remove(module,"ME")) %>%
-  
+  mutate(module=str_replace(module, "(.*)_(leaf|root)","\\2: \\1"))
+
+d.plot.order <- d.plot %>%
+  group_by(module) %>%
+  summarize(cor=abs(cor(leaf_avg_std, eigenGene))) %>%
+  arrange(desc(cor)) %>%
+  pull(module)
+
+d.plot %>%
+  mutate(module=factor(module, levels= d.plot.order)) %>%
   ggplot(aes(x=eigenGene, y=leaf_avg_std)) +
   geom_point() +
-  facet_wrap(~module, ncol = 3, scales = "free")
-ggsave("../../_Paper_Figures/Eigen_leaf_length.pdf")
+  facet_wrap(~module, ncol = 3, scales = "free") + 
+  theme_bw() +
+  ylab("Standardized Leaf Length") +
+  xlab("Eigen Gene Expression")
+ggsave("../../_Paper_Figures/Eigen_leaf_length.pdf", height=6, width=6)
+
+ggsave("/Volumes/GoogleDrive/Shared drives/BrassicaMicrobeRNAseq/Figs and Tables/Fig4_Eigen_leaf_length.png", height=7, width=6)
+
 ```
 
