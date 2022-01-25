@@ -27,7 +27,6 @@ History
 * Modify for updated plusN_Wang2003 using v5 (080621-081021)
 * Save as "custom_categories_consolidate1_forV5"
 * heatmap coloaring by soil FC sign (positive vs negative) (Sep 2021)
-* Cleaning up scripts (Jan 25, 2021)
 
 To Do
 
@@ -996,15 +995,15 @@ write_csv(InX.all.soilFC,file=file.path("RNA","output","InX.all.soilFC.csv"))
 # separate plot for each module (Dec 21, 2021): giving up to play with facet_wrap()
 # another trial by modifying function InX.comparison.plot() (Jan 4, 2022) -> Jan 18, 2022
 ```{r}
-# read soilFC
+# 
 InX.all.soilFC <- read_csv(file.path("RNA","output","InX.all.soilFC.csv"))
 # get data3
-data3 <- read_csv(file.path("RNA","output","data3.csv"))
+
 # full levels
 #full.level.x <- data3 %>% distinct(category3.up_down) %>% arrange(category3.up_down) %>% as_vector()
 #full.level.y <- data3 %>% distinct(InX) %>% arrange(InX) %>% as_vector()
 #
-InX.comparison.plot1.v2 <- function(data=data3,target.module="root.voom5.module.signedhybrid.darkred",level.x = full.level.x, level.y=full.level.y,,soilFC=InX.all.soilFC) {# data3.root.darkred <- data3 %>% filter(NAME=="root.voom5.module.signedhybrid.darkred")
+InX.comparison.plot1.v2 <- function(data=data3,target.module="root.voom5.module.signedhybrid.darkred",level.x = full.level.x, level.y=full.level.y) {# data3.root.darkred <- data3 %>% filter(NAME=="root.voom5.module.signedhybrid.darkred")
 #data.target <- data %>% filter(NAME==target.module) # 
 # instead enter FDR = 1 in non target.module
 data.target <- data %>% mutate(over_represented_padjust=ifelse(NAME==target.module,over_represented_padjust,1)) #%>% dplyr::select(over_represented_padjust,NAME)
@@ -1050,7 +1049,11 @@ data3 %>% distinct(NAME) %>% apply(.,1,function(x) InX.comparison.plot(target.mo
 
 ```
 
-# using soil FC
+
+############################################################
+############################################################
+# did not use following scripts (unused or old)
+# separate plot for each module (Dec 21, 2021): giving up to play with facet_wrap()
 ```{r}
 InX.comparison.plot5 <- function(data=data3,soilFC=InX.all.soilFC) {
   data <- data %>% mutate(NAME2=str_remove_all(NAME,"voom5.module.signedhybrid.")) #%>% separate(NAME2,into=c("tissue","module"))
@@ -1089,11 +1092,230 @@ p.all2 <- InX.comparison.plot5()
 ggsave(p.all2, path=file.path("RNA","output"),filename="WGCNA.customcatv5.consolidated1.GOseq.plot.InXcomparison.allmodules.soilFC.v2.pdf",height=800,width=20,limitsize=FALSE) # give up
 ```
 
+# better to use UpSet plot (by Scott and Julin at Br. meeting June 15 2021) -> does not work well for some reasons...
+```{r}
+library(UpSetR)
+filtered.custom.data.consolidated.numericLL %>% filter(set %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% filter(group=="In02orLess") %>% 
+  upset()
+# does not work
+filtered.custom.data.consolidated.numeric %>%
+  filter(totalSetN <= 2) %>% dplyr::select(genes,minusN_root_FC_down,plusMg_root_FC_down) %>% upset(nsets=2) 
+
+```
+
+# plot each module, making  function
+```{r}
+InX.comparison.plot <- function(data=data3,target.module="root.voom5.module.signedhybrid.darkred") {# data3.root.darkred <- data3 %>% filter(NAME=="root.voom5.module.signedhybrid.darkred")
+data.target <- data %>% filter(NAME==target.module)
+data.target %>% View()
+# plot 
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- ggplot(data.target, aes(x=category3.up_down,y=InX)) + geom_tile(aes(fill=-log10(over_represented_padjust)),colour="white") + scale_fill_gradient2(limit=c(0,10), high=muted("magenta")) + facet_grid(.~tissue3,scales="free_x",space="free")
+
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison + theme(axis.text.x=element_text(size=12,angle=90,hjust=1,vjust=0.3),
+                                      axis.text.y=element_text(size=12),
+                                      axis.title=element_text(size=10),
+                                      axis.ticks = element_blank(),
+                                      strip.text.y = element_text(angle=0),
+                                      strip.text.x = element_text(size=8,angle=90),
+                                      panel.background = element_rect(fill = "white",colour="black"),
+                                      plot.title=element_text(size=14),
+                                      axis.line=element_blank()) + 
+      labs(x="",y="",fill="-log10\n FDR",title=str_remove(target.module,"voom5.module.signedhybrid."))
+# adding overlap numbers
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison + geom_text(aes(label=numDEInCat))
+
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison
+ggsave(path=file.path("RNA","output"),filename=str_c("WGCNA.",target.module,".customcat.consolidatedv5.GOseq.plot.InXcomparison.png"),height=8,width=11) 
+}
+# test
+InX.comparison.plot(data=data3,target.module="root.voom5.module.signedhybrid.darkred")
+# how many mnodules we have?
+data3 %>% distinct(NAME) # 53 modules
+# 
+#data3 %>% distinct(NAME)  %>% map(~InX.comparison.plot(target.module=.$NAME)) # does not owrk
+# plot for all WGCNA modules
+data3 %>% distinct(NAME) %>% apply(.,1,function(x) InX.comparison.plot(target.module=x))
+# problem. each plot has different X and Y. (Jan 4, 2022)
+
+```
 
 
+# troubleshooting (June 2021) -> solved (June 13, 2021)
+```{r eval=FALSE}
+# duplicated genes in 
+root.all4 %>% filter(duplicated(genes)) %>% View() # none
+#
+root.all3 %>% filter(duplicated(genes)) %>% View() # one
+
+root.all3 %>% semi_join(root.all3[duplicated(root.all3$genes),"genes"],by="genes") %>% View()
+root.all3 %>% semi_join(root.all3[duplicated(root.all3$genes),"genes"],by="genes") %>% dplyr::select(matches("minusN_\nPeng")) # this has different values in the same gene.
+# multiple!
+N_Peng_2007_ST1and2 %>% filter(genes=="BraA04g024020.3C")
+# due to AGI -> Br conversion? -> No. Only one...
+Br.v3.0anno.At.BLAST.highscore %>% filter(name=="BraA04g024020.3C")
+# 
+Br.v3.0anno.At.BLAST.highscore.Br %>% filter(name=="BraA04g024020.3C")
+#
+N_Peng_2007_ST1_down <- read_xls(file.path("intermediate","N_Peng_2007","11103_2007_9241_MOESM1_ESM.xls"),skip=9, col_names=TRUE)
+N_Peng_2007_ST1_down %>% View()
+N_Peng_2007_ST1_down %>% dplyr::select(`AGI ID`,bRatio) %>% dplyr::rename(AGI=`AGI ID`) %>% mutate(AGI=str_to_upper(AGI)) %>% left_join(Br.v3.0anno.At.BLAST.highscore,by="AGI") %>% filter(name=="BraA04g024020.3C") %>% View() # the original data has duplicated data for one gene! or due to AGI -> Br conversion?
+
+# AT2G33450
+N_Peng_2007_ST1_down %>% dplyr::select(`AGI ID`,bRatio) %>% dplyr::rename(AGI=`AGI ID`) %>% mutate(AGI=str_to_upper(AGI))
+
+# original table 
+temp <- N_Peng_2007_ST1_down %>% dplyr::select(`AGI ID`,bRatio) %>% dplyr::rename(AGI=`AGI ID`) %>% mutate(AGI=str_to_upper(AGI)) %>% left_join(Br.v3.0anno.At.BLAST.highscore,by="AGI")
+# 
+dim(temp)
+temp[duplicated(temp$AGI),] %>% View()
+temp[temp$AGI=="AT2G33450",] # two
+#
+N_Peng_2007_ST1_down %>% dplyr::select(`AGI ID`,bRatio) %>% dplyr::rename(AGI=`AGI ID`) %>% mutate(AGI=str_to_upper(AGI)) %>% filter(AGI=="AT2G33450") # two. I looked up the original xls file and there are two "AT2G33450"! So use higher bRatio for this.
+
+```
+
+# Does shoot.all have duplicated genes?
+```{r}
+shoot.all %>% filter(duplicated(genes)) %>% View() #none. No need to change.
+```
+
+# Overlap between "minusN_root_FC_down","plusMg_root_FC_down" in In02orLess (found in root.ivory)? (061521) -> v5 version (082021)
+```{r}
+target.module="root.voom5.module.signedhybrid.ivory"
+data <- data3
+data.target <- data %>% filter(NAME==target.module) %>% filter(str_detect(InX.FDR0.001,"In02orless")) 
+# load
+load(file.path("annotation","output","In02orless.consolidated.forORA.list2.v5.Rdata"))
+# load(file.path("annotation","output","In02orless.consolidated.forORA.list2.Rdata"))
+In02orless.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # 6 overlap
+#### under construction ####
+
+# 
+load(file.path("annotation","output","In03orless.consolidated.forORA.list2.Rdata"))
+In03orless.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # 17 overlap
+# 
+#load(file.path("annotation","output","In05orless.consolidated.forORA.list2.Rdata"))
+load(file=file.path("annotation","output","In05orless.consolidated.forORA.list2.v5.Rdata"))
+
+In05orless.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # 39 overlap
+
+# updated for v5
+#load(file.path("annotation","output","In10orless.consolidated.forORA.list2.Rdata"))
+load(file=file.path("annotation","output","In10orless.consolidated.forORA.list2.v5.Rdata"))
+In10orless.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # 92 overlap
+# 
+load(file.path("annotation","output","In20orless.consolidated.forORA.list2.Rdata"))
+In20orless.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # 96 overlap
+# 
+load(file.path("annotation","output","Total.consolidated.forORA.list2.Rdata"))
+In05orMore.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # 67 overlap
+#
+load(file.path("annotation","output","In05orMore.consolidated.forORA.list2.Rdata"))
+In05orMore.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% count(name) %>% count(n,name="n of n") # 67 overlap
+```
 
 
+```{r}
+# 
+load(file.path("annotation","output","In02orless.consolidated.forORA.list2.Rdata"))
+In02orless.consolidated.forORA.list2 %>% enframe() %>% unnest(value) %>% filter(value %in% c("minusN_root_FC_up","minusPi_root_FC_up")) %>% count(name) %>% count(n,name="n of n") # 112 overlap
 
-############################################################
-############################################################
-# did not use following scripts (unused or old)
+```
+
+# make one function for one module (I am not satisfied with this function.)
+```{r}
+InX.comparison.plot6 <- function(data=data3,soilFC=InX.all.soilFC,which.module="root.voom5.module.signedhybrid.ivory") {
+  data <- data %>% mutate(NAME2=str_remove_all(NAME,"voom5.module.signedhybrid.")) #%>% separate(NAME2,into=c("tissue","module"))
+  # unite
+    data <- data %>% unite(col=tissue.module.category.InX, c(NAME2,tissue3,category3.up_down,InX),sep=".",remove=FALSE) # this tissue3 is for category, not for module.
+  # modify soilFC
+    soilFC <- soilFC %>% separate(category,into=c("category3","tissue3","FC","up_down")) %>% unite(category3.up_down,c(category3,up_down),sep="_") %>% unite(col=tissue.module.category.InX, c(tissue,module,tissue3,category3.up_down,InX),sep=".",remove=FALSE) #%>% View(). what is this tissue? tissue for modules.
+    # combine data and soilFC
+    data.combine <- data %>% inner_join(soilFC,by="tissue.module.category.InX") #
+    data.combine
+    # modify over_represented_padjust according to soilFC
+    data.combine <- data.combine %>% mutate(minuslog10.soilFC.over_represented_padjust=ifelse(soilFC>=0,-log10(over_represented_padjust),log10(over_represented_padjust))) #%>% View()
+    # select module
+    data.combine <- data.combine %>% filter(NAME==which.module)
+    # levels of categories
+    levels(data.combine$category3.up_down.x)
+    
+  # plot 
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- ggplot(data.combine, aes(x=category3.up_down.x,y=InX.x)) + geom_tile(aes(fill=minuslog10.soilFC.over_represented_padjust),colour="white") + scale_fill_gradient2(limit=c(-10,10), low="green",high=muted("magenta")) # + facet_wrap(vars(NAME,tissue3.x),scales="free_x",ncol=4)
+
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison + theme(axis.text.x=element_text(size=12,angle=90,hjust=1,vjust=0.3),
+                                      axis.text.y=element_text(size=12),
+                                      axis.title=element_text(size=10),
+                                      axis.ticks = element_blank(),
+                                      strip.text.y = element_text(size=16,angle=0),
+                                      strip.text.x = element_text(size=8,angle=0),
+                                      panel.background = element_rect(fill = "white",colour="black"),
+                                      plot.title=element_text(size=14),
+                                      axis.line=element_blank()) + 
+      labs(x="",y="",fill="-log10\n FDR",title=str_c("WGCNA.customcatv5.consolidated1.GOseq.plot.InXcomparison."))
+# adding overlap numbers
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison + geom_text(aes(label=numDEInCat))
+
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison
+#ggsave(path=file.path("RNA","output"),filename="WGCNA.customcatv5.consolidated1.GOseq.plot.InXcomparison.allmodules.soilFC.pdf",height=200,width=20,limitsize=FALSE) 
+return(WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison)
+}
+
+# test
+p.all3 <- InX.comparison.plot6()
+
+# WGCNA modules
+WGCNA.modules.all <- unique(data3$NAME) # old way
+# 
+data3 %>% distinct(NAME) # tidyverse way
+# 
+# map(data3 %>% distinct(NAME) ,function(x) InX.comparison.plot6(which.module=x)) # does not work
+#
+InX.heatmap.plot.all <- map(WGCNA.modules.all,function(x) InX.comparison.plot6(which.module=x)) # needs to have the same X axis. Revise InX.comparison.plot6()
+#
+
+ggsave(p.all3, path=file.path("RNA","output"),filename="WGCNA.customcatv5.consolidated1.GOseq.plot.InXcomparison.allmodules.soilFC.v3.pdf",height=800,width=20,limitsize=FALSE) 
+```
+
+# all in one plot (June 29, 2021) -> updated version (Sep 20, 2021 )
+```{r}
+InX.all.soilFC <- read_csv(file.path("RNA","output","InX.all.soilFC.csv"))
+InX.comparison.plot4 <- function(data=data3,soilFC=InX.all.soilFC) {
+  data <- data %>% mutate(NAME2=str_remove_all(NAME,"voom5.module.signedhybrid.")) #%>% separate(NAME2,into=c("tissue","module"))
+  # unite
+    data <- data %>% unite(col=tissue.module.category.InX, c(NAME2,tissue3,category3.up_down,InX),sep=".",remove=FALSE) # this tissue3 is for category, not for module.
+  # modify soilFC
+    soilFC <- soilFC %>% separate(category,into=c("category3","tissue3","FC","up_down")) %>% unite(category3.up_down,c(category3,up_down),sep="_") %>% unite(col=tissue.module.category.InX, c(tissue,module,tissue3,category3.up_down,InX),sep=".",remove=FALSE) #%>% View(). what is this tissue? tissue for modules.
+    # combine data and soilFC
+    data.combine <- data %>% inner_join(soilFC,by="tissue.module.category.InX") #
+    data.combine
+    # modify over_represented_padjust according to soilFC
+    data.combine <- data.combine %>% mutate(minuslog10.soilFC.over_represented_padjust=ifelse(soilFC>=0,-log10(over_represented_padjust),log10(over_represented_padjust))) #%>% View()
+  # plot 
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- ggplot(data.combine, aes(x=category3.up_down.x,y=InX.x)) + geom_tile(aes(fill=minuslog10.soilFC.over_represented_padjust),colour="white") + scale_fill_gradient2(limit=c(-10,10), low="green",high=muted("magenta")) + facet_grid(NAME~tissue3.x,scales="free_x",space="free")
+
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison + theme(axis.text.x=element_text(size=12,angle=90,hjust=1,vjust=0.3),
+                                      axis.text.y=element_text(size=12),
+                                      axis.title=element_text(size=10),
+                                      axis.ticks = element_blank(),
+                                      strip.text.y = element_text(size=16,angle=0),
+                                      strip.text.x = element_text(size=8,angle=90),
+                                      panel.background = element_rect(fill = "white",colour="black"),
+                                      plot.title=element_text(size=14),
+                                      axis.line=element_blank()) + 
+      labs(x="",y="",fill="-log10\n FDR",title=str_c("WGCNA.customcatv5.consolidated1.GOseq.plot.InXcomparison."))
+# adding overlap numbers
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison + geom_text(aes(label=numDEInCat))
+
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison
+#ggsave(path=file.path("RNA","output"),filename="WGCNA.customcatv5.consolidated1.GOseq.plot.InXcomparison.allmodules.soilFC.pdf",height=200,width=20,limitsize=FALSE) 
+return(WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison)
+}
+
+# test
+p.all <- InX.comparison.plot4()
+#p.all
+ggsave(p.all, path=file.path("RNA","output"),filename="WGCNA.customcatv5.consolidated1.GOseq.plot.InXcomparison.allmodules.soilFC.plot4.pdf",height=200,width=20,limitsize=FALSE) 
+# this version is too long to find which column corresponds to which category.
+```
+

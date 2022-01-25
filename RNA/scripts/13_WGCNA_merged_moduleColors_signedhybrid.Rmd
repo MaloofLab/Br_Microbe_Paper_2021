@@ -711,9 +711,9 @@ WGCNA.voom5.signedhybrid.all.moduleColors.customcat.GOseq <-
 read_csv(file.path("RNA","output","WGCNA.voom5.signedhybrid.all.moduleColors.customcat.GOseq.csv"))
 # under construction (July 20, 2021)
 
-
 # Is "GSEA_cust.root" + "GSEA_cust.leaf" correlated with leaf_avg_std???? (041921)
 ##I do not think so.
+## does not work (011122)
 WGCNA.voom5.signedhybrid.all.modules.leaf_avg_std.correlated.customcat.GOseq <- WGCNA.voom5.signedhybrid.all.modules.customcat.GOseq %>% mutate(name=str_replace(name,"_",".")) %>% filter(name %in% c(colnames(GSEA_cust.root) ,colnames(GSEA_cust.leaf))) %>% dplyr::rename(NAME=name) # check
 WGCNA.voom5.signedhybrid.all.modules.leaf_avg_std.correlated.customcat.GOseq %>% View()
 str(WGCNA.voom5.signedhybrid.all.modules.leaf_avg_std.correlated.customcat.GOseq)
@@ -721,7 +721,7 @@ str(WGCNA.voom5.signedhybrid.all.modules.leaf_avg_std.correlated.customcat.GOseq
 
 # soil treatment associated modules
 ```{r}
-WGCNA.voom5.signedhybrid.all.modules.customcat.GOseq
+WGCNA.voom5.signedhybrid.all.modules.customcat.GOseq # does not work
 #
 WGCNA.voom5.signedhybrid.all.modules.GOseq <- read_csv(file.path("RNA","output","WGCNA.voom5.signedhybrid.all.modules.GOseq.csv"))
 #
