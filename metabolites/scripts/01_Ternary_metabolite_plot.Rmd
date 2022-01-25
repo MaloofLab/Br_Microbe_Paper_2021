@@ -1,0 +1,65 @@
+---
+title: "Ternary plot for metabolites"
+output: html_notebook
+---
+
+```{r}
+if(!"ggtern" %in% installed.packages(fields="Package"))
+  install.packages("ggtern")
+```
+
+```{r}
+library(tidyverse)
+library(ggtern)
+```
+
+## get metabolite data
+
+```{r}
+met_raw <-read_csv("../input/metabolites_set1.csv")
+met <- met_raw %>% 
+  mutate(pot=str_pad(pot, width = 3, pad = "0")) %>%
+  mutate(sampleID=str_c("wyo", genotype, pot, sep="_")) %>%
+  mutate(trt=ifelse(is.na(autoclave), "BLANK", autoclave)) %>%
+  select(sampleID, genotype, tissue, trt, sample_mass = `sample_mass mg`, !submission_number:concatenate)  %>%
+  
+  #make long
+  pivot_longer(!sampleID:sample_mass, names_to = "metabolite", values_to = "met_amount") %>%
+  
+  #filter away unnamed
+ # filter(str_detect(metabolite, pattern="^[0-9]+$", negate=TRUE)) %>%
+  
+  #adjust by sample mass
+  mutate(met_per_mg=met_amount/sample_mass) %>%
+  
+  #get mean
+  group_by(metabolite, genotype, tissue, trt) %>%
+  summarize(mean_amt=mean(met_amount),
+            mean_per_mg=mean(met_per_mg)) %>%
+  
+  #proportion of total
+  mutate(prop_total_amt = mean_amt /sum(mean_amt),
+         prop_total_per_mg = mean_per_mg / sum(mean_per_mg)) %>% 
+  
+  #reformat
+  pivot_wider(id_cols = c(genotype, tissue, metabolite), 
+              names_from = c(trt), 
+              values_from = starts_with("prop_"),
+              names_sep = "_") %>%
+  arrange(metabolite, tissue, genotype)
+
+met 
+```
+
+```{r}
+met %>% select(tissue, 
+               genotype, 
+               live=prop_total_amt_live,
+               dead=prop_total_amt_dead,
+               blank=prop_total_amt_BLANK) %>%
+  
+  ggtern(aes(blank, live, dead)) +
+  geom_point(alpha=.2) +
+  facet_grid(tissue ~ genotype)
+```
+
