@@ -346,36 +346,3 @@ ggsave(p.test, path=file.path("RNA","output"),filename=paste("WGCNA.customcatv5.
 ```{r}
 data3 %>% distinct(NAME) %>% apply(.,1,function(x) InX.comparison.plot5.2(target.module=x))
 ```
-
-
-
-#### not used 
-# all in one plot (June 29, 2021) -> updated version (Aug 17, 2021, under construction)
-## This is not good to check which X corresponds in each plot
-```{r}
-InX.comparison.plot3 <- function(data=data3) {
-  #data <- data %>% filter(NAME==target.module)
-  # plot 
-WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- ggplot(data, aes(x=category3.up_down,y=InX)) + geom_tile(aes(fill=-log10(over_represented_padjust)),colour="white") + scale_fill_gradient2(limit=c(0,10), high=muted("magenta")) + facet_grid(NAME~tissue3,scales="free_x",space="free")
-
-WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison + theme(axis.text.x=element_text(size=12,angle=90,hjust=1,vjust=0.3),
-                                      axis.text.y=element_text(size=12),
-                                      axis.title=element_text(size=10),
-                                      axis.ticks = element_blank(),
-                                      strip.text.y = element_text(size=16,angle=0),
-                                      strip.text.x = element_text(size=8,angle=90),
-                                      panel.background = element_rect(fill = "white",colour="black"),
-                                      plot.title=element_text(size=14),
-                                      axis.line=element_blank()) + 
-      labs(x="",y="",fill="-log10\n FDR",title=str_c("WGCNA.customcatv5.consolidated1.GOseq.plot.InXcomparison."))
-# adding overlap numbers
-WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison + geom_text(aes(label=numDEInCat))
-
-WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison
-ggsave(path=file.path("RNA","output"),filename="WGCNA.customcatv5.consolidated1.GOseq.plot.InXcomparison.allmodules.pdf",height=200,width=20,limitsize=FALSE) 
-}
-
-# test
-InX.comparison.plot3()
-
-```
