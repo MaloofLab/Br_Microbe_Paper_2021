@@ -36,7 +36,7 @@ History
 
 To Do
 * Cleaning up scripts more
-* having the same x-axis and y-axis for WGCNA heatmap
+* having the same x-axis and y-axis for WGCNA heatmap in every WGCNA module
 
 #### making root + shoot category with up and down and
 # prep
@@ -318,28 +318,32 @@ all.temp <- all.temp %>% mutate(InX=factor(InX,levels=level.y))
 # check
 all.temp %>% View()
 str(all.temp)
+# remove 0 in numDEInCat
+all.temp <- all.temp %>% mutate(numDEInCat=ifelse(numDEInCat==0,"",numDEInCat)) #%>% View()
 # plot 
 WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- ggplot(all.temp, aes(x=category3.up_down,y=InX)) + geom_tile(aes(fill=minuslog10.soilFC.over_represented_padjust),colour="white") + scale_fill_gradient2(limit=c(-10,10), low="green",high=muted("magenta")) + facet_grid(.~tissue3,scales="free_x",space="free")
 # 
-WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison + theme(axis.text.x=element_text(size=12,angle=90,hjust=1,vjust=0.3),
-                                      axis.text.y=element_text(size=12),
-                                      axis.title=element_text(size=10),
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison + theme(axis.text.x=element_text(size=8,angle=90,hjust=1,vjust=0.3),
+                                      axis.text.y=element_text(size=8),
+                                      axis.title=element_text(size=9),
                                       axis.ticks = element_blank(),
                                       strip.text.y = element_text(size=16,angle=0),
-                                      strip.text.x = element_text(size=8,angle=0),
+                                      strip.text.x = element_text(size=8,angle=90),
                                       panel.background = element_rect(fill = "white",colour="black"),
-                                      plot.title=element_text(size=14),
+                                      plot.title=element_text(size=8),
                                       axis.line=element_blank()) + 
-      labs(x="",y="",fill="-log10\n FDR",title=str_c("WGCNA.customcatv5.consolidated1.GOseq.plot.InXcomparison."))
+      labs(x="",y="",fill="-log10\n FDR",title=target.module) # str_c("WGCNA.customcatv5.consolidated1.GOseq.plot.InXcomparison.\n",target.module))
 # adding overlap numbers
-WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison + geom_text(aes(label=numDEInCat))
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison + geom_text(aes(label=numDEInCat),size=2, angle=90)
 # 
 WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison
-ggsave(path=file.path("RNA","output"),filename=paste("WGCNA.customcatv5.consol1.ORA.InXcomp.soilFC.",target.module,".pdf",sep=""),height=4,width=6.5) 
+#ggsave(path=file.path("RNA","output"),filename=paste("WGCNA.customcatv5.consol1.ORA.InXcomp.soilFC.",target.module,".pdf",sep=""),height=4,width=6.5) 
 return(WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison)
 }
 # test 
-ggsave(p.test, path=file.path("RNA","output"),filename=paste("WGCNA.customcatv5.consol1.ORA.InXcomp.soilFC.",target.module,".pdf",sep=""),height=4,width=6.5) # legend needs to be improved. How?
+p.test <- InX.comparison.plot5.2()
+target.module <- "root.voom5.module.signedhybrid.darkred"
+ggsave(path=file.path("RNA","output"),filename=paste("WGCNA.customcatv5.consol1.ORA.InXcomp.soilFC.",target.module,".pdf",sep=""),height=4,width=6.5) # legend needs to be improved. How?
 ```
 
 # apply to all modules 
