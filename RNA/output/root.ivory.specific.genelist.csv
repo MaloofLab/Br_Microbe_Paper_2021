@@ -1,77 +1,77 @@
 genes,totalSetN,AGI,At_symbol,At_short_description,root.voom5.module.signedhybrid,leaf.voom5.module.signedhybrid,minusN_root_FC_down,plusMg_root_FC_down,n
-BraA07g012800.3C,1,AT1G25422,NA,NA,ivory,turquoise,1,NA,1
+BraA07g012800.3C,1,AT1G25422,NA,NA,ivory,lightcyan1,1,NA,1
 BraA10g015690.3C,1,AT3G29110,NA,NA,ivory,NA,NA,1,1
 BraA02g045070.3C,2,AT5G65210,TGA1,bZIP transcription factor family protein,ivory,grey,1,NA,1
-BraA03g025060.3C,2,AT2G27510,ATFD3,ferredoxin 3,ivory,tan,NA,1,1
-BraA03g052000.3C,2,AT4G24620,PGI,phosphoglucose isomerase 1,ivory,turquoise,1,NA,1
-BraA04g011990.3C,2,AT5G39590,NA,TLD-domain containing nucleolar protein,ivory,turquoise,1,NA,1
-BraA04g024110.3C,2,AT2G33550,ASR3,Homeodomain-like superfamily protein,ivory,salmon4,1,NA,1
-BraA05g011300.3C,2,AT2G33550,ASR3,Homeodomain-like superfamily protein,ivory,sienna3,1,NA,1
+BraA03g025060.3C,2,AT2G27510,ATFD3,ferredoxin 3,ivory,lightcyan1,NA,1,1
+BraA03g052000.3C,2,AT4G24620,PGI,phosphoglucose isomerase 1,ivory,lightcyan1,1,NA,1
+BraA04g011990.3C,2,AT5G39590,NA,TLD-domain containing nucleolar protein,ivory,lightcyan1,1,NA,1
+BraA04g024110.3C,2,AT2G33550,ASR3,Homeodomain-like superfamily protein,ivory,cyan,1,NA,1
+BraA05g011300.3C,2,AT2G33550,ASR3,Homeodomain-like superfamily protein,ivory,antiquewhite4,1,NA,1
 BraA06g028670.3C,2,AT5G65210,TGA1,bZIP transcription factor family protein,ivory,grey,1,NA,1
 BraA07g018210.3C,2,AT2G27510,ATFD3,ferredoxin 3,ivory,brown,NA,1,1
-BraA09g008570.3C,2,AT5G65210,TGA1,bZIP transcription factor family protein,ivory,saddlebrown,1,NA,1
-BraA09g013650.3C,2,AT1G64190,PGD1,6-phosphogluconate dehydrogenase family protein,ivory,grey60,1,NA,1
+BraA09g008570.3C,2,AT5G65210,TGA1,bZIP transcription factor family protein,ivory,cyan,1,NA,1
+BraA09g013650.3C,2,AT1G64190,PGD1,6-phosphogluconate dehydrogenase family protein,ivory,cyan,1,NA,1
 BraA10g027330.3C,2,AT5G10580,NA,"Protein of unknown function, DUF599",ivory,NA,1,NA,1
 BraA01g042240.3C,3,AT3G05950,NA,RmlC-like cupins superfamily protein,ivory,NA,1,NA,1
-BraA02g016920.3C,3,AT1G66140,ZFP4,zinc finger protein 4,ivory,pink,1,NA,1
-BraA02g018180.3C,3,AT1G68240,NA,basic helix-loop-helix (bHLH) DNA-binding superfamily protein,ivory,white,1,NA,1
+BraA02g016920.3C,3,AT1G66140,ZFP4,zinc finger protein 4,ivory,cyan,1,NA,1
+BraA02g018180.3C,3,AT1G68240,NA,basic helix-loop-helix (bHLH) DNA-binding superfamily protein,ivory,lightgreen,1,NA,1
 BraA03g005580.3C,3,AT5G13110,G6PD2,glucose-6-phosphate dehydrogenase 2,ivory,brown4,1,NA,1
 BraA04g003010.3C,3,AT3G57920,SPL15,NA,ivory,NA,1,NA,1
-BraA04g031460.3C,3,AT2G43750,ACS1,O-acetylserine (thiol) lyase B,ivory,turquoise,1,NA,1
+BraA04g031460.3C,3,AT2G43750,ACS1,O-acetylserine (thiol) lyase B,ivory,lightcyan1,1,NA,1
 BraA07g041110.3C,3,AT1G77990,AST56,STAS domain / Sulfate transporter family,ivory,honeydew1,1,NA,1
-BraA10g025400.3C,3,AT5G13420,TRA2,Aldolase-type TIM barrel family protein,ivory,turquoise,1,NA,1
+BraA10g025400.3C,3,AT5G13420,TRA2,Aldolase-type TIM barrel family protein,ivory,lightcyan1,1,NA,1
 BraA02g024490.3C,4,AT1G78050,PGM,phosphoglycerate/bisphosphoglycerate mutase,ivory,cyan,1,NA,1
-BraA04g001550.3C,4,AT3G60750,AtTKL1,Transketolase,ivory,turquoise,1,NA,1
-BraA04g014140.3C,4,AT5G41670,PGD3,6-phosphogluconate dehydrogenase family protein,ivory,turquoise,1,NA,1
-BraA04g019390.3C,4,AT2G26980,CIPK3,CBL-interacting protein kinase 3,ivory,turquoise,1,NA,1
+BraA04g001550.3C,4,AT3G60750,AtTKL1,Transketolase,ivory,lightcyan1,1,NA,1
+BraA04g014140.3C,4,AT5G41670,PGD3,6-phosphogluconate dehydrogenase family protein,ivory,lightcyan1,1,NA,1
+BraA04g019390.3C,4,AT2G26980,CIPK3,CBL-interacting protein kinase 3,ivory,lightcyan1,1,NA,1
 BraA05g000080.3C,4,AT2G48080,ALKBH10A,NA,ivory,grey,1,NA,1
-BraA06g004430.3C,4,AT1G48600,AtPMEAMT,S-adenosyl-L-methionine-dependent methyltransferases superfamily protein,ivory,turquoise,1,NA,1
-BraA06g037550.3C,4,AT4G27710,CYP709B3,"cytochrome P450, family 709, subfamily B, polypeptide 3",ivory,purple,1,NA,1
+BraA06g004430.3C,4,AT1G48600,AtPMEAMT,S-adenosyl-L-methionine-dependent methyltransferases superfamily protein,ivory,lightcyan1,1,NA,1
+BraA06g037550.3C,4,AT4G27710,CYP709B3,"cytochrome P450, family 709, subfamily B, polypeptide 3",ivory,plum1,1,NA,1
 BraA07g012320.3C,4,AT1G24280,G6PD3,glucose-6-phosphate dehydrogenase 3,ivory,grey,1,NA,1
 BraA07g027260.3C,4,AT1G76790,IGMT5,O-methyltransferase family protein,ivory,thistle1,1,NA,1
-BraA08g025060.3C,4,AT1G24280,G6PD3,glucose-6-phosphate dehydrogenase 3,ivory,white,1,NA,1
+BraA08g025060.3C,4,AT1G24280,G6PD3,glucose-6-phosphate dehydrogenase 3,ivory,lightgreen,1,NA,1
 BraA10g027660.3C,4,AT5G10210,NA,NA,ivory,NA,1,NA,1
-BraA10g027790.3C,4,AT5G10030,OBF4,TGACG motif-binding factor 4,ivory,turquoise,1,NA,1
-BraA10g031320.3C,4,AT5G09650,AtPPa6,pyrophosphorylase 6,ivory,turquoise,1,NA,1
-BraA01g027200.3C,5,AT1G58080,ATATP-PRT1,ATP phosphoribosyl transferase 1,ivory,turquoise,1,NA,1
-BraA02g019680.3C,5,AT1G70260,RTP1,nodulin MtN21 /EamA-like transporter family protein,ivory,turquoise,NA,1,1
-BraA02g045520.3C,5,AT5G67420,ASL39,LOB domain-containing protein 37,ivory,tan,1,NA,1
-BraA06g026370.3C,5,AT5G62720,NA,Integral membrane HPP family protein,ivory,turquoise,1,NA,1
+BraA10g027790.3C,4,AT5G10030,OBF4,TGACG motif-binding factor 4,ivory,lightcyan1,1,NA,1
+BraA10g031320.3C,4,AT5G09650,AtPPa6,pyrophosphorylase 6,ivory,lightcyan1,1,NA,1
+BraA01g027200.3C,5,AT1G58080,ATATP-PRT1,ATP phosphoribosyl transferase 1,ivory,lightcyan1,1,NA,1
+BraA02g019680.3C,5,AT1G70260,RTP1,nodulin MtN21 /EamA-like transporter family protein,ivory,lightcyan1,NA,1,1
+BraA02g045520.3C,5,AT5G67420,ASL39,LOB domain-containing protein 37,ivory,lightcyan1,1,NA,1
+BraA06g026370.3C,5,AT5G62720,NA,Integral membrane HPP family protein,ivory,lightcyan1,1,NA,1
 BraA07g035080.3C,5,AT1G70260,RTP1,nodulin MtN21 /EamA-like transporter family protein,ivory,NA,NA,1,1
 BraA08g030550.3C,5,AT1G13300,AtNIGT1,myb-like transcription factor family protein,ivory,NA,1,NA,1
-BraA09g007390.3C,5,AT5G62720,NA,Integral membrane HPP family protein,ivory,turquoise,1,NA,1
-BraA09g008960.3C,5,AT5G67420,ASL39,LOB domain-containing protein 37,ivory,tan,1,NA,1
+BraA09g007390.3C,5,AT5G62720,NA,Integral membrane HPP family protein,ivory,lightcyan1,1,NA,1
+BraA09g008960.3C,5,AT5G67420,ASL39,LOB domain-containing protein 37,ivory,lightcyan1,1,NA,1
 BraA09g034540.3C,5,AT1G30510,ATRFNR2,root FNR 2,ivory,darkorange,1,NA,1
-BraA02g015520.3C,6,AT5G52050,AtDTX50,MATE efflux family protein,ivory,floralwhite,1,NA,1
+BraA02g015520.3C,6,AT5G52050,AtDTX50,MATE efflux family protein,ivory,coral1,1,NA,1
 BraA02g023460.3C,6,AT1G76410,ATL8,RING/U-box superfamily protein,ivory,NA,1,NA,1
-BraA03g064230.3C,6,AT1G62180,APR2,5'adenylylphosphosulfate reductase 2,ivory,turquoise,1,NA,1
+BraA03g064230.3C,6,AT1G62180,APR2,5'adenylylphosphosulfate reductase 2,ivory,lightcyan1,1,NA,1
 BraA04g013440.3C,6,AT5G40850,AtUPM1,urophorphyrin methylase 1,ivory,grey,1,NA,1
-BraA06g033180.3C,6,AT5G26200,NA,Mitochondrial substrate carrier family protein,ivory,grey60,1,NA,1
+BraA06g033180.3C,6,AT5G26200,NA,Mitochondrial substrate carrier family protein,ivory,cyan,1,NA,1
 BraA06g038760.3C,6,AT3G25790,HHO1,NA,ivory,NA,1,NA,1
 BraA09g024540.3C,6,AT3G25790,HHO1,NA,ivory,NA,1,NA,1
 BraA02g006220.3C,7,AT5G15830,AtbZIP3,basic leucine-zipper 3,ivory,orangered4,1,NA,1
 BraA07g005240.3C,7,AT2G15620,ATHNIR,nitrite reductase 1,ivory,darkorange,1,NA,1
 BraA07g031060.3C,7,AT1G67910,NA,NA,ivory,NA,1,NA,1
-BraA08g020510.3C,7,AT4G36040,DJC23,NA,ivory,darkturquoise,1,NA,1
-BraA09g010360.3C,7,AT2G15620,ATHNIR,nitrite reductase 1,ivory,turquoise,1,NA,1
-BraA09g060970.3C,7,AT1G12110,AtNPF6.3,nitrate transporter 1.1,ivory,lightpink4,1,NA,1
-BraA07g012860.3C,8,AT1G25550,HHO3,myb-like transcription factor family protein,ivory,turquoise,1,NA,1
+BraA08g020510.3C,7,AT4G36040,DJC23,NA,ivory,darkgrey,1,NA,1
+BraA09g010360.3C,7,AT2G15620,ATHNIR,nitrite reductase 1,ivory,lightcyan1,1,NA,1
+BraA09g060970.3C,7,AT1G12110,AtNPF6.3,nitrate transporter 1.1,ivory,cyan,1,NA,1
+BraA07g012860.3C,8,AT1G25550,HHO3,myb-like transcription factor family protein,ivory,lightcyan1,1,NA,1
 BraA01g012700.3C,9,AT4G21990,APR3,APS reductase 3,ivory,yellow4,1,NA,1
-BraA03g049900.3C,9,AT4G21990,APR3,APS reductase 3,ivory,salmon,1,NA,1
-BraA06g015930.3C,2,AT1G20380,POQR,Prolyl oligopeptidase family protein,ivory,turquoise,1,1,2
+BraA03g049900.3C,9,AT4G21990,APR3,APS reductase 3,ivory,darkgrey,1,NA,1
+BraA06g015930.3C,2,AT1G20380,POQR,Prolyl oligopeptidase family protein,ivory,lightcyan1,1,1,2
 BraA01g024810.3C,3,AT3G47980,NA,NA,ivory,NA,1,1,2
-BraA04g020620.3C,5,AT2G28780,NA,NA,ivory,royalblue,1,1,2
+BraA04g020620.3C,5,AT2G28780,NA,NA,ivory,lightsteelblue1,1,1,2
 BraA07g019070.3C,5,AT2G28780,NA,NA,ivory,NA,1,1,2
-BraA09g024860.3C,5,AT4G05390,ATRFNR1,root FNR 1,ivory,green,1,1,2
+BraA09g024860.3C,5,AT4G05390,ATRFNR1,root FNR 1,ivory,darkgrey,1,1,2
 BraA02g013030.3C,6,AT5G56080,ATNAS2,nicotianamine synthase 2,ivory,NA,1,1,2
-BraA02g024390.3C,6,AT1G77760,GNR1,nitrate reductase 1,ivory,pink,1,1,2
+BraA02g024390.3C,6,AT1G77760,GNR1,nitrate reductase 1,ivory,cyan,1,1,2
 BraA02g024520.3C,6,AT1G78090,ATTPPB,trehalose-6-phosphate phosphatase,ivory,darkmagenta,1,1,2
 BraA06g007830.3C,6,AT1G11080,scpl31,serine carboxypeptidase-like 31,ivory,NA,1,1,2
-BraA07g026900.3C,6,AT1G77760,GNR1,nitrate reductase 1,ivory,turquoise,1,1,2
-BraA07g040960.3C,6,AT1G77760,GNR1,nitrate reductase 1,ivory,turquoise,1,1,2
+BraA07g026900.3C,6,AT1G77760,GNR1,nitrate reductase 1,ivory,lightcyan1,1,1,2
+BraA07g040960.3C,6,AT1G77760,GNR1,nitrate reductase 1,ivory,lightcyan1,1,1,2
 BraA07g041220.3C,6,AT1G78090,ATTPPB,trehalose-6-phosphate phosphatase,ivory,NA,1,1,2
 BraA08g031840.3C,6,AT1G11080,scpl31,serine carboxypeptidase-like 31,ivory,NA,1,1,2
-BraA02g008310.3C,8,AT5G19600,SULTR3;5,sulfate transporter 3;5,ivory,turquoise,1,1,2
+BraA02g008310.3C,8,AT5G19600,SULTR3;5,sulfate transporter 3;5,ivory,lightcyan1,1,1,2
 BraA03g064110.3C,8,AT1G62280,SLAH1,SLAC1 homologue 1,ivory,NA,1,1,2
 BraA09g012510.3C,8,AT1G62280,SLAH1,SLAC1 homologue 1,ivory,NA,1,1,2
 BraA09g016040.3C,8,AT1G62280,SLAH1,SLAC1 homologue 1,ivory,NA,1,1,2

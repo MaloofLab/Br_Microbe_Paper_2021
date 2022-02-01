@@ -37,6 +37,7 @@ History
 To Do
 * Cleaning up scripts more
 * having the same x-axis and y-axis for WGCNA heatmap in every WGCNA module
+* Oops! Use WGCNA.signedhybrid.moduleColors.voom5.csv.gz instead of WGCNA.signedhybrid.module.voom5.csv.gz
 
 #### making root + shoot category with up and down and
 # prep
@@ -59,7 +60,8 @@ library(ggnewscale)
 # which genes found in root.ivory module? (optional)
 ```{r}
 # gene list
-Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid <- read_csv(file.path("RNA","output","WGCNA.signedhybrid.modules.voom5.csv.gz"))
+#Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid <- read_csv(file.path("RNA","output","WGCNA.signedhybrid.modules.voom5.csv.gz"))#
+Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid <- read_csv(file.path("RNA","output","WGCNA.signedhybrid.moduleColors.voom5.csv.gz"))
 #  
 load(file.path("RNA","output","filtered.custom.data.consolidated.numericL.Rdata"))
 # 
@@ -68,9 +70,9 @@ filtered.custom.data.consolidated.numericLL <- filtered.custom.data.consolidated
 head(filtered.custom.data.consolidated.numericLL,20)
 
 filtered.custom.data.consolidated.numericLL
-Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid
+Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid
 #
-temp <- filtered.custom.data.consolidated.numericLL %>% filter(set %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% filter(totalSetN <=20, group_summary=="1") %>% filter(presentInSet==1) %>% inner_join(Br.v3.0anno.At.BLAST.highscore.modules.signedhybrid %>% filter(root.voom5.module.signedhybrid=="ivory"), by=c("genes"="name")) %>% arrange(totalSetN) %>% dplyr::select("genes","totalSetN","set","AGI","At_symbol","At_short_description","root.voom5.module.signedhybrid","leaf.voom5.module.signedhybrid","presentInSet") %>% distinct()
+temp <- filtered.custom.data.consolidated.numericLL %>% filter(set %in% c("minusN_root_FC_down","plusMg_root_FC_down")) %>% filter(totalSetN <=20, group_summary=="1") %>% filter(presentInSet==1) %>% inner_join(Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid %>% filter(root.voom5.module.signedhybrid=="ivory"), by=c("genes"="name")) %>% arrange(totalSetN) %>% dplyr::select("genes","totalSetN","set","AGI","At_symbol","At_short_description","root.voom5.module.signedhybrid","leaf.voom5.module.signedhybrid","presentInSet") %>% distinct()
 # count
 temp.count <- temp %>% dplyr::count(genes) #%>% View()
 temp %>% pivot_wider(names_from="set",values_from="presentInSet") %>% left_join(temp.count,by="genes") %>% group_by(plusMg_root_FC_down) %>% arrange(n,.group_by=TRUE) %>% write_csv(file.path("RNA","output","root.ivory.specific.genelist.csv")) #View()
@@ -89,7 +91,7 @@ root.voom5 <- readr::read_tsv(file.path("RNA","output","voom_expression.e1and3.r
 leaf.voom5 <- readr::read_tsv(file.path("RNA","output","voom_expression.e1and3.resid.exp_gt.leaf.plusR500.txt.gz"))
 ```
 
-# WGCNA modules
+# WGCNA modules (correct one)
 ```{r}
 Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid <- read_csv(file.path("RNA","output","WGCNA.signedhybrid.moduleColors.voom5.csv.gz"))
 ```
