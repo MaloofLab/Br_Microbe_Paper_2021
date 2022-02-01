@@ -19,6 +19,7 @@ editor_options:
 * ML selected GO ORA (042721) - > used.
 * WGCNA signedhybrid modules ~ custom category enrichemnt (table does not match to heatmap). Fixed it. (050221)
 * Copied from 10_WGCNA_ML_selected_modules_signedhybrid
+* 
 
 # To Do
 * root.ivory is enriched with both Fe-down and Fe-up, which are strange. Make 0/1 table for each module + categories. 
@@ -244,9 +245,10 @@ return(plot2)
 plot.full <- plot.WGCNAmodule.signedhybrid.soiltrt()
 # format
 plot.full <- plot.full + theme(legend.position="left",legend.key.height=unit(10,"pt"),legend.text=element_text(size=10,angle=0),plot.margin = margin(0, 30, 0, 0, "pt")) 
-
-ggsave(plot.full,filename="plot.full.signedhybrid.soiltrtFDR0.05.v2.png",path=file.path("RNA","output"),width=11,height=6)
-
+# save file (png)
+ggsave(plot.full,filename="plot.full.signedhybrid.soiltrtFDR0.05.v2.png",path=file.path("RNA","output"),width=6.5,height=5)
+# save file (pdf)
+ggsave(plot.full,filename="plot.full.signedhybrid.soiltrtFDR0.05.v2.pdf",path=file.path("RNA","output"),width=6.5,height=5)
 ```
 
 # digested version (finalized in De 14, 2021)
@@ -256,12 +258,14 @@ plot.digest <- plot.WGCNAmodule.signedhybrid.soiltrt.digest(data = module.soil.l
                                                   leaf_avg_std.ML.data = ElasticNet0.5_multiCV_Pct_var_signedhybrid)
 # format
 plot.digest <- plot.digest + theme(legend.position="left",legend.key.height=unit(10,"pt"),legend.text=element_text(size=10,angle=0),plot.margin = margin(0, 30, 0, 0, "pt")) 
-# save file
-ggsave(plot.digest,filename="plot.full.signedhybrid.soiltrtFDR0.05.v2.digest.png",path=file.path("RNA","output"),width=11,height=6)
+# save file (png)
+ggsave(plot.digest,filename="plot.full.signedhybrid.soiltrtFDR0.05.v2.digest.png",path=file.path("RNA","output"),width=6.5,height=5)
+# save file (pdf)
+ggsave(plot.digest,filename="plot.full.signedhybrid.soiltrtFDR0.05.v2.digest.pdf",path=file.path("RNA","output"),width=6.5,height=5)
 ```
 
 
-
+########################################## pending below ##########
 
 # how about expression pattern
 # scatter plot of genes within a module: microbe FC vs N and MG FC for each gene in Root Ivory
@@ -460,7 +464,7 @@ dat.voom.long <- dat.voom %>% filter(genes %in% target) %>% dplyr::select(-dat.v
 
 
 
-
+#################################################3
 
 
 ################### not used below ############
@@ -988,7 +992,7 @@ WGCNA.voom5.signedhybrid.all.modules.GOseq.MLselected.top1[order(factor(WGCNA.vo
 
 
 
-
+#########################
 
 # root.ivory is enriched with both Fe-down and Fe-up, which are strange. Make 0/1 table for each module + categories (050221)
 # making function (copied from [my blog](https://knozue.github.io/post/2018/10/07/over-representation-analysis-5-useful-tools/))

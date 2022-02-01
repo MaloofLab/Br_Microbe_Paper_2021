@@ -337,7 +337,7 @@ WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- WGCNA.voom
 WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison <- WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison + geom_text(aes(label=numDEInCat),size=2, angle=90)
 # 
 WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison
-#ggsave(path=file.path("RNA","output"),filename=paste("WGCNA.customcatv5.consol1.ORA.InXcomp.soilFC.",target.module,".pdf",sep=""),height=4,width=6.5) 
+ggsave(path=file.path("RNA","output"),filename=paste("WGCNA.customcatv5.consol1.ORA.InXcomp.soilFC.",target.module,".pdf",sep=""),height=4,width=6.5) 
 return(WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.InXcomparison)
 }
 # test 

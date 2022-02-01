@@ -311,4 +311,3 @@ ggsave("../../_Paper_Figures/Eigen_leaf_length.pdf", height=6, width=6)
 ggsave("/Volumes/GoogleDrive/Shared drives/BrassicaMicrobeRNAseq/Figs and Tables/Fig4_Eigen_leaf_length.png", height=7, width=6)
 
 ```
-
