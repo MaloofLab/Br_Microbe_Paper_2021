@@ -79,9 +79,6 @@ temp %>% pivot_wider(names_from="set",values_from="presentInSet") %>% left_join(
 ```
 
 
-
-# new InX.comparion.plot4() for color coding FDR by microbiome FC (Aug 23, 2021) -> abundan this (Sep 14, 2021)
-
 ### start calculating microbiome responsiveness FC
 # calculate microbe FC
 # load normalized log2 expression data (Brassica genome v3.0 annotation) 
