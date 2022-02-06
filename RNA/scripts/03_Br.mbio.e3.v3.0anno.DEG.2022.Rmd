@@ -125,9 +125,9 @@ cor.summary <- tibble(
           paste("p.value = ",signif(leaf.cor.test.result$p.value,2),sep="")))
 
 # root plot
-root.exp1and3.FDR0.1.plot.s <- ggplot(root.exp1and3.FDR0.1.data) + geom_point(aes(x=`original root`,y=`validation root`,alpha=0.5),size=1) + theme(legend.position="none") + geom_text(data=cor.summary[1:2,],aes(label=value,x=x,y=y),size=3)
+root.exp1and3.FDR0.1.plot.s <- ggplot(root.exp1and3.FDR0.1.data) + geom_point(aes(x=`original root`,y=`validation root`,alpha=0.5),size=1) + theme(legend.position="none") + geom_text(data=cor.summary[1:2,],aes(label=value,x=x,y=y),size=4) + theme(axis.text=element_text(size=10))
 # leaf plot
-leaf.exp1and3.FDR0.1.plot.s <- ggplot(leaf.exp1and3.FDR0.1.data) + geom_point(aes(x=`original leaf`,y=`validation leaf`,alpha=0.5),size=1) + theme(legend.position="none") +  geom_text(data=cor.summary[3:4,],aes(label=value,x=x,y=y),size=3)
+leaf.exp1and3.FDR0.1.plot.s <- ggplot(leaf.exp1and3.FDR0.1.data) + geom_point(aes(x=`original leaf`,y=`validation leaf`,alpha=0.5),size=1) + theme(legend.position="none") +  geom_text(data=cor.summary[3:4,],aes(label=value,x=x,y=y),size=4)+ theme(axis.text=element_text(size=10))
 ```
 
 # combine
@@ -135,9 +135,9 @@ leaf.exp1and3.FDR0.1.plot.s <- ggplot(leaf.exp1and3.FDR0.1.data) + geom_point(ae
 library(cowplot)
 #venn.ggplot <- venn.ggplot + theme(plot.margin=margin(t = 0, r = 0, b = 0, l = 100, unit = "pt"))
 #library(ggplotify) # https://github.com/ggobi/ggally/issues/256
-p.all <- cowplot::plot_grid(root.exp1and3.FDR0.1.plot.s, leaf.exp1and3.FDR0.1.plot.s, venn.ggplot, labels = c('A','B','C'), label_size = 9,ncol=2,rel_heights =c(1,1.5)) # ,rel_widths=c(1,1,2)
+p.all <- cowplot::plot_grid(root.exp1and3.FDR0.1.plot.s, leaf.exp1and3.FDR0.1.plot.s, venn.ggplot, labels = c('A','B','C'), label_size = 10,ncol=2,rel_heights =c(1,1.2)) # ,rel_widths=c(1,1,2)
 p.all <- p.all+ theme(plot.background = element_rect(fill="white")) # default background in plot C was gray.
-ggsave2(p.all,filename=file.path("RNA","output","cor.plus.Venn3.png"),width=6.5,height=4,units="in") # width 6.5 (Feb 3, 2022)
-ggsave2(p.all,filename=file.path("RNA","output","cor.plus.Venn3.pdf"),width=6.5,height=4,units="in")
+ggsave2(p.all,filename=file.path("RNA","output","cor.plus.Venn3.png"),width=6.5,height=7.5,units="in") # width 6.5 (Feb 3, 2022)
+ggsave2(p.all,filename=file.path("RNA","output","cor.plus.Venn3.pdf"),width=6.5,height=7.5,units="in")
 
 ```
