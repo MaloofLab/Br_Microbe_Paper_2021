@@ -244,7 +244,7 @@ return(plot2)
 ```{r}
 plot.full <- plot.WGCNAmodule.signedhybrid.soiltrt.full()
 # format
-plot.full <- plot.full + theme(legend.position="left",legend.key.height=unit(6,"pt"),legend.text=element_text(size=6,angle=0),legend.title=element_text(size=6),plot.margin = margin(0, 0, 0, 0, "pt")) + labs(size="Gene numbers") #,legend.box="vertical") 
+plot.full <- plot.full + theme(legend.position="left",legend.key.height=unit(6,"pt"),legend.text=element_text(size=6,angle=0),legend.title=element_text(size=6),plot.margin = margin(0, 0, 0, 0, "pt")) + labs(size="module size") #,legend.box="vertical") 
 # To do (1) change legend, (2) align x text to top
 # save file (png)
 ggsave(plot.full,filename="plot.full.signedhybrid.soiltrtFDR0.05.v3.png",path=file.path("RNA","output"),width=6.5,height=5)
@@ -259,7 +259,7 @@ plot.digest <- plot.WGCNAmodule.signedhybrid.soiltrt.digest(data = module.soil.l
                                                   leaf_avg_std.ML.data = ElasticNet0.5_multiCV_Pct_var_signedhybrid)
 # format
 # plot.digest <- plot.digest + theme(legend.position="left",legend.key.height=unit(10,"pt"),legend.text=element_text(size=10,angle=0),plot.margin = margin(0, 30, 0, 0, "pt"))  # for v2 setting
-plot.digest <- plot.digest + theme(legend.position="left",legend.key.height=unit(6,"pt"),legend.text=element_text(size=6,angle=0),legend.title=element_text(size=6),plot.margin = margin(10, 0, 0, 0, "pt")) + labs(size="Gene numbers")
+plot.digest <- plot.digest + theme(legend.position="left",legend.key.height=unit(6,"pt"),legend.text=element_text(size=6,angle=0),legend.title=element_text(size=6),plot.margin = margin(10, 0, 0, 0, "pt")) + labs(size="module size")
 # save file (png)
 ggsave(plot.digest,filename="plot.full.signedhybrid.soiltrtFDR0.05.v3.digest.png",path=file.path("RNA","output"),width=6.5,height=5)
 # save file (pdf)
@@ -267,7 +267,7 @@ ggsave(plot.digest,filename="plot.full.signedhybrid.soiltrtFDR0.05.v3.digest.pdf
 ```
 
 
-########################################## pending below ##########
+########################################## pending below #################
 
 # how about expression pattern
 # scatter plot of genes within a module: microbe FC vs N and MG FC for each gene in Root Ivory
