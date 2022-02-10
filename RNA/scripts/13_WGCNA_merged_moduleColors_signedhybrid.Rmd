@@ -144,7 +144,7 @@ print("genes.count2")
 
 # + scale_x_discrete(sec.axis=dup_axis())# not working
 plot2 <- plot2 +     theme(axis.text.y=element_text(size=10,angle=90),
-      axis.text.x=element_text(size=10,angle=90,vjust=0.4,hjust=1),
+      axis.text.x=element_text(size=8,angle=90,vjust=0.4,hjust=1),
       axis.title=element_text(size=10),
       axis.ticks = element_blank(),
       strip.text.y = element_text(angle=0),
