@@ -252,6 +252,22 @@ ggsave(plot.full,filename="plot.full.signedhybrid.soiltrtFDR0.05.v3.png",path=fi
 ggsave(plot.full,filename="plot.full.signedhybrid.soiltrtFDR0.05.v3.pdf",path=file.path("RNA","output"),width=6.5,height=5)
 ```
 
+# test full module version (updated Dec 7, 2021)
+```{r, fig.height=1,fig.width=6.5}
+plot.full <- plot.WGCNAmodule.signedhybrid.soiltrt.full()
+# format
+plot.full <- plot.full + theme(legend.position="left",legend.key.height=unit(6,"pt"),legend.text=element_text(size=6,angle=0),legend.title=element_text(size=6),plot.margin = margin(0, 0, 0, 0, "pt")) + labs(size="module size") #,legend.box="vertical") 
+#
+plot.full
+# To do (1) change legend, (2) align x text to top
+# save file (png)
+ggsave(plot.full,filename="plot.full.signedhybrid.soiltrtFDR0.05.v4.png",path=file.path("RNA","output"),width=6.5)
+# save file (pdf)
+#ggsave(plot.full,filename="plot.full.signedhybrid.soiltrtFDR0.05.v3.pdf",path=file.path("RNA","output"),width=6.5,height=5)
+```
+
+
+
 # digested version (finalized in De 14, 2021)
 ## Needs to have solid rectangle in every tile. Why some has no line?
 ```{r}
