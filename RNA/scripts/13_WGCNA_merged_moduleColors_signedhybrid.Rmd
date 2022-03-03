@@ -199,7 +199,12 @@ dendro.x.NAME.trim.tibble <- tibble(module=dendro.x.NAME) %>% semi_join(data2.tr
 # 
 data2.trim <- data2.trim %>% mutate(module=factor(module,levels=dendro.x.NAME.trim.tibble)) #%>% str()
 # 
-base.plot <- data2.trim %>% 
+
+# create blank tiles as placeholder for later points
+
+blank <- expand_grid(module=levels(data2.trim$module), soil="", `-log10FDR`=0)
+
+base.plot <- data2.trim %>% rbind(blank) %>% 
   ggplot(aes(y=soil,x=module)) + geom_tile(aes(fill=`-log10FDR`),colour="black")  + scale_fill_gradient2(name="soil effects \n(-log10 FDR)",limit=c(0,3), high=muted("magenta")) # + facet_grid(~tissue) # not OK
 # add Pct_Var_Explained, using levels of modules in module.soil.leafgrowth
 genes.count2 <- genes.count %>% inner_join(data2.trim,by="module") %>% 
@@ -215,17 +220,17 @@ x.genes.count2 <- tibble(module=levels(genes.count2$module),x=seq(1,length(level
 genes.count2 <- x.genes.count2 %>% inner_join(genes.count2,by="module")
 #
     plot2 <- base.plot + 
-      geom_point(aes(y=0.45,x=x,size=n),color = "red",  inherit.aes = FALSE, data=genes.count2) +
+      geom_point(aes(y=1.25,x=x,size=n),color = "red",  inherit.aes = FALSE, data=genes.count2) +
       # for PropVar_0.5_LOO (120820), changed for leaf_avg_std.ML.data = ElasticNet0.5_multiCV_Pct_var (031221), ElasticNet0.5_multiCV_Pct_var_signedhybrid (042321)
       new_scale_fill() + # error
-      geom_point(aes(y=0.35,x=x,fill=Pct_Var_Explained,shape=Effect), size=3,inherit.aes = FALSE, data=genes.count2)  +
+      geom_point(aes(y=0.75,x=x,fill=Pct_Var_Explained,shape=Effect), size=3,inherit.aes = FALSE, data=genes.count2)  +
       scale_fill_gradient(name="assocation to \nleaf length \n(-log10 FDR)",limit=c(0,10),low="white",high="blue") +
       scale_shape_manual(values=c("Increase"=24,"Decrease"=25)) + # trial to heve different shape 
-    coord_cartesian(ylim = c(0.9,2)) 
+    coord_fixed(ratio = 2) 
 print("genes.count2")
 
 # + scale_x_discrete(sec.axis=dup_axis())# not working
-plot2 <- plot2 +     theme(axis.text.y=element_text(size=10,angle=90),
+plot2 <- plot2 +     theme(axis.text.y=element_text(size=10,angle=90, hjust=0.5),
       axis.text.x=element_text(size=10,angle=90,vjust=0.4),
       axis.title=element_text(size=10),
       axis.ticks = element_blank(),
