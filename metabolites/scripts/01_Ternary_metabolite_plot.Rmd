@@ -112,6 +112,10 @@ met_lm %>% ungroup() %>%
 met_lm %>% group_by(tissue, type) %>%
   summarize(across(ends_with("fdr"),.fns = ~ sum(.x < 0.1, na.rm = TRUE)))
 
+met_lm %>% group_by(tissue, type) %>%
+  mutate(all_trt_lmer_sig0.05 = trt_lmer.pval < 0.05 | `trt:genotype_lmer.pval` < 0.05) %>%
+  summarize(trt_or_interaction_lmer_sig_p_0.05 = sum(all_trt_lmer_sig0.05))
+
 sum(met_lm$trt_lm.pval < 0.05 & met_lm$trt_lmer.pval >= 0.05)
 sum(met_lm$`trt:genotype_lm.pval` < 0.05 & met_lm$`trt:genotype_lmer.pval` >= 0.05)
 
@@ -199,7 +203,7 @@ met_plot %>% filter(type=="raw") %>%
   scale_color_manual(values=c("TRUE" = "red", "FALSE" = "black"), guide="none") +
   scale_shape_manual(values=c("TRUE" = 17, "FALSE" = 1), guide = "none") +
   scale_alpha_manual(values=c("TRUE" = 1, "FALSE" = 0.4), guide = "none") +
-  facet_grid(tissue ~ genotype) + ggtitle("Not normalized") + theme_bw() 
+  facet_grid(tissue ~ genotype) + ggtitle("Not standardized") + theme_bw() 
 ggsave("../../_Paper_Figures/Figure_5.png", height = 6.5, width = 6.5)
 ggsave("/Volumes/GoogleDrive/Shared drives/BrassicaMicrobeRNAseq/Figs and Tables/Figure_5.png", height = 6.5, width = 6.5)
 
@@ -218,7 +222,7 @@ met_plot %>% filter(type=="normalized") %>%
   ggtern(aes(B, L, D)) +
   geom_point(alpha=.4, aes(color=sigboth)) +
   scale_color_manual(values=c("TRUE" = "red", "FALSE" = "black"), guide="none") +
-  facet_grid(tissue ~ genotype) + ggtitle("Normalized") + theme_bw() 
+  facet_grid(tissue ~ genotype) + ggtitle("Standardized") + theme_bw() 
 ggsave("../../_Paper_Figures/Figure_S5.png", height = 6.5, width = 6.5)
 ggsave("/Volumes/GoogleDrive/Shared drives/BrassicaMicrobeRNAseq/Figs and Tables/Figure_S5.png", height = 6.5, width = 6.5)
 
