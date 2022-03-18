@@ -138,25 +138,14 @@ genes.count2 <- x.genes.count2 %>% inner_join(genes.count2,by="module")
 plot2 <- base.plot + 
       geom_point(aes(y=1.25,x=x,size=n),color = "red",  inherit.aes = FALSE, data=genes.count2) +
       # for PropVar_0.5_LOO (120820), changed for leaf_avg_std.ML.data = ElasticNet0.5_multiCV_Pct_var (031221), ElasticNet0.5_multiCV_Pct_var_signedhybrid (042321)
+  scale_size_area(max_size=2) + # to change size of module size circle that fit to tiles
       new_scale_fill() + # error? need this? (031722). How to make this red module size circle smaller? (031722)
       geom_point(aes(y=0.75,x=x,fill=Pct_Var_Explained,shape=Effect), size=2,inherit.aes = FALSE, data=genes.count2)  +
       scale_fill_gradient(name="assocation to \nleaf length \n(-log10 FDR)",limit=c(0,10),low="white",high="blue") +
       scale_shape_manual(values=c("Increase"=24,"Decrease"=25)) + # trial to heve different shape 
-    coord_fixed(ratio = 10) # ! modifiedby Julin! (March 3, 2022)
+    coord_fixed(ratio = 5) # ! modifiedby Julin! (March 3, 2022)
 print("genes.count2")
 
-# old plot2
-#     plot2 <- base.plot + 
-#       geom_point(aes(y=0.45,x=x,size=n),color = "red",  inherit.aes = FALSE, data=genes.count2) +
-#       # for PropVar_0.5_LOO (120820), changed for leaf_avg_std.ML.data = ElasticNet0.5_multiCV_Pct_var (031221), ElasticNet0.5_multiCV_Pct_var_signedhybrid (042321)
-#       new_scale_fill() + # error
-#       geom_point(aes(y=0.35,x=x,fill=Pct_Var_Explained,shape=Effect), size=3,inherit.aes = FALSE, data=genes.count2)  +
-#       scale_fill_gradient(name="assocation to \nleaf length \n(-log10 FDR)",limit=c(0,10),low="white",high="blue") +
-#       scale_shape_manual(values=c("Increase"=24,"Decrease"=25)) + # trial to heve different shape 
-#     coord_cartesian(ylim = c(0.9,2)) 
-# print("genes.count2")
-
-# + scale_x_discrete(sec.axis=dup_axis())# not working
 plot2 <- plot2 +     theme(axis.text.y=element_text(size=10,angle=90, hjust=0.5),
       axis.text.x=element_text(size=8,angle=90,vjust=0.4,hjust=1),
       axis.title=element_text(size=10),
@@ -166,18 +155,8 @@ plot2 <- plot2 +     theme(axis.text.y=element_text(size=10,angle=90, hjust=0.5)
       plot.title=element_text(size=20),
       axis.line=element_blank()) + 
 labs(x="",y="")#,fill="-log10\n FDR")
-# old one
-# plot2 <- plot2 +     theme(axis.text.y=element_text(size=10,angle=90),
-#       axis.text.x=element_text(size=8,angle=90,vjust=0.4,hjust=1),
-#       axis.title=element_text(size=10),
-#       axis.ticks = element_blank(),
-#       strip.text.y = element_text(angle=0),
-#       panel.background = element_rect(fill = "white",colour="black"),
-#       plot.title=element_text(size=20),
-#       axis.line=element_blank()) + 
-# labs(x="",y="")#,fill="-log10\n FDR")
 print(plot2)
-save(data2,file=file.path("RNA","output","data2.stored.Rdata")) # do I need this?
+#save(data2,file=file.path("RNA","output","data2.stored.Rdata")) # do I need this?
 return(plot2)
 }
 ```
@@ -248,7 +227,7 @@ genes.count2 <- x.genes.count2 %>% inner_join(genes.count2,by="module")
       # for PropVar_0.5_LOO (120820), changed for leaf_avg_std.ML.data = ElasticNet0.5_multiCV_Pct_var (031221), ElasticNet0.5_multiCV_Pct_var_signedhybrid (042321)
       new_scale_fill() + # error? need this? (031722)
       geom_point(aes(y=0.75,x=x,fill=Pct_Var_Explained,shape=Effect), size=3,inherit.aes = FALSE, data=genes.count2)  +
-      scale_fill_gradient(name="assocation to \nleaf length \n(-log10 FDR)",limit=c(0,10),low="white",high="blue") +
+      scale_fill_gradient(name="assocation to \nleaf length \n(-log10 FDR)",limit=c(0,15),low="white",high="blue") +
       scale_shape_manual(values=c("Increase"=24,"Decrease"=25)) + # trial to heve different shape 
     coord_fixed(ratio = 2) # ! modifiedby Julin! (March 3, 2022)
 print("genes.count2")
