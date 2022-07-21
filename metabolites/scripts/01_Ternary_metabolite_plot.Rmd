@@ -204,8 +204,8 @@ met_plot %>% filter(type=="raw") %>%
   scale_shape_manual(values=c("TRUE" = 17, "FALSE" = 1), guide = "none") +
   scale_alpha_manual(values=c("TRUE" = 1, "FALSE" = 0.4), guide = "none") +
   facet_grid(tissue ~ genotype) + ggtitle("Not standardized") + theme_bw() 
-ggsave("../../_Paper_Figures/Figure_5.png", height = 6.5, width = 6.5)
-ggsave("/Volumes/GoogleDrive/Shared drives/BrassicaMicrobeRNAseq/Figs and Tables/Figure_5.png", height = 6.5, width = 6.5)
+ggsave("../../_Paper_Figures/Figure_6.png", height = 6.5, width = 6.5)
+ggsave("/Volumes/GoogleDrive/Shared drives/BrassicaMicrobeRNAseq/Figs and Tables/Figure_6.png", height = 6.5, width = 6.5)
 
 ```
 
