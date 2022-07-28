@@ -14,6 +14,11 @@ Take a different approach with metabolites:
 1) ID metabolites responding to microbes
 2) Ask if those are associated with leaf length
 
+NOTE: MODELS WITH GENOTYPE OR GENOTYPE INTERACTIONS HAVE BEEN TRIED AND DO NOT IN GENERAL IMPROVE ON WHAT IS SHOWN HERE
+
+NOTE: NEXT STEPS: SPLIT UP FDR PER TISSUE AND TRY MAKING TERNARY PLOT WITH SIMPLE MEANS.
+
+
 ```{r}
 library(tidyverse)
 library(broom)
