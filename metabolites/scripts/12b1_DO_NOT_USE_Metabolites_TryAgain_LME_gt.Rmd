@@ -131,8 +131,8 @@ met_per_mg_lme_results %>% filter(FDR_trt_trt < 0.1 & FDR_leaf_value_scale < 0.1
 
 met_per_mg_lme_results %>% 
   #filter(FDR.trt < 0.1 | FDR.leaf < 0.1) %>%
-  mutate(sig.both = FDR_trt_trt < 0.1 & FDR_leaf_value < 0.1) %>%
-  arrange(desc(sig.both), min(.$FDR_trt_trt, .$FDR_leaf_value)) %>% 
+  mutate(sig.both = FDR_trt_trt < 0.1 & FDR_leaf_value_scale < 0.1) %>%
+  arrange(desc(sig.both), min(.$FDR_trt_trt, .$FDR_leaf_value_scale)) %>% 
   write_csv("../output/met_per_mg_lme_full.csv")
 ```
 
@@ -180,93 +180,109 @@ met_amt_lme_results %>% filter(FDR_trt_trt < 0.1 & FDR_leaf_value_scale < 0.1) %
 met_amt_lme_results %>% 
   #filter(FDR.trt < 0.1 | FDR.leaf < 0.1) %>%
   mutate(sig.both = FDR_trt_trt < 0.1 & FDR_leaf_value_scale < 0.1) %>%
-  arrange(desc(sig.both), min(.$FDR_trt_trt, .$FDR_leaf_value)) %>% 
+  arrange(desc(sig.both), min(.$FDR_trt_trt, .$FDR_leaf_value_scale)) %>% 
   write_csv("../output/met_amt_lme_full.csv")
 ```
 
 
 # NO BLANK
 
-
-
 ## find sig metabolites
 
-Live vs  dead
+Live vs blank dead
 
 normalized
 ```{r}
-met_per_mg_lme_nb <- met_per_mg %>%
-  filter(trt!="BLANK") %>%
+met_per_mg_lme <- met_per_mg %>%
+  filter(trt != "BLANK") %>%
   pivot_longer(cols=starts_with("met"), names_to = "metabolite") %>%
+  mutate(tissue=str_extract(metabolite, "leaf|root")) %>%
+
+  #scale and center
+  group_by(metabolite, genotype, tissue) %>%
+  mutate(value_scale=scale(value)) %>%
   group_by(metabolite) %>%
   nest() %>%
-  mutate(lme_trt=map(data, ~ lmer(value ~ trt + (1|block), data=.)),
-         lme_leaf=map(data, ~ lmer(leaf_avg_std ~ value + (1|block), data=.)))
-
+  mutate(lme_trt=map(data, ~ lmer(value ~ trt * genotype + (1|block), data=.)),
+         lme_leaf=map(data, ~ lmer(leaf_avg_std ~ value_scale + (1|block), data=.)))
 ```
 
 
-```{r}
-met_per_mg_lme_results_nb <- met_per_mg_lme_nb %>% mutate(broomtidy.trt = map(lme_trt, broom.mixed::tidy),
-                                                          broomtidy.leaf = map(lme_leaf, broom.mixed::tidy)) %>%
-  unnest(broomtidy.trt, broomtidy.leaf) %>%
-  select(metabolite, term.trt=term, p.value.trt=p.value,
-         term.leaf=term1, p.value.leaf=p.value1) %>%
-  filter(term.trt=="trtlive",
-         term.leaf=="value") %>%
+```{r, warning=FALSE}
+met_per_mg_lme_results_trt <- met_per_mg_lme %>% mutate(broomtidy.trt = map(lme_trt, ~ broom.mixed::tidy(anova(.x)))) %>%
+  unnest(broomtidy.trt) %>%
+  select(metabolite, term, p.value) %>%
+  pivot_wider(id_cols = metabolite, names_from = term, values_from = p.value, names_prefix = "p.value_trt_")
+
+met_per_mg_lme_results_leaf <- met_per_mg_lme %>% mutate(broomtidy.leaf = map(lme_leaf, ~ broom.mixed::tidy(anova(.x)))) %>%
+  unnest(broomtidy.leaf) %>%
+  select(metabolite, term, p.value) %>%
+  pivot_wider(id_cols = metabolite, names_from = term, values_from = p.value, names_prefix = "p.value_leaf_") 
+
+met_per_mg_lme_results <- inner_join(met_per_mg_lme_results_trt, met_per_mg_lme_results_leaf) %>%
   mutate(tissue=str_extract(metabolite,"(leaf|root)")) %>%
   group_by(tissue) %>%
-  mutate(FDR.trt=p.adjust(p.value.trt, method = "fdr"),
-         FDR.leaf=p.adjust(p.value.leaf, method = "fdr")) 
+  mutate(across(starts_with("p.value"), .fns = p.adjust, method = "fdr", .names = "FDR_{.col}")) %>%
+  rename_with(~ str_replace(.x, "FDR_p.value", "FDR")) %>%
+  ungroup()
 
-met_per_mg_lme_results_nb %>% ungroup() %>%
-  summarize(sig.trt=sum(FDR.trt<0.1), sig.leaf=sum(FDR.leaf<0.1), sig.both=sum(FDR.trt<0.1&FDR.leaf<0.1), count=n())
+met_per_mg_lme_results %>% 
+  summarize(across(starts_with("FDR"), ~ sum(.x < .1)), both=sum(FDR_trt_trt < 0.1 & FDR_leaf_value_scale < 0.1), count=n())
 
-met_per_mg_lme_results_nb %>% filter(FDR.trt < 0.1 & FDR.leaf < 0.1) %>% select(metabolite, FDR.trt, FDR.leaf)
+met_per_mg_lme_results %>% filter(FDR_trt_trt < 0.1 & FDR_leaf_value_scale < 0.1) %>% 
+  select(metabolite, FDR_trt_trt, FDR_leaf_value_scale)
 
-met_per_mg_lme_results %>% select(-term.trt, - term.leaf) %>%
+met_per_mg_lme_results %>% 
   #filter(FDR.trt < 0.1 | FDR.leaf < 0.1) %>%
-  mutate(sig.both = FDR.trt < 0.1 & FDR.leaf < 0.1) %>%
-  arrange(desc(sig.both), min(.$FDR.trt, .$FDR.leaf)) %>% 
-  write_csv("../output/met_per_mg_lme_NOBLANK.csv")
-
+  mutate(sig.both = FDR_trt_trt < 0.1 & FDR_leaf_value_scale < 0.1) %>%
+  arrange(desc(sig.both), min(.$FDR_trt_trt, .$FDR_leaf_value_scale)) %>% 
+  write_csv("../output/met_per_mg_lme_full_NOBLANK.csv")
 ```
 
 raw
 ```{r}
-met_amt_lme_nb <- met_amt %>%
-  filter(trt!="BLANK") %>%
+met_amt_lme <- met_amt %>%
+  filter(trt != "BLANK") %>%
   pivot_longer(cols=starts_with("met"), names_to = "metabolite") %>%
+  mutate(tissue=str_extract(metabolite, "leaf|root")) %>%
+
+  #scale and center
+  group_by(metabolite, genotype, tissue) %>%
+  mutate(value_scale=scale(value)) %>%
   group_by(metabolite) %>%
   nest() %>%
-  mutate(lme_trt=map(data, ~ lmer(value ~ trt + (1|block), data=.)),
-         lme_leaf=map(data, ~ lmer(leaf_avg_std ~ value + (1|block), data=.)))
-
+  mutate(lme_trt=map(data, ~ lmer(value ~ trt * genotype + (1|block), data=.)),
+         lme_leaf=map(data, ~ lmer(leaf_avg_std ~ value_scale + (1|block), data=.)))
 ```
 
 
 ```{r}
-met_amt_lme_results_nb<- met_amt_lme_nb %>% mutate(broomtidy.trt = map(lme_trt, broom.mixed::tidy),
-                                                   broomtidy.leaf = map(lme_leaf, broom.mixed::tidy)) %>%
-  unnest(broomtidy.trt, broomtidy.leaf) %>%
-  select(metabolite, term.trt=term, p.value.trt=p.value,
-         term.leaf=term1, p.value.leaf=p.value1) %>%
-  filter(term.trt=="trtlive",
-         term.leaf=="value") %>%
+met_amt_lme_results_trt <- met_amt_lme %>% mutate(broomtidy.trt = map(lme_trt, ~ broom.mixed::tidy(anova(.x)))) %>%
+  unnest(broomtidy.trt) %>%
+  select(metabolite, term, p.value) %>%
+  pivot_wider(id_cols = metabolite, names_from = term, values_from = p.value, names_prefix = "p.value_trt_")
+
+met_amt_lme_results_leaf <- met_amt_lme %>% mutate(broomtidy.leaf = map(lme_leaf, ~ broom.mixed::tidy(anova(.x)))) %>%
+  unnest(broomtidy.leaf) %>%
+  select(metabolite, term, p.value) %>%
+  pivot_wider(id_cols = metabolite, names_from = term, values_from = p.value, names_prefix = "p.value_leaf_") 
+
+met_amt_lme_results <- inner_join(met_amt_lme_results_trt, met_amt_lme_results_leaf) %>%
   mutate(tissue=str_extract(metabolite,"(leaf|root)")) %>%
   group_by(tissue) %>%
-  mutate(FDR.trt=p.adjust(p.value.trt, method = "fdr"),
-         FDR.leaf=p.adjust(p.value.leaf, method = "fdr")) 
+  mutate(across(starts_with("p.value"), .fns = p.adjust, method = "fdr", .names = "FDR_{.col}")) %>%
+  rename_with(~ str_replace(.x, "FDR_p.value", "FDR")) %>%
+  ungroup()
 
-met_amt_lme_results_nb %>% ungroup() %>%
-  summarize(sig.trt=sum(FDR.trt<0.1), sig.leaf=sum(FDR.leaf<0.1), sig.both=sum(FDR.trt<0.1&FDR.leaf<0.1), count=n())
+met_amt_lme_results %>% 
+  summarize(across(starts_with("FDR"), ~ sum(.x < .1)), both=sum(FDR_trt_trt < 0.1 & FDR_leaf_value_scale < 0.1), count=n())
 
-met_amt_lme_results_nb %>% filter(FDR.trt < 0.1 & FDR.leaf < 0.1) %>% select(FDR.trt, FDR.leaf)
+met_amt_lme_results %>% filter(FDR_trt_trt < 0.1 & FDR_leaf_value_scale < 0.1) %>% 
+  select(metabolite, FDR_trt_trt, FDR_leaf_value_scale)
 
-met_amt_lme_results %>% select(-term.trt, - term.leaf) %>%
+met_amt_lme_results %>% 
   #filter(FDR.trt < 0.1 | FDR.leaf < 0.1) %>%
-  mutate(sig.both = FDR.trt < 0.1 & FDR.leaf < 0.1) %>%
-  arrange(desc(sig.both), min(.$FDR.trt, .$FDR.leaf)) %>% 
-  write_csv("../output/met_amt_lme_NOBLANK.csv")
-
+  mutate(sig.both = FDR_trt_trt < 0.1 & FDR_leaf_value_scale < 0.1) %>%
+  arrange(desc(sig.both), min(.$FDR_trt_trt, .$FDR_leaf_value_scale)) %>% 
+  write_csv("../output/met_amt_lme_full_NOBLANK.csv")
 ```
