@@ -3,6 +3,8 @@ title: "Ternary plot for metabolites"
 output: html_document
 ---
 
+A ternary plot using sample means.
+
 ```{r}
 if(!"ggtern" %in% installed.packages(fields="Package"))
   install.packages("ggtern")
@@ -10,9 +12,7 @@ if(!"ggtern" %in% installed.packages(fields="Package"))
 
 ```{r}
 library(tidyverse)
-library(broom)
 library(ggtern)
-library(lmerTest)
 ```
 
 ## get and wrangle metabolite data
@@ -26,6 +26,9 @@ met <- met_raw %>%
   #make long
   pivot_longer(!sampleID:sample_mass, names_to = "metabolite", values_to = "met_amount") %>%
   
+  #filter away unnamed
+  filter(str_detect(metabolite, pattern="^[0-9]+$", negate=TRUE)) %>%
+  
   #adjust by sample mass
   mutate(met_per_mg=met_amount/sample_mass) %>%
   
@@ -38,130 +41,51 @@ met <- met_raw %>%
 
 met %>% head 
 ```
-### Add block info
+
+### calculate means
 
 ```{r}
-plantinfo <- readxl::read_excel("../../plant/input/exp1_leaf_ln_data.xlsx", sheet = 2) %>%
-  select(pot, block) %>%
-  mutate(block=str_c("B", block)) # make it character to ensure used correctly.
-plantinfo
+normalized.means <- met %>%
+  filter(type=="normalized") %>%
+  select(genotype, tissue, trt, metabolite, amount) %>%
+  group_by(genotype, tissue, trt, metabolite) %>%
+  summarize(value=mean(amount))
+
+normalized.means
+  
 ```
 
 ```{r}
-met <- met %>% inner_join(plantinfo) %>%
-  select(sampleID, block, everything())
-met %>% head
-```
+raw.means <- met %>%
+  filter(type=="raw") %>%
+  select(genotype, tissue, trt, metabolite, amount) %>%
+  group_by(genotype, tissue, trt, metabolite) %>%
+  summarize(value=mean(amount))
 
-## find sig metabolites
-
-Use lmer so that we can include block.  A fair number of metabolites give a boundary / singlular warning.  In that case it is because the block variance is estimated at 0, and in those cases lmer and lm give the same results.  So while it is a bit unsettling, I will leave that as is.
-
-Also, storing all of the lmer results in the tibble bogs things down, so I wil store anova results and then re-run metabolites of interest.
-```{r}
-lm.anova.pvals <- function(x) {
-  lm(amount ~ trt * genotype, data=x) %>%
-    aov() %>%
-    summary() %>%
-    magrittr::extract2(1) %>%
-    magrittr::extract(1:3, "Pr(>F)", drop=FALSE) %>%
-    t() %>%
-    as_tibble() %>%
-    rename_with( ~ {str_remove_all(.x, " ") %>% 
-        str_c( "_lm.pval")} )
-}
-
-lmer.anova.pvals <- function(x) {
-  lmer(amount ~ trt * genotype + (1|block), data=x) %>%
-    anova() %>%
-    t() %>%
-    magrittr::extract("Pr(>F)",, drop=FALSE) %>%
-    as_tibble() %>%
-    rename_with( ~ str_c(.x, "_lmer.pval"))
-}
-
-met_lm <- met %>%
-  mutate(trt = factor(trt, levels = c("live", "dead", "BLANK"))) %>% # setting live to be ref will make some of the filtering easier
-  group_by(metabolite, tissue, type) %>%
-  nest() 
-
-system.time(
-  met_lm <- met_lm %>% mutate(lm=map(data, lm.anova.pvals), 
-                              lmer=map(data, lmer.anova.pvals)) %>%
-    unnest(c(lm,lmer)) %>%
-    
-    group_by(tissue, type) %>%
-    mutate(lmer.trt.fdr=p.adjust(trt_lmer.pval, method = "fdr"),
-           lmer.interaction.fdr=p.adjust(`trt:genotype_lmer.pval`, method="fdr")) %>%
-    
-    # FDR only on named metabolites
-    mutate(named = str_detect(metabolite, pattern="^[0-9]+$", negate=TRUE)) %>%
-    group_by(tissue, type, named) %>%
-    mutate(named.lmer.trt.fdr=ifelse(named, p.adjust(trt_lmer.pval, method = "fdr"), NA),
-           named.lmer.interaction.fdr=ifelse(named, p.adjust(`trt:genotype_lmer.pval`, method="fdr"), NA)) %>%
-    ungroup()
-)
-
-met_lm[1:20,]
-```
-
-```{r}
-met_lm %>% ungroup() %>%
-  summarize(across(ends_with("pval"),.fns = ~ sum(.x < 0.05)))
-
-met_lm %>% group_by(tissue, type) %>%
-  summarize(across(ends_with("fdr"),.fns = ~ sum(.x < 0.1, na.rm = TRUE)))
-
-met_lm %>% group_by(tissue, type) %>%
-  mutate(all_trt_lmer_sig0.05 = trt_lmer.pval < 0.05 | `trt:genotype_lmer.pval` < 0.05) %>%
-  summarize(trt_or_interaction_lmer_sig_p_0.05 = sum(all_trt_lmer_sig0.05))
-
-sum(met_lm$trt_lm.pval < 0.05 & met_lm$trt_lmer.pval >= 0.05)
-sum(met_lm$`trt:genotype_lm.pval` < 0.05 & met_lm$`trt:genotype_lmer.pval` >= 0.05)
-
-```
-```{r}
-met_lm %>% filter(named.lmer.trt.fdr < 0.1)
+raw.means
 ```
 
 
+## Get pvals 
 
-So the lmer is a bit more sensitive and there are only 2 that lm picks up and lmer doesn't.  go with lmer.
-Filter to keep metabolites significant for trt or trt:genotype interaction
 ```{r}
+pvals.norm <- read_csv("../output/met_per_mg_lm_full.csv") %>%
+  select(metabolite, FDR_microbe=FDR_trt_trtlive, FDR_leaf=FDR_leaf_value_scale) %>%
+  mutate(tissue = str_extract(metabolite, "leaf|root"),
+         metabolite=str_remove(metabolite, ".*_(leaf|root)_"))
 
-met_lm_filtered <- met_lm %>%
-  select(tissue, metabolite, type, data, contains("lmer")) %>%
-  filter(             trt_lmer.pval < 0.05 | 
-                        `trt:genotype_lmer.pval` < 0.05)
-
-met_lm_filtered[1:20,]
+pvals.raw <- read_csv("../output/met_amt_lm_full.csv")  %>%
+  select(metabolite, FDR_microbe=FDR_trt_trtlive, FDR_leaf=FDR_leaf_value_scale) %>%
+  mutate(tissue = str_extract(metabolite, "leaf|root"),
+         metabolite=str_remove(metabolite, ".*_(leaf|root)_"))
 ```
 
-Now: rerun lmer on these 338 and then pull out fitted values
+Join pvals and means
 
 ```{r}
-get_coef_pvals <- function(x) {
-  x %>% broom.mixed::tidy() %>%
-  filter(term %in% c("trtdead", "trtBLANK")) %>%
-  select(term, p.value) %>%
-  column_to_rownames("term") %>%
-  t() %>%
-  as_tibble() %>%
-  rename_with( ~ str_c( .x, "_pval"))
-}
+normalized.means <- normalized.means %>% ungroup() %>% left_join(pvals.norm)
 
-newdata <- expand.grid(genotype=c("R500", "FPsc"), trt=c("live", "dead", "BLANK")) # data frame for predictions
-
-met_lm_fitted <- met_lm_filtered %>%
-  mutate(lmer = map(data, ~ lmer(amount ~ genotype*trt + (1|block), data = .x)),
-         fitted = map(lmer, ~ cbind(newdata, estimate=predict(.x, re.form = ~0, newdata=newdata))),
-         coef.pval = map(lmer, get_coef_pvals)
-                      ) %>%
-  select(-data, -lmer) %>%
-  unnest(c(fitted, coef.pval))
-
-met_lm_fitted[1:12,]
+raw.means <- raw.means %>% ungroup() %>% left_join(pvals.raw)
 ```
 
 
@@ -170,58 +94,80 @@ met_lm_fitted[1:12,]
 ### calculate proportion of total
 
 ```{r}
-met_plot <- met_lm_fitted %>%
-  group_by(metabolite, genotype, tissue, type) %>%
+met_plot_norm <- normalized.means %>%
+  group_by(metabolite, genotype, tissue) %>%
   
   #proportion of total
-  mutate(prop_total = estimate /sum(estimate)) %>%
+  mutate(prop_total = value /sum(value)) %>%
   
   #reformat
-  pivot_wider(id_cols = c(genotype, tissue, metabolite, type, trtdead_pval, trtBLANK_pval, named.lmer.trt.fdr), 
+  pivot_wider(id_cols = c(genotype, tissue, metabolite, FDR_microbe, FDR_leaf), 
               names_from = trt, 
               values_from = prop_total) %>%
-  arrange(metabolite, type, tissue, genotype) %>%
-  mutate(sigboth = trtdead_pval < 0.1 & trtBLANK_pval < 0.1,
-         sigfdr = ifelse(is.na(named.lmer.trt.fdr), FALSE, named.lmer.trt.fdr < 0.1) )
+  arrange(metabolite, tissue, genotype) %>%
+  mutate(sig_microbe = FDR_microbe < 0.1,
+         sig_leaf = FDR_leaf < 0.1)
 
-met_plot %>% head(20)
+met_plot_norm %>% head(20)
 ```
 
-```{r, fig.width=6.5, fig.height=6.5}
-met_plot %>% filter(type=="raw") %>%
+
+```{r}
+met_plot_raw <- raw.means %>%
+  group_by(metabolite, genotype, tissue) %>%
+  
+  #proportion of total
+  mutate(prop_total = value /sum(value)) %>%
+  
+  #reformat
+  pivot_wider(id_cols = c(genotype, tissue, metabolite, FDR_microbe, FDR_leaf), 
+              names_from = trt, 
+              values_from = prop_total) %>%
+  arrange(metabolite, tissue, genotype) %>%
+  mutate(sig_microbe = FDR_microbe < 0.1,
+         sig_leaf = FDR_leaf < 0.1)
+
+met_plot_raw %>% head(20)
+```
+
+```{r, fig.width=10, fig.height=10}
+met_plot_raw %>%
   select(tissue, 
          genotype, 
-         sigboth,
-         sigfdr,
+         sig_microbe,
+         sig_leaf,
          L=live,
          D=dead,
          B=BLANK) %>%
-  arrange(sigfdr, sigboth) %>%
+  arrange(sig_leaf, sig_microbe) %>%
   
   ggtern(aes(B, L, D)) +
-  geom_point(aes(color=sigboth, shape=sigfdr, alpha=sigfdr)) +
-  scale_color_manual(values=c("TRUE" = "red", "FALSE" = "black"), guide="none") +
-  scale_shape_manual(values=c("TRUE" = 17, "FALSE" = 1), guide = "none") +
-  scale_alpha_manual(values=c("TRUE" = 1, "FALSE" = 0.4), guide = "none") +
+  geom_point(aes(color=sig_microbe, shape=sig_leaf, alpha=(sig_microbe|sig_leaf))) +
+  scale_color_manual(values=c("TRUE" = "red", "FALSE" = "black")) +
+  scale_shape_manual(values=c("TRUE" = 17, "FALSE" = 16)) +
+  scale_alpha_manual(values=c("TRUE" = 1, "FALSE" = 0.2), guide = "none") +
   facet_grid(tissue ~ genotype) + ggtitle("Not standardized") + theme_bw() 
 ggsave("../../_Paper_Figures/Figure_6.png", height = 6.5, width = 6.5)
 ggsave("/Volumes/GoogleDrive/Shared drives/BrassicaMicrobeRNAseq/Figs and Tables/Figure_6.png", height = 6.5, width = 6.5)
 
 ```
 
-```{r, fig.width=6.5, fig.height=6.5}
-met_plot %>% filter(type=="normalized") %>%
+```{r, fig.width=10, fig.height=10}
+met_plot_norm %>%
   select(tissue, 
          genotype, 
-         sigboth,
+         sig_microbe,
+         sig_leaf,
          L=live,
          D=dead,
          B=BLANK) %>%
-  arrange(sigboth) %>%
+  arrange(sig_leaf, sig_microbe) %>%
   
   ggtern(aes(B, L, D)) +
-  geom_point(alpha=.4, aes(color=sigboth)) +
-  scale_color_manual(values=c("TRUE" = "red", "FALSE" = "black"), guide="none") +
+  geom_point(aes(color=sig_microbe, shape=sig_leaf, alpha=(sig_microbe|sig_leaf))) +
+  scale_color_manual(values=c("TRUE" = "red", "FALSE" = "black")) +
+  scale_shape_manual(values=c("TRUE" = 17, "FALSE" = 16)) +
+  scale_alpha_manual(values=c("TRUE" = 1, "FALSE" = 0.2), guide = "none") +
   facet_grid(tissue ~ genotype) + ggtitle("Standardized") + theme_bw() 
 ggsave("../../_Paper_Figures/Figure_S5.png", height = 6.5, width = 6.5)
 ggsave("/Volumes/GoogleDrive/Shared drives/BrassicaMicrobeRNAseq/Figs and Tables/Figure_S5.png", height = 6.5, width = 6.5)

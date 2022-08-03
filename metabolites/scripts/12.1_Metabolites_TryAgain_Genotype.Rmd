@@ -117,7 +117,9 @@ met_per_mg_lm_results <- inner_join(met_per_mg_lm_results_trt, met_per_mg_lm_res
   ungroup()
 
 met_per_mg_lm_results %>% 
-  summarize(across(starts_with("FDR"), ~ sum(.x < .1)), both=sum(FDR_trt_trtlive < 0.1 & FDR_leaf_value_scale < 0.1), count=n())
+  mutate(both=(FDR_trt_trtlive < 0.1) & (FDR_leaf_value_scale < 0.1)) %>%
+  group_by(tissue) %>%
+  summarize(across(starts_with("FDR"), ~ sum(.x < .1)), both=sum(both), count=n())
 
 met_per_mg_lm_results %>% filter(FDR_trt_trtlive < 0.1 & FDR_leaf_value_scale < 0.1) %>% 
   select(metabolite, FDR_trt_trtlive, FDR_leaf_value_scale)
@@ -168,7 +170,9 @@ met_amt_lm_results <- inner_join(met_amt_lm_results_trt, met_amt_lm_results_leaf
   ungroup()
 
 met_amt_lm_results %>% 
-  summarize(across(starts_with("FDR"), ~ sum(.x < .1)), both=sum(FDR_trt_trtlive < 0.1 & FDR_leaf_value_scale < 0.1), count=n())
+  mutate(both=(FDR_trt_trtlive < 0.1) & (FDR_leaf_value_scale < 0.1)) %>%
+  group_by(tissue) %>%
+  summarize(across(starts_with("FDR"), ~ sum(.x < .1)), both=sum(both), count=n())
 
 met_amt_lm_results %>% filter(FDR_trt_trtlive < 0.1 & FDR_leaf_value_scale < 0.1) %>% 
   select(metabolite, FDR_trt_trtlive, FDR_leaf_value_scale)
@@ -226,7 +230,9 @@ met_per_mg_lm_results <- inner_join(met_per_mg_lm_results_trt, met_per_mg_lm_res
   ungroup()
 
 met_per_mg_lm_results %>% 
-  summarize(across(starts_with("FDR"), ~ sum(.x < .1)), both=sum(FDR_trt_trtlive < 0.1 & FDR_leaf_value_scale < 0.1), count=n())
+  mutate(both=(FDR_trt_trtlive < 0.1) & (FDR_leaf_value_scale < 0.1)) %>%
+  group_by(tissue) %>%
+  summarize(across(starts_with("FDR"), ~ sum(.x < .1)), both=sum(both), count=n())
 
 met_per_mg_lm_results %>% filter(FDR_trt_trtlive < 0.1 & FDR_leaf_value_scale < 0.1) %>% 
   select(metabolite, FDR_trt_trtlive, FDR_leaf_value_scale)
@@ -277,7 +283,9 @@ met_amt_lm_results <- inner_join(met_amt_lm_results_trt, met_amt_lm_results_leaf
   ungroup()
 
 met_amt_lm_results %>% 
-  summarize(across(starts_with("FDR"), ~ sum(.x < .1)), both=sum(FDR_trt_trtlive < 0.1 & FDR_leaf_value_scale < 0.1), count=n())
+  mutate(both=(FDR_trt_trtlive < 0.1) & (FDR_leaf_value_scale < 0.1)) %>%
+  group_by(tissue) %>%
+  summarize(across(starts_with("FDR"), ~ sum(.x < .1)), both=sum(both), count=n())
 
 met_amt_lm_results %>% filter(FDR_trt_trtlive < 0.1 & FDR_leaf_value_scale < 0.1) %>% 
   select(metabolite, FDR_trt_trtlive, FDR_leaf_value_scale)
