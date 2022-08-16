@@ -31,6 +31,7 @@ editor_options:
 * dendrogram (clustering)
 * scatter plot (microbe FC vs given custom category FC) for genes in a given module (072621)
 * scatter plot for root.ivory and root.bisque4
+* Checking if this script is updated version (Aug 11, 2022)
 
 ```{r setup}
 rm(list=ls())

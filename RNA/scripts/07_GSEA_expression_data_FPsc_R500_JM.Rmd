@@ -9,6 +9,9 @@ editor_options:
 
 Write tables of voom stabilized expression data, corrected (or not) for experiment and block effects
 
+# To do
+* remove "GSEA" from file name because we do not ue GSEA anhynore. (Aug 16, 2022, KN)
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE,error=TRUE)
 library(edgeR)
