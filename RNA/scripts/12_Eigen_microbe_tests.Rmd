@@ -10,6 +10,7 @@ This is an alternative approach to look for modules that are responsive to treat
 
 ```{r}
 library(tidyverse)
+library(cowplot)
 ```
 
 ## load sample info
@@ -89,14 +90,17 @@ write_csv(root_results, "../output/root_eigen_microbes_lm.csv")
 
 ```{r}
 
-rootorder <- root_results %>% filter(fdr<0.1) %>% arrange(fdr) %>% pull(module)
+rootorder <- root_results %>% filter(fdr<0.1) %>% arrange(estimate) %>% pull(module)
 
-root_results_full %>% filter(fdr<0.1) %>%
+root_microbe_eigen.pl <- root_results_full %>% filter(fdr<0.1) %>%
   select(module, data, fdr) %>% arrange(fdr) %>% unnest(data) %>%
   ggplot(aes(x=module, y=eigen_value, fill=trt)) +
-  geom_boxplot() + 
+  geom_boxplot(show.legend = FALSE) + 
   scale_x_discrete(limits=rootorder) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10) )
+
+root_microbe_eigen.pl
+
 ggsave("../../_Paper_Figures/Eigen_microbe_root.pdf")
 ```
 
@@ -161,15 +165,30 @@ write_csv(leaf_results, "../output/leaf_eigen_microbes_lm.csv")
 
 ```{r}
 
-leaforder <- leaf_results %>% filter(fdr<0.1) %>% arrange(fdr) %>% pull(module)
+leaforder <- leaf_results %>% filter(fdr<0.1) %>% arrange(estimate) %>% pull(module)
 
-leaf_results_full %>% filter(fdr<0.1) %>%
+leaf_microbe_eigen.pl <- leaf_results_full %>% filter(fdr<0.1) %>%
   select(module, data, fdr) %>% arrange(fdr) %>% unnest(data) %>%
   ggplot(aes(x=module, y=eigen_value, fill=trt)) +
   geom_boxplot() + 
   scale_x_discrete(limits=leaforder) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10) )
+
+leaf_microbe_eigen.pl
+
 ggsave("../../_Paper_Figures/Eigen_microbe_leaf.pdf")
+```
+
+## Combine root and leaf plots for single paper for figure:
+
+```{r}
+microbe_eigen.pl <- plot_grid(root_microbe_eigen.pl, leaf_microbe_eigen.pl, ncol = 2, labels="AUTO", rel_widths = c(1,1.1))
+
+microbe_eigen.pl
+
+save_plot("../../_Paper_Figures/figure_4_microbe_eigen.pdf", microbe_eigen.pl)
+save_plot("../../_Paper_Figures/figure_4_microbe_eigen.png", microbe_eigen.pl)
+
 ```
 
 
