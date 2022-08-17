@@ -47,7 +47,7 @@ head(sample.description)
 #type_convert(sample.description[,-3]) # to keep "unknown" column as character type.
 #sample.description$block<-as.integer(sample.description$block)
 # change lowercases into uppercases in soil column and character into integer in block
-sample.description<-sample.description %>% mutate(soil=toupper(soil)) %>% mutate(block=str_c("b", as.integer(block))) ## get additional metadata. (Oct 14, 2019) Block effects have to be character, not integer!!!!
+sample.description <- sample.description %>% mutate(soil=toupper(soil)) %>% mutate(block=str_c("b", as.integer(block))) ## get additional metadata. (Oct 14, 2019) Block effects have to be character, not integer!!!!
 
 sample.info <- read_tsv(file.path("RNA","input","wy003-metadata.txt"), col_names=c("sample2","tissue","soil","trt","density","block","pot"),skip=1) # do I need to add thi info? Yes for tissue info.
 head(sample.info)
@@ -60,7 +60,7 @@ head(sample.description2)
 sample.description2 %>% summarize(n_distinct(group)) # n_distinct()
 write_csv(sample.description2,path=file.path("plant","output","Br.mbio.e3.sample.description.csv")) # change file name 
 # data.frame version
-sample.description2.DF<-data.frame(sample.description2)
+sample.description2.DF <- data.frame(sample.description2)
 ```
 
 
@@ -489,6 +489,5 @@ write.csv(leaf.trtlive.DEGs.int.all.rD.rCR.v3.0anno,file=file.path("RNA","output
 write.csv(root.densityun.DEGs.int.all.rD.rCR.v3.0anno,file=file.path("RNA","output","FULLtoptag","e3.root.densityun.DEGs.int.rD.rCR.v3.0anno.csv"))
 write.csv(leaf.densityun.DEGs.int.all.rD.rCR.v3.0anno,file=file.path("RNA","output","FULLtoptag","e3.leaf.densityun.DEGs.int.rD.rCR.v3.0anno.csv"))
 ```
-
 
 

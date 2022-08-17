@@ -31,6 +31,7 @@ editor_options:
 * dendrogram (clustering)
 * scatter plot (microbe FC vs given custom category FC) for genes in a given module (072621)
 * scatter plot for root.ivory and root.bisque4
+* Checking if this script is updated version (Aug 11, 2022)
 
 ```{r setup}
 rm(list=ls())
@@ -117,9 +118,12 @@ data2 <- data2 %>% mutate(module=factor(module,levels=dendro.y.NAME))
 # plot (base)
 # format data
 data2 <- data2 %>% dplyr::select(module,live,dead) %>% pivot_longer(cols=2:3,names_to="soil",values_to="-log10FDR")
+#  create blank tiles as placeholder for later points (copied from plot.WGCNAmodule.signedhybrid.soiltrt.digest and modified)
+blank <- expand_grid(module=levels(data2$module), soil="", `-log10FDR`=0)
 # 
-base.plot <- data2 %>% 
-  ggplot(aes(y=soil,x=module)) + geom_tile(aes(fill=`-log10FDR`),colour="black")  + scale_fill_gradient2(name="soil effects \n(-log10 FDR)",limit=c(0,3), high=muted("magenta")) # + facet_grid(~tissue) # not OK
+base.plot <- data2 %>% rbind(blank) %>% 
+  ggplot(aes(y=soil,x=module)) + geom_tile(aes(fill=`-log10FDR`),colour="black")  + scale_fill_gradient2(name="soil effects \n(-log10 FDR)",limit=c(0,3), high=muted("magenta")) 
+
 # add Pct_Var_Explained, using levels of modules in module.soil.leafgrowth
 genes.count2 <- genes.count %>% left_join(leaf_avg_std.ML.data,by=c("module"="tissue.module")) %>% 
   mutate(module=factor(module,levels=levels(data2$module))) # %>%    mutate(sign=ifelse(PropVar_0.5_LOO >0,"positive","negative")) # adding leaf_avg_std.ML.data
@@ -131,19 +135,19 @@ print(dim(genes.count2))
 x.genes.count2 <- tibble(module=levels(genes.count2$module),x=seq(1,length(levels(genes.count2$module))))
 # add y
 genes.count2 <- x.genes.count2 %>% inner_join(genes.count2,by="module")
-#
-    plot2 <- base.plot + 
-      geom_point(aes(y=0.45,x=x,size=n),color = "red",  inherit.aes = FALSE, data=genes.count2) +
+# new plot2
+plot2 <- base.plot + 
+      geom_point(aes(y=1.25,x=x,size=n),color = "red",  inherit.aes = FALSE, data=genes.count2) +
       # for PropVar_0.5_LOO (120820), changed for leaf_avg_std.ML.data = ElasticNet0.5_multiCV_Pct_var (031221), ElasticNet0.5_multiCV_Pct_var_signedhybrid (042321)
-      new_scale_fill() + # error
-      geom_point(aes(y=0.35,x=x,fill=Pct_Var_Explained,shape=Effect), size=3,inherit.aes = FALSE, data=genes.count2)  +
+  scale_size_area(max_size=2) + # to change size of module size circle that fit to tiles
+      new_scale_fill() + # error? need this? (031722). How to make this red module size circle smaller? (031722)
+      geom_point(aes(y=0.75,x=x,fill=Pct_Var_Explained,shape=Effect), size=2,inherit.aes = FALSE, data=genes.count2)  +
       scale_fill_gradient(name="assocation to \nleaf length \n(-log10 FDR)",limit=c(0,10),low="white",high="blue") +
       scale_shape_manual(values=c("Increase"=24,"Decrease"=25)) + # trial to heve different shape 
-    coord_cartesian(ylim = c(0.9,2)) 
+    coord_fixed(ratio = 5) # ! modifiedby Julin! (March 3, 2022)
 print("genes.count2")
 
-# + scale_x_discrete(sec.axis=dup_axis())# not working
-plot2 <- plot2 +     theme(axis.text.y=element_text(size=10,angle=90),
+plot2 <- plot2 +     theme(axis.text.y=element_text(size=10,angle=90, hjust=0.5),
       axis.text.x=element_text(size=8,angle=90,vjust=0.4,hjust=1),
       axis.title=element_text(size=10),
       axis.ticks = element_blank(),
@@ -153,7 +157,7 @@ plot2 <- plot2 +     theme(axis.text.y=element_text(size=10,angle=90),
       axis.line=element_blank()) + 
 labs(x="",y="")#,fill="-log10\n FDR")
 print(plot2)
-save(data2,file=file.path("RNA","output","data2.stored.Rdata"))
+#save(data2,file=file.path("RNA","output","data2.stored.Rdata")) # do I need this?
 return(plot2)
 }
 ```
@@ -222,11 +226,11 @@ genes.count2 <- x.genes.count2 %>% inner_join(genes.count2,by="module")
     plot2 <- base.plot + 
       geom_point(aes(y=1.25,x=x,size=n),color = "red",  inherit.aes = FALSE, data=genes.count2) +
       # for PropVar_0.5_LOO (120820), changed for leaf_avg_std.ML.data = ElasticNet0.5_multiCV_Pct_var (031221), ElasticNet0.5_multiCV_Pct_var_signedhybrid (042321)
-      new_scale_fill() + # error
+      new_scale_fill() + # error? need this? (031722)
       geom_point(aes(y=0.75,x=x,fill=Pct_Var_Explained,shape=Effect), size=3,inherit.aes = FALSE, data=genes.count2)  +
-      scale_fill_gradient(name="assocation to \nleaf length \n(-log10 FDR)",limit=c(0,10),low="white",high="blue") +
+      scale_fill_gradient(name="assocation to \nleaf length \n(-log10 FDR)",limit=c(0,15),low="white",high="blue") +
       scale_shape_manual(values=c("Increase"=24,"Decrease"=25)) + # trial to heve different shape 
-    coord_fixed(ratio = 2) 
+    coord_fixed(ratio = 2) # ! modifiedby Julin! (March 3, 2022)
 print("genes.count2")
 
 # + scale_x_discrete(sec.axis=dup_axis())# not working
@@ -252,26 +256,10 @@ plot.full <- plot.WGCNAmodule.signedhybrid.soiltrt.full()
 plot.full <- plot.full + theme(legend.position="left",legend.key.height=unit(6,"pt"),legend.text=element_text(size=6,angle=0),legend.title=element_text(size=6),plot.margin = margin(0, 0, 0, 0, "pt")) + labs(size="module size") #,legend.box="vertical") 
 # To do (1) change legend, (2) align x text to top
 # save file (png)
-ggsave(plot.full,filename="plot.full.signedhybrid.soiltrtFDR0.05.v3.png",path=file.path("RNA","output"),width=6.5,height=5)
+ggsave(plot.full,filename="plot.full.signedhybrid.soiltrtFDR0.05.v4.png",path=file.path("RNA","output"),width=6.5,height=5)
 # save file (pdf)
-ggsave(plot.full,filename="plot.full.signedhybrid.soiltrtFDR0.05.v3.pdf",path=file.path("RNA","output"),width=6.5,height=5)
+ggsave(plot.full,filename="plot.full.signedhybrid.soiltrtFDR0.05.v4.pdf",path=file.path("RNA","output"),width=6.5,height=5)
 ```
-
-# test full module version (updated Dec 7, 2021)
-```{r, fig.height=1,fig.width=6.5}
-plot.full <- plot.WGCNAmodule.signedhybrid.soiltrt.full()
-# format
-plot.full <- plot.full + theme(legend.position="left",legend.key.height=unit(6,"pt"),legend.text=element_text(size=6,angle=0),legend.title=element_text(size=6),plot.margin = margin(0, 0, 0, 0, "pt")) + labs(size="module size") #,legend.box="vertical") 
-#
-plot.full
-# To do (1) change legend, (2) align x text to top
-# save file (png)
-ggsave(plot.full,filename="plot.full.signedhybrid.soiltrtFDR0.05.v4.png",path=file.path("RNA","output"),width=6.5)
-# save file (pdf)
-#ggsave(plot.full,filename="plot.full.signedhybrid.soiltrtFDR0.05.v3.pdf",path=file.path("RNA","output"),width=6.5,height=5)
-```
-
-
 
 # digested version (finalized in De 14, 2021)
 ## Needs to have solid rectangle in every tile. Why some has no line?

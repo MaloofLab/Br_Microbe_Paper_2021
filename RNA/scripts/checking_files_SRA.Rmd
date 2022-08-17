@@ -1,0 +1,40 @@
+---
+title: "checking_files_SRA"
+author: "Kazu"
+date: "4/21/2022"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+library(edgeR);library(tidyverse);library(readr);library(readxl)
+```
+
+```{r}
+samples.forSRA.exp3 <- read_csv(file.path("/Volumes","data_work","Data6","data_JM4","seq_database_sql","Br_microbiome","SRA submission files exp_validation","data_file_B_rapa_validation.csv"))
+samples.forSRA.exp3 %>% mutate(ID=str_replace(`Data_file_name VARCHAR(65)`,
+                                              "(^.*)_S.*",
+                                              "\\1")) %>% 
+  pull(ID) %>% unique() # 64 samples, which is the same as # "write_csv(sample.description2,path=file.path("plant","output","Br.mbio.e3.sample.description.csv")) in 02_Br.mbio.e3.v3.0anno.DEG.2021
+samples.forSRA.exp3 %>% mutate(ID=str_replace(`Data_file_name VARCHAR(65)`,
+                                              "(^.*)_S.*",
+                                              "\\1")) %>% 
+  group_by(ID) %>% distinct(`Data_file_location MEDIUMTEXT`) %>% view()
+# for 
+sample.description2 <- read_csv(file.path("plant","output","Br.mbio.e3.sample.description.csv")) 
+# convert "cr" to "crowd", "un" to "uncrowd" in density (void due to avoid character length limit)
+sample.description2.mod <- sample.description2 %>% 
+  #mutate(density=str_replace(density,"cr","crowd")) %>% mutate(density=str_replace(density,"un","uncrowd")) %>%
+  mutate(Sample_condition1="14:10 L:D and 20:15.5C temperature cycles") %>% 
+  mutate(Sample_condition3=str_c("location (",location,
+                           "), trt (",trt,
+                          "), density (",density,
+                         "), block (",block,
+                        "), pot (",pot,
+                       ")")) %>%  
+    mutate(Sample_condition2=str_c(location,trt,density, block, pot, sep=","))
+  sample.description2.mod %>% pull(Sample_condition2)
+write_csv(sample.description2.mod,file.path("/Volumes","data_work","Data6","data_JM4","seq_database_sql","Br_microbiome","SRA submission files exp_validation","Br.mbio.e3.sample.description.mod.csv"))
+
+```
