@@ -69,7 +69,213 @@ module.soil.leafgrowth <- bind_rows(root_results,leaf_results) %>% full_join(Ela
 module.soil.leafgrowth %>% View()
 ```
 
+# format: fdr < 0.1 (for soil treatment) (added Aug 24, 2022)
+```{r}
+# fdr cut off 0.1
+module.soil.leafgrowth <- module.soil.leafgrowth %>% mutate(fdr =ifelse(fdr > 0.1, 1,fdr)) %>% mutate(`-log10FDR`=-log10(fdr)) #%>% View()
+```
+
+# calculate numbers of genes in each module (updated for signedhybrid WGCNA modules). Use WGCNA.signedhybrid.moduleColors.voom5.csv.gz 
+```{r}
+Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid <- read_csv(file.path("RNA","output","WGCNA.signedhybrid.moduleColors.voom5.csv.gz"))
+genes.count.root <- Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid %>% 
+  group_by(root.voom5.module.signedhybrid) %>% drop_na() %>% summarise(n=n()) %>% 
+  dplyr::rename(module=root.voom5.module.signedhybrid) %>% mutate(module=str_c("root.",module))
+genes.count.leaf <- Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid %>% 
+  group_by(leaf.voom5.module.signedhybrid) %>% drop_na() %>% summarise(n=n()) %>% 
+  dplyr::rename(module=leaf.voom5.module.signedhybrid) %>% mutate(module=str_c("leaf.",module))
+genes.count <- bind_rows(genes.count.root,genes.count.leaf) 
+```
+
+# drow heatmap (full modules)
+```{r}
+plot.WGCNAmodule.signedhybrid.soiltrt.full <- function(data = module.soil.leafgrowth,
+                                                  leaf_avg_std.ML.data = ElasticNet0.5_multiCV_Pct_var_signedhybrid,
+                                            top.margin=290,
+                                            bottom.margin=30,
+                                            legend.height=30,
+                                            legend.width=10,
+                                            modules="fullmodule") {
+# draw dendrogram
+  # split fdr according to estimate sign
+data2 <- data %>% mutate(live=`-log10FDR`,dead=`-log10FDR`) %>% mutate(live=ifelse(estimate>0,live,0)) %>% mutate(dead=ifelse(estimate<0,dead,0))
+# matrix for dendrogram  
+data2.matrix <- data2[,c("live","dead")] %>% as.matrix()
+rownames(data2.matrix) <- data2[,"module"] %>% as_vector()
+# scaling for dendrogram calculation
+data2.scaled <- scale(data2.matrix) %>% as.data.frame()
+# Run clustering
+data2.scaled.dendro <- as.dendrogram(hclust(d = dist(x = data2.scaled)))
+# Create dendrogram plot
+dendro.plot <- ggdendrogram(data = data2.scaled.dendro, rotate = TRUE) + 
+#  theme(axis.text.y = element_text(size = 6))
+  theme(axis.text.y = element_blank())
+print(dendro.plot)
+#
+dendro.y.NAME <- dendro_data(data2.scaled.dendro)$label$label
+# relevel modules in module.soil.leafgrowth
+data2 <- data2 %>% mutate(module=factor(module,levels=dendro.y.NAME))
+# plot (base)
+# format data
+data2 <- data2 %>% dplyr::select(module,live,dead) %>% pivot_longer(cols=2:3,names_to="soil",values_to="-log10FDR")
+#  create blank tiles as placeholder for later points (copied from plot.WGCNAmodule.signedhybrid.soiltrt.digest and modified)
+blank <- expand_grid(module=levels(data2$module), soil="", `-log10FDR`=0)
+# 
+base.plot <- data2 %>% rbind(blank) %>% 
+  ggplot(aes(y=soil,x=module)) + geom_tile(aes(fill=`-log10FDR`),colour="black")  + scale_fill_gradient2(name="soil effects \n(-log10 FDR)",limit=c(0,3), high=muted("magenta")) 
+
+# add Pct_Var_Explained, using levels of modules in module.soil.leafgrowth
+genes.count2 <- genes.count %>% left_join(leaf_avg_std.ML.data,by=c("module"="tissue.module")) %>% 
+  mutate(module=factor(module,levels=levels(data2$module))) # %>%    mutate(sign=ifelse(PropVar_0.5_LOO >0,"positive","negative")) # adding leaf_avg_std.ML.data
+print(genes.count2)
+str(genes.count2)
+print("dim(genes.count2)")
+print(dim(genes.count2))
+# sort genes.count2 by data2$module levels
+x.genes.count2 <- tibble(module=levels(genes.count2$module),x=seq(1,length(levels(genes.count2$module))))
+# add y
+genes.count2 <- x.genes.count2 %>% inner_join(genes.count2,by="module")
+# new plot2
+plot2 <- base.plot + 
+      geom_point(aes(y=1.25,x=x,size=n),color = "red",  inherit.aes = FALSE, data=genes.count2) +
+      # for PropVar_0.5_LOO (120820), changed for leaf_avg_std.ML.data = ElasticNet0.5_multiCV_Pct_var (031221), ElasticNet0.5_multiCV_Pct_var_signedhybrid (042321)
+  scale_size_area(max_size=2) + # to change size of module size circle that fit to tiles
+      new_scale_fill() + # error? need this? (031722). How to make this red module size circle smaller? (031722)
+      geom_point(aes(y=0.75,x=x,fill=Pct_Var_Explained,shape=Effect), size=2,inherit.aes = FALSE, data=genes.count2)  +
+      scale_fill_gradient(name="assocation to \nleaf length \n(-log10 FDR)",limit=c(0,10),low="white",high="blue") +
+      scale_shape_manual(values=c("Increase"=24,"Decrease"=25)) + # trial to heve different shape 
+    coord_fixed(ratio = 5) # ! modifiedby Julin! (March 3, 2022)
+print("genes.count2")
+
+plot2 <- plot2 +     theme(axis.text.y=element_text(size=10,angle=90, hjust=0.5),
+      axis.text.x=element_text(size=8,angle=90,vjust=0.4,hjust=1),
+      axis.title=element_text(size=10),
+      axis.ticks = element_blank(),
+      strip.text.y = element_text(angle=0),
+      panel.background = element_rect(fill = "white",colour="black"),
+      plot.title=element_text(size=20),
+      axis.line=element_blank()) + 
+labs(x="",y="")#,fill="-log10\n FDR")
+print(plot2)
+#save(data2,file=file.path("RNA","output","data2.stored.Rdata")) # do I need this?
+return(plot2)
+}
+```
+
+# drow heatmap (digest modules)
+```{r}
+plot.WGCNAmodule.signedhybrid.soiltrt.digest <- function(data = module.soil.leafgrowth,
+                                                  leaf_avg_std.ML.data = ElasticNet0.5_multiCV_Pct_var_signedhybrid,
+                                            top.margin=290,
+                                            bottom.margin=30,
+                                            legend.height=30,
+                                            legend.width=10,
+                                            modules="fullmodule") {
+# draw dendrogram
+  # split fdr according to estimate sign
+data2 <- data %>% mutate(live=`-log10FDR`,dead=`-log10FDR`) %>% mutate(live=ifelse(estimate>0,live,0)) %>% mutate(dead=ifelse(estimate<0,dead,0))
+# matrix for dendrogram  
+data2.matrix <- data2[,c("live","dead")] %>% as.matrix()
+rownames(data2.matrix) <- data2[,"module"] %>% as_vector()
+# scaling for dendrogram calculation
+data2.scaled <- scale(data2.matrix) %>% as.data.frame()
+# Run clustering
+data2.scaled.dendro <- as.dendrogram(hclust(d = dist(x = data2.scaled)))
+# Create dendrogram plot
+dendro.plot <- ggdendrogram(data = data2.scaled.dendro, rotate = TRUE) + 
+#  theme(axis.text.y = element_text(size = 6))
+  theme(axis.text.y = element_blank())
+print(dendro.plot)
+#
+dendro.x.NAME <- dendro_data(data2.scaled.dendro)$label$label
+# relevel modules in module.soil.leafgrowth
+data2 <- data2 %>% mutate(module=factor(module,levels=dendro.x.NAME))
+# plot (base)
+# remove live0 and dead==0
+module.drop <- data2 %>% filter(is.na(Pct_Var_Explained)) %>% filter(live==0 & dead==0)
+data2.trim <- data2 %>% anti_join(module.drop,by="module")
+# format data
+data2.trim <- data2.trim %>% dplyr::select(module,live,dead) %>% pivot_longer(cols=2:3,names_to="soil",values_to="-log10FDR")
+# remove unnecessary modules
+#data2.trim <- data2 %>% left_join(leaf_avg_std.ML.data,by=c("module"="tissue.module")) %>% filter(!`-log10FDR`==0|Pct_Var_Explained>0) 
+# level
+dendro.x.NAME.trim.tibble <- tibble(module=dendro.x.NAME) %>% semi_join(data2.trim, by="module") %>% as_vector() # needed?
+# 
+data2.trim <- data2.trim %>% mutate(module=factor(module,levels=dendro.x.NAME.trim.tibble)) #%>% str()
+# 
+
+# create blank tiles as placeholder for later points
+
+blank <- expand_grid(module=levels(data2.trim$module), soil="", `-log10FDR`=0)
+
+base.plot <- data2.trim %>% rbind(blank) %>% 
+  ggplot(aes(y=soil,x=module)) + geom_tile(aes(fill=`-log10FDR`),colour="black")  + scale_fill_gradient2(name="soil effects \n(-log10 FDR)",limit=c(0,3), high=muted("magenta")) # + facet_grid(~tissue) # not OK
+# add Pct_Var_Explained, using levels of modules in module.soil.leafgrowth
+genes.count2 <- genes.count %>% inner_join(data2.trim,by="module") %>% 
+  mutate(module=factor(module,levels=levels(data2.trim$module))) %>% left_join(leaf_avg_std.ML.data,by=c("module"="tissue.module")) %>% 
+  mutate(module=factor(module,levels=levels(data2.trim$module)))# %>%    mutate(sign=ifelse(PropVar_0.5_LOO >0,"positive","negative")) # adding leaf_avg_std.ML.data
+print(genes.count2)
+str(genes.count2)
+print("dim(genes.count2)")
+print(dim(genes.count2))
+# error
+x.genes.count2 <- tibble(module=levels(genes.count2$module),x=seq(1,length(levels(genes.count2$module))))
+# add x
+genes.count2 <- x.genes.count2 %>% inner_join(genes.count2,by="module")
+#
+    plot2 <- base.plot + 
+      geom_point(aes(y=1.25,x=x,size=n),color = "red",  inherit.aes = FALSE, data=genes.count2) +
+      # for PropVar_0.5_LOO (120820), changed for leaf_avg_std.ML.data = ElasticNet0.5_multiCV_Pct_var (031221), ElasticNet0.5_multiCV_Pct_var_signedhybrid (042321)
+      new_scale_fill() + # error? need this? (031722)
+      geom_point(aes(y=0.75,x=x,fill=Pct_Var_Explained,shape=Effect), size=3,inherit.aes = FALSE, data=genes.count2)  +
+      scale_fill_gradient(name="assocation to \nleaf length \n(-log10 FDR)",limit=c(0,15),low="white",high="blue") +
+      scale_shape_manual(values=c("Increase"=24,"Decrease"=25)) + # trial to heve different shape 
+    coord_fixed(ratio = 2) # ! modifiedby Julin! (March 3, 2022)
+print("genes.count2")
+
+# + scale_x_discrete(sec.axis=dup_axis())# not working
+plot2 <- plot2 +     theme(axis.text.y=element_text(size=10,angle=90, hjust=0.5),
+      axis.text.x=element_text(size=10,angle=90,vjust=0.4),
+      axis.title=element_text(size=10),
+      axis.ticks = element_blank(),
+      strip.text.y = element_text(angle=0),
+      panel.background = element_rect(fill = "white",colour="black"),
+      plot.title=element_text(size=20),
+      axis.line=element_blank()) + 
+labs(x="",y="")#,fill="-log10\n FDR")
+print(plot2)
+#save(data2,file=file.path("RNA","output","data2.stored.Rdata"))
+return(plot2)
+}
+```
+
+# test full module version
+```{r}
+plot.full <- plot.WGCNAmodule.signedhybrid.soiltrt.full()
 # format
+plot.full <- plot.full + theme(legend.position="left",legend.key.height=unit(6,"pt"),legend.text=element_text(size=6,angle=0),legend.title=element_text(size=6),plot.margin = margin(0, 0, 0, 0, "pt")) + labs(size="module size") #,legend.box="vertical") 
+# To do (1) change legend, (2) align x text to top
+# save file (png)
+ggsave(plot.full,filename="plot.full.signedhybrid.soiltrtFDR0.1.v4.png",path=file.path("RNA","output"),width=6.5,height=5)
+# save file (pdf)
+ggsave(plot.full,filename="plot.full.signedhybrid.soiltrtFDR0.1.v4.pdf",path=file.path("RNA","output"),width=6.5,height=5)
+```
+
+# digested version
+## Needs to have solid rectangle in every tile. Why some has no line?
+```{r}
+plot.digest <- plot.WGCNAmodule.signedhybrid.soiltrt.digest(data = module.soil.leafgrowth,
+                                                  leaf_avg_std.ML.data = ElasticNet0.5_multiCV_Pct_var_signedhybrid)
+# format
+# plot.digest <- plot.digest + theme(legend.position="left",legend.key.height=unit(10,"pt"),legend.text=element_text(size=10,angle=0),plot.margin = margin(0, 30, 0, 0, "pt"))  # for v2 setting
+plot.digest <- plot.digest + theme(legend.position="left",legend.key.height=unit(6,"pt"),legend.text=element_text(size=6,angle=0),legend.title=element_text(size=6),plot.margin = margin(10, 0, 0, 0, "pt")) + labs(size="module size")
+# save file (png)
+ggsave(plot.digest,filename="plot.full.signedhybrid.soiltrtFDR0.1.v3.digest.png",path=file.path("RNA","output"),width=6.5,height=5)
+# save file (pdf)
+ggsave(plot.digest,filename="plot.full.signedhybrid.soiltrtFDR0.1.v3.digest.pdf",path=file.path("RNA","output"),width=6.5,height=5)
+```
+########## end of fdr < 0.1 #########
+# format: fdr < 0.05 (for soil treatment)
 ```{r}
 # fdr cut off 0.05
 module.soil.leafgrowth <- module.soil.leafgrowth %>% mutate(fdr =ifelse(fdr > 0.05, 1,fdr)) %>% mutate(`-log10FDR`=-log10(fdr)) #%>% View()
@@ -256,9 +462,9 @@ plot.full <- plot.WGCNAmodule.signedhybrid.soiltrt.full()
 plot.full <- plot.full + theme(legend.position="left",legend.key.height=unit(6,"pt"),legend.text=element_text(size=6,angle=0),legend.title=element_text(size=6),plot.margin = margin(0, 0, 0, 0, "pt")) + labs(size="module size") #,legend.box="vertical") 
 # To do (1) change legend, (2) align x text to top
 # save file (png)
-ggsave(plot.full,filename="plot.full.signedhybrid.soiltrtFDR0.05.v4.png",path=file.path("RNA","output"),width=6.5,height=5)
+ggsave(plot.full,filename="plot.full.signedhybrid.soiltrtFDR0.05.v5.png",path=file.path("RNA","output"),width=6.5,height=5)
 # save file (pdf)
-ggsave(plot.full,filename="plot.full.signedhybrid.soiltrtFDR0.05.v4.pdf",path=file.path("RNA","output"),width=6.5,height=5)
+ggsave(plot.full,filename="plot.full.signedhybrid.soiltrtFDR0.05.v5.pdf",path=file.path("RNA","output"),width=6.5,height=5)
 ```
 
 # digested version (finalized in De 14, 2021)
@@ -270,11 +476,10 @@ plot.digest <- plot.WGCNAmodule.signedhybrid.soiltrt.digest(data = module.soil.l
 # plot.digest <- plot.digest + theme(legend.position="left",legend.key.height=unit(10,"pt"),legend.text=element_text(size=10,angle=0),plot.margin = margin(0, 30, 0, 0, "pt"))  # for v2 setting
 plot.digest <- plot.digest + theme(legend.position="left",legend.key.height=unit(6,"pt"),legend.text=element_text(size=6,angle=0),legend.title=element_text(size=6),plot.margin = margin(10, 0, 0, 0, "pt")) + labs(size="module size")
 # save file (png)
-ggsave(plot.digest,filename="plot.full.signedhybrid.soiltrtFDR0.05.v3.digest.png",path=file.path("RNA","output"),width=6.5,height=5)
+ggsave(plot.digest,filename="plot.full.signedhybrid.soiltrtFDR0.05.v4.digest.png",path=file.path("RNA","output"),width=6.5,height=5)
 # save file (pdf)
-ggsave(plot.digest,filename="plot.full.signedhybrid.soiltrtFDR0.05.v3.digest.pdf",path=file.path("RNA","output"),width=6.5,height=5)
+ggsave(plot.digest,filename="plot.full.signedhybrid.soiltrtFDR0.05.v4.digest.pdf",path=file.path("RNA","output"),width=6.5,height=5)
 ```
-
 
 ########################################## pending below #################
 
