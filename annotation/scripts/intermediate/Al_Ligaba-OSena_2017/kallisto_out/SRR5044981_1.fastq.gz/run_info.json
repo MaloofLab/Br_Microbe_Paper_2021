@@ -1,0 +1,9 @@
+{
+	"n_targets": 33602,
+	"n_bootstraps": 0,
+	"n_processed": 5941268,
+	"kallisto_version": "0.43.1",
+	"index_version": 10,
+	"start_time": "Thu Feb 20 07:45:51 2020",
+	"call": "kallisto quant -i ../../NGS/references/TAIR10_cdna_20110103_representative_gene_model_updated_kallisto_index --single -l 250 -s 40 -o kallisto_out/SRR5044981_1.fastq.gz SRR5044981_1.fastq.gz"
+}

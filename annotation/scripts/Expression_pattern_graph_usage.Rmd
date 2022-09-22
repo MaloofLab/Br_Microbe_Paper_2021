@@ -1,0 +1,88 @@
+---
+title: "Expression_pattern_graph"
+output: 
+  flexdashboard::flex_dashboard:
+    #css: libs/my-theme.css
+    vertical_layout: scroll
+    orientation: columns
+    #social: menu
+    source_code: embed
+    #theme: default
+editor_options: 
+  chunk_output_type: console
+---
+```{r setup, include=FALSE}
+library(knitr)
+library(flexdashboard)
+source("Expression_pattern_graph.R",chdir=TRUE) # reading necessary data from temporal workind directory where the file "Expression_Pattern_graph.R" locate.
+#source("../../../tools/Expression_pattern_graph.R",chdir=TRUE)
+# "/Volumes/data_work/Data8/NGS_related/Brassica_microbiome/Brapa_microbes/tools"
+```
+
+# Reading DEGs list exp1 {data-navmenu="Reading DEGs"}
+===========================================
+```{r echo=TRUE, message=FALSE, warning=FALSE, paged.print=FALSE, error=TRUE}
+# all model including subset data
+DEG.objs.e1.v3.0annotation.all<-list.files(path=file.path("..","v3.0annotation","20170617-samples","output","FULLtoptag"),
+           pattern="(^leaf|^root)(\\.)(.+)(v3.0anno)(.csv)") 
+# read csv file (only full model)
+DEG.count.list.e1.v3.0annotation.all<-lapply(DEG.objs.e1.v3.0annotation.all, function(x) read_csv(paste(file.path("..","v3.0annotation","20170617-samples","output","FULLtoptag"),"/",x,sep="")))
+names(DEG.count.list.e1.v3.0annotation.all)<-gsub(".csv","",DEG.objs.e1.v3.0annotation.all)
+DEG.count.list.e1.v3.0annotation.all[["root.R500.trtlive.DEGs.all.rD.v3.0anno"]] %>% filter(FDR<0.05)
+names(DEG.count.list.e1.v3.0annotation.all)
+# FDR<0.05
+DEG.count.list.e1.v3.0annotation.all %>% map(filter(FDR<0.05)) # does not work
+DEG.count.list.e1.v3.0annotation.all.FDR0.05<-DEG.count.list.e1.v3.0annotation.all %>% map(function(df) filter(df,FDR<0.05)) # does work
+names(DEG.count.list.e1.v3.0annotation.all.FDR0.05)
+# playing with map and lapply
+DEG.count.list.e1.v3.0annotation.all %>% map(~filter(.,FDR<0.05)) # does work
+DEG.count.list.e1.v3.0annotation.all %>% map(nrow) # does work
+map(DEG.count.list.e1.v3.0annotation.all,~filter(.x,FDR<0.05)) # does work
+lapply(DEG.count.list.e1.v3.0annotation.all,function(df) filter(df,FDR<0.05)) # does work
+# confirm
+DEG.count.list.e1.v3.0annotation.all.FDR0.05[["root.R500.trtlive.DEGs.all.rD.v3.0anno"]] %>% View() # OK. 383 genes
+
+```
+
+# Reading DEGs list exp3 {data-navmenu="Reading DEGs"}
+===========================================
+```{r echo=TRUE, message=FALSE, warning=FALSE, paged.print=FALSE, error=TRUE}
+# all model including subset data
+DEG.objs.e3.v3.0annotation.all<-list.files(path=file.path("..","v3.0annotation","20180202-samples","output","FULLtoptag"),
+           pattern="(^leaf|^root)(\\.)(.+)(v3.0anno)(.csv)") 
+# read csv file (only full model)
+DEG.count.list.e3.v3.0annotation.all<-lapply(DEG.objs.e3.v3.0annotation.all, function(x) read_csv(paste(file.path("..","v3.0annotation","20180202-samples","output","FULLtoptag"),"/",x,sep="")))
+names(DEG.count.list.e3.v3.0annotation.all)<-gsub(".csv","",DEG.objs.e3.v3.0annotation.all)
+DEG.count.list.e3.v3.0annotation.all[["root.cr.trtlive.DEGs.all.rD.v3.0anno"]] %>% filter(FDR<0.05)
+names(DEG.count.list.e3.v3.0annotation.all)
+# FDR<0.05
+DEG.count.list.e3.v3.0annotation.all %>% map(filter(FDR<0.05)) # does not work
+DEG.count.list.e3.v3.0annotation.all.FDR0.05<-DEG.count.list.e3.v3.0annotation.all %>% map(function(df) filter(df,FDR<0.05)) # does work
+names(DEG.count.list.e3.v3.0annotation.all.FDR0.05)
+# alternative way
+DEG.count.list.e3.v3.0annotation.all %>% map(~filter(.,FDR<0.05)) # does work
+map(DEG.count.list.e3.v3.0annotation.all,~filter(.x,FDR<0.05)) # does work
+lapply(DEG.count.list.e3.v3.0annotation.all,function(df) filter(df,FDR<0.05)) # does work
+
+DEG.count.list.e3.v3.0annotation.all.FDR0.05[["root.cr.trtlive.DEGs.all.rD.v3.0anno"]] %>% View() # OK. 3887 genes
+```
+
+# Expression pattern in exp1 {data-navmenu="Soil responsive genes in root and FPsc in exp1"}
+===========================================
+```{r fig.height=18, echo=FALSE, message=FALSE, warning=FALSE, error=TRUE}
+# exp1 v3.0anno, root, FPsc (subset), soil responsive DEGs
+gene.of.interest<-DEG.count.list.e1.v3.0annotation.all.FDR0.05[["root.FPsc.trtlive.DEGs.all.rD.v3.0anno"]] %>% filter(FDR<0.05) %>% dplyr::select(genes) %>% as_vector()
+# drawing expression pattern in exp1 (using count data)
+# expression.pattern.Br.graph.exp1(data=counts.exp1.v3.0,target.genes=gene.of.interest,title="exp1 v3.0",geno="both")
+## using normalized expression data (cpm)
+expression.pattern.Br.graph.exp1(data=left_join(cpm.exp1.root.v3.0,cpm.exp1.leaf.v3.0,by="transcript_ID") %>% rename(target_id=transcript_ID) ,target.genes=gene.of.interest,title="exp1 v3.0",geno="both")
+```
+
+# Expression pattern in exp3 {data-navmenu="Soil responsive genes in root and FPsc in exp1"}
+===========================================
+```{r fig.height=18, echo=FALSE, message=FALSE, warning=FALSE, error=TRUE}
+expression.pattern.Br.graph.exp3(data=left_join(cpm.exp3.root.v3.0,cpm.exp3.leaf.v3.0,by="transcript_ID") %>% rename(target_id=transcript_ID) ,target.genes=gene.of.interest,title="exp3 v3.0")
+```
+
+
+

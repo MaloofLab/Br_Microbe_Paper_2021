@@ -1,0 +1,157 @@
+---
+title: "Al"
+output:
+  html_document:
+    df_print: paged
+---
+
+Phosphate deficiency responsive genes.
+
+|our purpose|Study|plant|samples|transcriptome platform|available data|available raw data|
+|----|----|--|------|--|--------|-|
+|Al responsive genes|[Ligaba-OSena_2017](https://nph.onlinelibrary.wiley.com/doi/full/10.1111/nph.14420))|Arabidopsis thaliana|About 10 mg of seeds (c. 500 plants) were germinated and grown in a complete nutrient solution as described earlier, for 7 d. The plants were then rinsed with 18 MΩ water and transferred to fresh nutrient solution with or without 20 μM AlCl3. After 24 h, root and shoot tissues were separated and immediately frozen in liquid N2.|RNAseq||[PRJNA354456](https://www.ncbi.nlm.nih.gov/bioproject/354456)|
+
+# prep
+```{r setup, include=FALSE}
+#library(knitr)
+knitr::opts_chunk$set(echo = TRUE,error=TRUE)
+#library(d3heatmap)
+#library(flexdashboard)
+library(edgeR);library(tidyverse)
+library(readr);library(readxl)
+library(stringr)
+# for microarray 
+library(lmerTest);library(broom);library(broom.mixed);library(lme4);library(affy)
+# https://bioconductor.org/packages/devel/workflows/vignettes/maEndToEnd/inst/doc/MA-Workflow.html
+# for expression pattern
+source("Expression_pattern_graph.R")
+source("addAGIAnno.R")
+source("twocomparison.edgeR.DEG.R")
+```
+
+* Downloading fastq files
+```{r eval=FALSE}
+system("while read line; do /usr/local/stow/sratoolkit.2.9.2-ubuntu64/bin/fastq-dump --split-files --gzip ${line}; done < SRR_Acc_List_Ligaba-OSena_2017_Al.txt")
+```
+
+* Mapping by Kallisto (single end)
+```{r eval=FALSE}
+system("mkdir kallisto_out") # for storing count tables
+# fastq files with single end 
+fastqfiles<-list.files(pattern="fastq.gz")
+for(x in fastqfiles) {
+system(paste("kallisto quant -i ../../NGS/references/TAIR10_cdna_20110103_representative_gene_model_updated_kallisto_index  --single -l 250 -s 40 -o kallisto_out/",x," ",x, sep="")) 
+}
+```
+
+# design
+* download SraRunTable.txt from [RunSelector MetaData](https://www.ncbi.nlm.nih.gov/Traces/study/?acc=SRP093743&o=acc_s%3Aa)
+
+```{r}
+# SRR5045000 seven-day plants(shoot) grown in fresh nutrient solution with 20 µM AlCl3 for 24 h, rep3
+# SRR5044999 seven-day plants(shoot) grown in fresh nutrient solution with 20 µM AlCl3 for 24 h, rep2
+# SRR5044998 seven-day plants(shoot) grown in fresh nutrient solution with 20 µM AlCl3 for 24 h, rep1
+# SRR5044997 seven-day plants(root) grown in fresh nutrient solution with 20 µM AlCl3 for 24 h, rep3
+# SRR5044996 seven-day plants(root) grown in fresh nutrient solution with 20 µM AlCl3 for 24 h, rep2
+# SRR5044995 seven-day plants(root) grown in fresh nutrient solution with 20 µM AlCl3 for 24 h, rep1
+# SRR5044994 seven-day plants(shoot) grown in fresh nutrient solution without 20 µM AlCl3 for 24 h, rep3
+# SRR5044993 seven-day plants(shoot) grown in fresh nutrient solution without 20 µM AlCl3 for 24 h, rep2
+# SRR5044992 seven-day plants(shoot) grown in fresh nutrient solution without 20 µM AlCl3 for 24 h, rep1
+# SRR5044991 seven-day plants(root) grown in fresh nutrient solution without 20 µM AlCl3 for 24 h, rep3
+# SRR5044990 seven-day plants(root) grown in fresh nutrient solution without 20 µM AlCl3 for 24 h, rep2
+# SRR5044989 seven-day plants(root) grown in fresh nutrient solution without 20 µM AlCl3 for 24 h, rep1
+# SRR5044988 seven-day plants(shoot) grown in fresh nutrient solution with 20 µM AlCl3 for 24 h, rep3
+# SRR5044987 seven-day plants(shoot) grown in fresh nutrient solution with 20 µM AlCl3 for 24 h, rep2
+# SRR5044986 seven-day plants(shoot) grown in fresh nutrient solution with 20 µM AlCl3 for 24 h, rep1
+# SRR5044985 seven-day plants(root) grown in fresh nutrient solution with 20 µM AlCl3 for 24 h, rep3
+# SRR5044984 seven-day plants(root) grown in fresh nutrient solution with 20 µM AlCl3 for 24 h, rep2
+# SRR5044983 seven-day plants(root) grown in fresh nutrient solution with 20 µM AlCl3 for 24 h, rep1
+# SRR5044982 seven-day plants(shoot) grown in fresh nutrient solution without 20 µM AlCl3 for 24 h, rep3
+# SRR5044981 seven-day plants(shoot) grown in fresh nutrient solution without 20 µM AlCl3 for 24 h, rep2
+# SRR5044980 seven-day plants(shoot) grown in fresh nutrient solution without 20 µM AlCl3 for 24 h, rep1
+# SRR5044979 seven-day plants(root) grown in fresh nutrient solution without 20 µM AlCl3 for 24 h, rep3
+# SRR5044978 seven-day plants(root) grown in fresh nutrient solution without 20 µM AlCl3 for 24 h, rep2
+# SRR5044977 seven-day plants(root) grown in fresh nutrient solution without 20 µM AlCl3 for 24 h, rep1
+
+design <- read_csv(file.path("intermediate","Al_Ligaba-OSena_2017","SraRunTable.txt"))  %>% 
+  tidyr::extract(`Sample Name`,into=c("gt","trt","tissue2"),regex="(Cbl1|Col-0)([[:print:]]+)(\\-[[:print:]]+)") %>% 
+  dplyr::mutate(trt=str_replace(trt,"plusA1","+Al")) %>%
+  dplyr::select(Run,tissue,gt,trt) %>% 
+  unite(group,c(tissue,trt),remove=FALSE)
+# separate root and shoot
+design.root <- design %>% filter(tissue=="root", gt=="Col-0");design.root
+design.shoot <- design %>% filter(tissue=="shoot",gt=="Col-0");design.shoot
+
+```
+
+# copy kallisto_out directory in Whitney under input directory
+## get reads and create data frame
+```{r}
+files <- dir(file.path("intermediate","Al_Ligaba-OSena_2017","kallisto_out"), include.dirs = TRUE) # rename kallisto out folder
+files %>% head()
+```
+
+```{r}
+counts.list <- map(files, ~ read_tsv(
+  file=file.path("intermediate","Al_Ligaba-OSena_2017","kallisto_out",.,"abundance.tsv"),
+  col_types = "cdddd"))
+names(counts.list) <- files %>% str_remove("\\_1.fastq.gz")
+```
+
+```{r}
+counts <- sapply(counts.list, dplyr::select, est_counts) %>% 
+  bind_cols(counts.list[[1]][,"target_id"],.)
+counts[is.na(counts)] <- 0
+colnames(counts) <- sub(".est_counts","",colnames(counts),fixed = TRUE)
+counts
+# only Col-0 and separate root and shoot. subset counts by tissue 
+counts.root <- counts %>% dplyr::select("target_id",design.root %>% pull(Run)) 
+counts.shoot <-counts %>% dplyr::select("target_id",design.shoot %>% pull(Run))
+```
+
+# Note: better to keep tissue info in group to double check final logFC data or graph?
+
+# start DEG analysis module
+* input is "counts" and "design". output is one table with all genes with expression level (cpm) for each treatment and logFC, and FDR for treatment, and annotation 
+* counts2 colnames and group from design object should be matched.
+
+# root
+```{r}
+counts <- counts.root
+group <- design.root %>% pull(group) %>% as_factor() %>% fct_relevel("root_-Al")
+group
+DEGfilename <- "Al_Ligaba-OSena_2017_root.DEGs.csv.gz"
+dge.object.filepath.name <- file.path("intermediate","Al_Ligaba-OSena_2017","Al_Ligaba-OSena_2017_root.dge.Rdata")
+expression.up.plot <- "Al_Ligaba-OSena_2017_root.up.png"
+expression.down.plot <- "Al_Ligaba-OSena_2017_root.down.png"
+```
+# DEG analysis (one treatment)
+* Outputs: edgeR DEG table with FDR
+```{r}
+twocomparison.edgeR.DEG(counts=counts,
+                        group=group,
+                        DEGfilename=DEGfilename,
+                        dge.object.filepath.name=dge.object.filepath.name,
+                        expression.up.plot=expression.up.plot,
+                        expression.down.plot=expression.down.plot)
+```
+# shoot
+```{r}
+counts <- counts.shoot
+group <- design.shoot %>% pull(group) %>% as_factor() %>% fct_relevel("shoot_-Al")
+group
+DEGfilename <- "Al_Ligaba-OSena_2017_shoot.DEGs.csv.gz"
+dge.object.filepath.name <- file.path("intermediate","Al_Ligaba-OSena_2017","Al_Ligaba-OSena_2017_shoot.dge.Rdata")
+expression.up.plot <- "Al_Ligaba-OSena_2017_shoot.up.png"
+expression.down.plot <- "Al_Ligaba-OSena_2017_shoot.down.png"
+```
+# DEG analysis (one treatment)
+* Outputs: edgeR DEG table with FDR
+```{r}
+twocomparison.edgeR.DEG(counts=counts,
+                        group=group,
+                        DEGfilename=DEGfilename,
+                        dge.object.filepath.name=dge.object.filepath.name,
+                        expression.up.plot=expression.up.plot,
+                        expression.down.plot=expression.down.plot)
+```

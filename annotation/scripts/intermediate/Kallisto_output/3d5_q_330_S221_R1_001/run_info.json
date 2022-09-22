@@ -1,0 +1,9 @@
+{
+	"n_targets": 46250,
+	"n_bootstraps": 0,
+	"n_processed": 8747177,
+	"kallisto_version": "0.43.1",
+	"index_version": 10,
+	"start_time": "Fri Jun 28 16:43:35 2019",
+	"call": "kallisto quant --index /share/malooflab/ref_genomes/B_rapa/V3.0/B_rapa_CDS_V3.0_k31_kallisto_index --output-dir /share/malooflab/Kazu/Brapa-microbes-timecourse-2018/Kallisto_output/3d5_q_330_S221_R1_001 --plaintext --single -l 250 -s 40 3d5_q_330_S221_R1_001.fastq.gz"
+}

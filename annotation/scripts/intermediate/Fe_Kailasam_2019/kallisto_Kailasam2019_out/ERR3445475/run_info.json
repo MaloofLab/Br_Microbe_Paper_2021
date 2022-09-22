@@ -1,0 +1,9 @@
+{
+	"n_targets": 33602,
+	"n_bootstraps": 0,
+	"n_processed": 49931830,
+	"kallisto_version": "0.43.1",
+	"index_version": 10,
+	"start_time": "Mon Feb 10 21:34:41 2020",
+	"call": "kallisto quant -i ../../references/TAIR10_cdna_20110103_representative_gene_model_updated_kallisto_index -o ../kallisto_sam_out2/ ERR3445475_1.fastq.gz ERR3445475_2.fastq.gz"
+}

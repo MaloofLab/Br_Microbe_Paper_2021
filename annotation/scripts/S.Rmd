@@ -1,0 +1,267 @@
+---
+title: "Sulfer"
+output:
+  html_document:
+    df_print: paged
+editor_options: 
+  chunk_output_type: console
+---
+
+* To Do
+  + cleanup scripts, especially correct directory names.
+  + final check
+  + Knit
+
+Sulfer deficiency responsive genes.
+
+|our purpose|Study|plant|samples|transcriptome platform|available data|available raw data|
+|----|----|--|------|--|--------|-|
+|Sulfer deficiency responsive genes|[Aarabi et al. 2016](https://advances.sciencemag.org/content/2/10/e1601087)|Arabidopsis thaliana|Col-0 (and some sulfur deficiency induced mutants SDI1 & SDI2) were raised on high S (1500uM SO4) or low S (15uM SO4).  Roots harvested after 10 days.|Microarray (ATH1). |Using (ANOVA), we selected 6000 genes as those that were differentially regulated among plant lines or conditions; many of the genes showed low P values negating problems caused by multiple testing (last stament sounds like BS).  Normalized expression data were converted through (PCA) to identify the directions of changes in gene expression at transcriptome levels shared with plant lines or conditions.  The direction indicated by PC1 showed high correlations with the –S responses in WT.   THESE PC1 GENES AND LOGRATIOS FOUND IN TABLE S6.  https://advances.sciencemag.org/highwire/filestream/191989/field_highwire_adjunct_files/1/1601087_Tables_S1_to_S11.zip|[GSE81347](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE81347)|
+
+# installation
+```{r eval=FALSE, include=FALSE}
+install.packages("tidyverse")
+install.packages("broom")
+install.packages("broom.mixed")
+install.packages("lmerTest")
+install.packages("rmarkdown")
+# https://bioconductor.org/packages/devel/workflows/vignettes/maEndToEnd/inst/doc/MA-Workflow.html
+install.packages("devtools")
+library(devtools)
+devtools::install_github("r-lib/remotes")
+#library(remotes)
+#packageVersion("remotes") # has to be 1.1.1.9000 or later
+remotes::install_github("b-klaus/maEndToEnd", ref="master")
+```
+
+# prep
+```{r setup, include=FALSE}
+#library(knitr)
+knitr::opts_chunk$set(echo = TRUE,error=TRUE)
+#library(d3heatmap)
+#library(flexdashboard)
+library(edgeR);library(tidyverse)
+library(readr);library(readxl)
+library(stringr)
+# for microarray 
+library(lmerTest);library(broom);library(broom.mixed);library(lme4);library(affy)
+# https://bioconductor.org/packages/devel/workflows/vignettes/maEndToEnd/inst/doc/MA-Workflow.html
+# for expression pattern
+source("Expression_pattern_graph.R")
+```
+
+# Aarabi_2016. Microarray (ATH1)
+Purpose:
+* Analize ATH1 microarray raw data () by lmer and broom.mixed packages for tidy way. See "Single Gene LME" done by Julin.
+
+# Read cel files and normalize data (copied from "RNAseqVSmicroarray_publication_final.R")
+```{r eval=TRUE}
+cel.filename<-list.files(pattern=".CEL.gz$","/Volumes/data_work/Data8/Microarray/GSE81347/") # no directory info
+cel.filename2<-list.files(pattern=".CEL.gz$",path=file.path("","Volumes","data_work","Data8","Microarray","GSE81347"),full.names=TRUE) # "" is needed for file.path()!!!  with directory info
+Data1<-ReadAffy(filenames =cel.filename2) 
+head(Data1)
+eset <- rma(Data1) # normalize chips (old way)
+# using expresso (see affy vignett)
+ eset.expresso<-expresso(Data1,normalize.method="qspline",
+               bgcorrect.method="rma",pmcorrect.method="pmonly",
+               summary.method="liwong")
+ class(eset.expresso) # ExpressionSet object. See Biobase vignet
+ head(eset.expresso)
+ exprs(eset.expresso) %>% head() # expression data
+ experimentData(eset.expresso) %>% head()
+ # write text file (affy package vignett, 3.3) not used
+# write.exprs(eset.expresso, file=file.path("..","output","eset.expresso.txt"))
+```
+
+# experimental design using GSE81347
+```{r eval=TRUE}
+cel.filename<-list.files(pattern=".CEL.gz$","/Volumes/data_work/Data8/Microarray/GSE81347") # no directory info
+# GSM2150907_amaru912_-S_Col_1.CEL.gz: Col -S root Biological Rep1
+# GSM2150908_amaru912_-S_Col_2.CEL.gz: Col -S root Biological Rep2
+# GSM2150911_amaru912_+S_Col_1.CEL.gz: Col +S root Biological Rep1
+# GSM2150912_amaru912_+S_Col_2.CEL.gz: Col +S root Biological Rep2
+design<-tibble(cel_file=cel.filename) %>% separate(cel_file,c("title","title2","trt","gt","rep","extra"),sep="(\\_|\\.)",extra="drop",remove=FALSE) %>%
+  dplyr::select(cel_file,trt,rep)
+design
+```
+
+# read probe ID and AGI
+```{r eval=TRUE}
+affyData <- read_csv(file.path("..","Annotation","input","affy_ATH1_array_elements-2010-12-20.csv")) #read TAIR annotation data from file (TAIR10)
+affyData2<-affyData[,c("array_element_name","is_control","locus","description","chromosome","start","stop")]
+names(affyData2) <- c("element","is.control","AGI","description","chromosome","start","stop")#get rid of underlines
+head(affyData2)
+# only unique element per AGI (is this OK? ASk Julin)
+affyData2.elementPerAGI.table<- affyData2 %>% group_by(AGI) %>% summarize(n=n())
+table(affyData2.elementPerAGI.table$n)
+affyData2unique<-affyData2.elementPerAGI.table %>% filter(n<2) %>% left_join(affyData2,by="AGI")
+dim(affyData2unique) #[1] 21789     8 use this instead of affyData2
+dim(affyData2) #[1] 22810     7
+```
+
+# Make expression value tibble
+```{r eval=TRUE}
+featureNames(eset.expresso) %>% head() # only probe name
+exp.values<-exprs(eset.expresso) %>% as_tibble(rownames="element") 
+```
+
+# combine
+```{r eval=TRUE}
+exp.values.combined <- exp.values %>% gather("cel_file","value",-element) %>% left_join(design,by="cel_file") %>%
+  left_join(affyData2unique, by="element") 
+# check 10 genes
+exp.values.combined %>% arrange(AGI) %>% head(10)
+# factor
+exp.values.combined %>% mutate(trt=factor(trt, levels=c("+S","-S")),rep=as.character(rep)) %>% str()
+# write in csv file
+write_csv(exp.values.combined,path=file.path("intermediate","Aarabi_2016","exp.values.combined.csv.gz"))
+```
+
+# lmer function
+```{r eval=TRUE}
+# gt*trt
+dofit.lmer.ATH1 <- function(genedata) { # gives a lot of singularity warnings
+  lmer(value ~ genotype*trt + (1|rep),
+       data=genedata)
+}
+# for only trt (subset data for Col, one tissue type, and one treatment)
+dofit.lmer2.ATH1 <- function(genedata) { # gives a lot of singularity warnings
+  lmer(value ~ trt + (1|rep),
+       data=genedata)
+}
+```
+
+# organize the data to make it easy to fit a model to each element (not AGI)
+```{r eval=TRUE}
+exp.values.combined<-read_csv(file.path("intermediate","S_Aarabi_2016","exp.values.combined.csv.gz"))
+exp.values.combined.nest <- exp.values.combined %>% 
+  select(value,trt,rep,element) %>% 
+  mutate(trt=factor(trt,levels=c("+S","-S"))) %>%
+  group_by(element) %>%
+  nest()
+# check exp.values.combined.nest
+exp.values.combined.nest %>% summarize(num=n()) %>% arrange(num) %>% head() #%>% View() #OK
+exp.values.combined.nest$data[[1]] %>% str() # factor!
+
+```
+
+## do a fit for each gene.  
+```{r eval=TRUE, warning=FALSE}
+fits <- exp.values.combined.nest %>% #%>% head(100) %>% 
+  #magrittr::extract(1:10,) %>% # comment out this line to do full set; uncomment for testing on small set.
+  mutate(fit.lmer2.ATH1 = map(data, dofit.lmer2.ATH1),
+         lmersingular = map_lgl(fit.lmer2.ATH1, isSingular))
+head(fits)
+
+```
+
+## add model summaries (5-10 minutes) using broom package (read "introduction to broom" vegnet)
+```{r eval=TRUE}
+fits.summary <- fits %>%
+  mutate(glancelmer = map(fit.lmer2.ATH1, broom::glance),
+         tidylmer = map(fit.lmer2.ATH1, broom::tidy)
+  ) # see tidy.lm
+```
+
+# unnesting by unnest() 
+```{r}
+fits.summary %>% unnest(tidylmer) %>% head(100) %>% View()
+```
+
+# make a 1 row summary of the tidy results (modified from copy from J's script "SingleGeneLME_DGE.Rmd")
+
+```{r eval=TRUE}
+fits.summary.table.all <- fits.summary %>% unnest(tidylmer) %>%
+  select(element, term, estimate, std.error, p.value) %>%
+  na.omit() %>%
+  mutate(p.value = ifelse(term=="(Intercept)", NA, p.value), # we don't care about intercept p-value and don't want it to mess up FDR
+         FDR = p.adjust(p.value, "fdr")) %>%
+  gather(key="key", value="value", estimate, std.error, p.value, FDR) %>%
+  mutate(key=str_c(key, "_", term)) %>%
+  select(-term) %>%
+  spread(key=key, value=value) %>% 
+  arrange(`FDR_trt-S`) #%>% head(100) %>% View()
+# number of DEGs
+fits.summary.table.all %>% filter(`FDR_trt-S` < 0.05) %>% dim() # 3156 9
+#
+write_csv(fits.summary.table.all,path=file.path("intermediate","S_Aarabi_2016","S.Aarabi_2016.fits.summary.table.all.csv.gz"))
+```
+# DGE table
+```{r}
+fits.summary.table.all<-read_csv(file.path("intermediate","S_Aarabi_2016","S.Aarabi_2016.fits.summary.table.all.csv.gz"))
+# number of DEGs
+fits.summary.table.all %>% filter(`FDR_trt-S` < 0.05) %>% dim() # 
+```
+
+# How to calculate logFC?
+* One option is using ?lme4::predict.merMod, which worked
+* Another option is to add up estimate
+
+```{r}
+# 
+fits.summary.table.all<-read_csv(file.path("intermediate","S_Aarabi_2016","S.Aarabi_2016.fits.summary.table.all.csv.gz"))
+# only this works
+fits.summary.unnest<-fits.summary %>% 
+  #head(10) %>% 
+  mutate(predicted.values=map(fit.lmer2.ATH1,predict)) %>% unnest(predicted.values) 
+# adding samplename column
+samplename<-design %>% unite(samplename,trt,rep,sep=".") %>% dplyr::select(samplename) %>% as_vector()
+# calculate predicted expression values (used also for expression graph)
+fits.element.exp.value<-fits.summary.unnest %>% ungroup() %>% inner_join(affyData2unique, by="element") %>% group_by(element) %>% mutate(samplename=samplename)  %>% 
+  separate(samplename,c("trt","rep"),sep="\\.") %>% rename(value=predicted.values) %>% dplyr::select(element,value,AGI,description,trt,rep)
+write_csv(fits.element.exp.value,file.path("custom_categories","S_Aarabi2016.fits.element.exp.value.csv.gz"))
+
+# calculate mean value per element, treatment
+fits.element.exp.value.mean <- fits.element.exp.value %>%
+  group_by(element,trt) %>% 
+  summarise(mean.element=mean(value)) %>% 
+  spread(trt,mean.element,-1) %>%
+  inner_join(affyData2unique, by="element") # only one element per one locus
+
+#  check if "one" per one element
+ fits.element.exp.value.mean %>% group_by(element) %>% summarize(num.element=n()) %>% arrange(num.element) %>% View()
+ # calculate log fold changes per each locus (one locus = one element)
+ fits.summary.AGI.FC <- fits.element.exp.value.mean %>% 
+   group_by(AGI) %>% 
+   mutate(mean.FC.AGI=log(`-S`/`+S`)) %>%
+  # add FDR_trtS-
+  inner_join(fits.summary.table.all 
+            %>% dplyr::select(element,`FDR_trt-S`), by="element") 
+ fits.summary.AGI.FC %>% View()
+ # check AGI number
+ fits.summary.AGI.FC %>% group_by(AGI) %>% summarize(num.AGI=n()) %>% arrange(num.AGI) %>% View() # there is no  "no_match"
+# write
+write_csv(fits.summary.AGI.FC,path=file.path("custom_categories","S_Aarabi2016.fits.summary.AGI.FC.csv.gz"))
+
+```
+
+# expression pattern 
+```{r eval=TRUE}
+fits.summary.AGI.FC <- read_csv(file.path("custom_categories","S_Aarabi2016.fits.summary.AGI.FC.csv.gz"))
+fits.element.exp.value <- read_csv(file.path("custom_categories","S_Aarabi2016.fits.element.exp.value.csv.gz"))
+# upregulated genes upon S deficienty
+gene.of.interest.FDR.up <- fits.summary.AGI.FC %>% ungroup() %>% rename(FDR=`FDR_trt-S`) %>% filter(FDR<0.05,mean.FC.AGI>0) %>% dplyr::select(AGI,FDR) %>% arrange(FDR) 
+print("logFC>0")
+p.up<-expression.pattern.AT.graph.ATH1(target.genes.FDR=gene.of.interest.FDR.up[1:5,],
+                              data=fits.element.exp.value,
+                              sample.description=design,
+                              title="S_Aarabi2016 root -S up") # good
+p.up
+ggsave(p.up,filename=file.path("custom_categories","S_Aarabi2016_root.up.png"))
+# -S down
+gene.of.interest.FDR.down <- fits.summary.AGI.FC %>% ungroup() %>% rename(FDR=`FDR_trt-S`) %>% filter(FDR<0.05,mean.FC.AGI<0) %>% dplyr::select(AGI,FDR) %>% arrange(FDR) 
+print("logFC<0")
+p.down<-expression.pattern.AT.graph.ATH1(target.genes.FDR=gene.of.interest.FDR.down[1:5,],
+                              data=fits.element.exp.value,
+                              sample.description=design,
+                              title="S_Aarabi2016 root -S down") # good
+p.down
+ggsave(p.down,filename=file.path("custom_categories","S_Aarabi2016_root.down.png"))
+
+```
+
+# Session info
+```{r}
+sessionInfo()
+```
+

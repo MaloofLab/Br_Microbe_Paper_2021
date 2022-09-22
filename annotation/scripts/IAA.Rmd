@@ -1,0 +1,557 @@
+---
+title: "IAA_responsive_genes"
+output:
+  html_document:
+    df_print: paged
+editor_options:
+  chunk_output_type: console
+---
+
+Purpose:
+* Analyze ATH1 microarray raw data () by lmer and broom.mixed packages for tidy way. 
+*** needs t oupdate this section for IAA ***
+
+|our purpose|Study|plant|samples|transcriptome platform|available data|available raw data|
+|----|----|--|------|--|--------|-|
+|NO3 starvation with a nitrate reductase mutant|[Wang et al. 2004](http://www.plantphysiol.org/content/136/1/2512)|Arabidopsis thaliana|WT (control) and nitrate reductase (NR)-null mutant were raised on full nutrient media for 10days at which point plants were treated with 5 mm KNO3 for 2 h. For the control, plants were treated with 5 mm KCl for 2 h. Roots and shoots were then harvested.|Microarray (ATH1 chip)|WT and Mutant Ratios listed in supplemental tables;  text indicates that they identified a total of 595 genes (across both roots and shoots together) that they are calling significant based on Affy Software and a 2-fold min cut off.  This list of 595 is in Supplemental table 5 and ratios (for fold change?) of these genes could be traced back using supplemental tables 1 & 2 for WT and 3 & 4 for mutant.|[NASCARRAYS-480](http://bar.utoronto.ca/NASCArrays/index.php?ExpID=480)|
+
+To Do
+* Expression pattern graph
+* Knit to finalize analysis.
+
+# installation
+```{r eval=FALSE, include=FALSE}
+install.packages("tidyverse")
+install.packages("broom")
+install.packages("broom.mixed")
+install.packages("lmerTest")
+install.packages("rmarkdown")
+# https://bioconductor.org/packages/devel/workflows/vignettes/maEndToEnd/inst/doc/MA-Workflow.html
+install.packages("devtools")
+library(devtools)
+devtools::install_github("r-lib/remotes")
+#library(remotes)
+#packageVersion("remotes") # has to be 1.1.1.9000 or later
+remotes::install_github("b-klaus/maEndToEnd", ref="master")
+```
+
+# prep
+```{r setup, include=FALSE}
+library(lmerTest);library(broom);library(broom.mixed);library(tidyverse);library(lme4);library(affy)
+# https://bioconductor.org/packages/devel/workflows/vignettes/maEndToEnd/inst/doc/MA-Workflow.html
+source("Expression_pattern_graph.R")
+```
+# Read cel files and normalize data (copied from "RNAseqVSmicroarray_publication_final.R")
+```{r eval=TRUE}
+cel.filename <- list.files(pattern=".CEL$","") # no directory info
+cel.filename2 <- list.files(pattern=".cel",path=file.path("","Volumes","data_work","Data8","Microarray","ExpressionSet_ME00336_IAA"),full.names=TRUE,include.dirs = FALSE,recursive=TRUE) # "" is needed for file.path()!!!  with directory info
+Data1<-ReadAffy(filenames =cel.filename2) 
+head(Data1)
+eset <- rma(Data1) # normalize chips (old way)
+# using expresso (see affy vignett)
+ eset.expresso<-expresso(Data1,normalize.method="qspline",
+               bgcorrect.method="rma",pmcorrect.method="pmonly",
+               summary.method="liwong")
+ class(eset.expresso) # ExpressionSet object. See Biobase vignette
+ head(eset.expresso)
+ exprs(eset.expresso) %>% head()# expression data
+ experimentData(eset.expresso)
+```
+# read probe ID and AGI
+```{r eval=TRUE}
+affyData <- read_csv(file.path("..","Annotation","input","affy_ATH1_array_elements-2010-12-20.csv")) #read TAIR annotation data from file (TAIR10)
+affyData2<-affyData[,c("array_element_name","is_control","locus","description","chromosome","start","stop")]
+names(affyData2) <- c("element","is.control","AGI","description","chromosome","start","stop")#get rid of underlines
+head(affyData2)
+# only unique element per AGI (is this OK? ASk Julin)
+affyData2.elementPerAGI.table<- affyData2 %>% group_by(AGI) %>% summarize(n=n())
+table(affyData2.elementPerAGI.table$n)
+affyData2unique<-affyData2.elementPerAGI.table %>% filter(n<2) %>% left_join(affyData2,by="AGI")
+dim(affyData2unique) #[1] 21789     8 use this instead of affyData2
+dim(affyData2) #[1] 22810     7
+```
+
+
+# Make expression value tibble
+```{r eval=TRUE}
+featureNames(eset.expresso)  # only probe name
+exp.values<-exprs(eset.expresso) %>% as_tibble(rownames="element") 
+```
+
+# experimental design
+```{r eval=TRUE}
+# extract experiment data info
+#cel.filename<-list.files(pattern=".CEL.gz",path=file.path("","Volumes","data_work","Data8","Microarray","Wang_2003_N","ATH1_CEL"),full.names=FALSE) # "" is needed for file.path()!!!  with directory info
+cel.filename <- list.files(pattern=".cel",path=file.path("","Volumes","data_work","Data8","Microarray","ExpressionSet_ME00336_IAA"),full.names=FALSE,include.dirs = TRUE,recursive=TRUE)
+
+design <- tibble(
+  cel_file=c("RIKENGODA2A.cel",
+             "RIKENGODA2B.cel",
+             "RIKENGODA1AD.cel",
+             "RIKENGODA1BD.cel",
+             "RIKENGODA9AD.cel",
+             "RIKENGODA9BD.cel",
+             "RIKENGODA10A.cel",
+             "RIKENGODA10B.cel",
+             "RIKENGODA17AD.cel",
+             "RIKENGODA17BD.cel",
+             "RIKENGODA18A.cel",
+             "RIKENGODA18B.cel"),
+  gt=c("WT",
+       "WT",
+       "WT",
+       "WT",
+       "WT",
+       "WT",
+       "WT",
+       "WT",
+       "WT",
+       "WT",
+       "WT",
+       "WT"),
+  trt=c("IAA",
+        "IAA",
+        "mock",
+        "mock",
+        "mock",
+        "mock",
+        "IAA",
+        "IAA",
+        "mock",
+        "mock",
+        "IAA",
+        "IAA"),
+  time=c("30min",
+         "30min",
+         "30min",
+         "30min",
+         "1hr",
+         "1hr",
+         "1hr",
+         "1hr",
+         "3hr",
+         "3hr",
+         "3hr",
+         "3hr"),
+  rep=rep(c(1,2),6)
+  )
+
+
+
+# design <- tibble(cel_file=cel.filename) %>% mutate(cel_file2=str_replace(cel_file,"Wild-type","WT")) %>% separate(cel_file2,into=c("NRID","Wang","num","condition","rep","extra"),extra="drop",sep="_") %>% mutate(condition=str_replace(condition,"K-nitrate","KNO3"),condition=str_replace(condition,"KCL","KCl")) %>% 
+#   separate(condition,into=c("gt1","gt2","conc","unit","trt","time","unit2","tissue")) %>% mutate(rep=str_replace(rep,"Rep",""),tissue=str_replace(tissue,"s$","")) %>% dplyr::select(cel_file,gt1,trt,tissue,rep)
+#
+design
+```
+
+# combine
+```{r eval=TRUE}
+exp.values.combined <- exp.values %>% 
+  gather("cel_file","value",-element) %>% 
+  left_join(design,by="cel_file") %>% 
+  left_join(affyData2, by="element") 
+# check 10 genes
+exp.values.combined %>% arrange(AGI) %>% head(10)
+# factor
+exp.values.combined %>% mutate(trt=factor(trt, levels=c("mock","IAA")),rep=as.character(rep)) %>% str() # 
+exp.values.combined %>% mutate(time=factor(time, levels=c("30min","1hr","3hr")),rep=as.character(rep)) %>% str() # 
+
+#exp.values.combined %>% mutate(trt=factor(trt, levels=c("mock","IAA"))) %>% str() # 
+# write in csv file
+write_csv(exp.values.combined,path=file.path("intermediate","ExpressionSet_ME00336_IAA","exp.values.combined.csv.gz"))
+```
+
+# lmer function
+```{r eval=TRUE}
+dofit.lmer.ATH1 <- function(genedata) { # gives a lot of singularity warnings
+  lmer(value ~ trt*time + (1|rep),
+       data=genedata)
+}
+```
+
+# seedlings
+# organize the data to make it easy to fit a model to each element (not gene)
+```{r eval=TRUE}
+exp.values.combined <- read_csv(file.path("intermediate","ExpressionSet_ME00336_IAA","exp.values.combined.csv.gz"))
+# ref 30 min
+exp.values.combined.nest.r30min <- exp.values.combined %>% dplyr::select(value,trt,time,rep,element) %>%
+  mutate(trt=factor(trt,levels=c("mock","IAA")),time=factor(time,levels=c("30min","1hr","3hr"))) %>%
+  group_by(element) %>%
+  nest()
+head(exp.values.combined.nest.r30min)
+exp.values.combined.nest.r30min %>% summarize(num=n()) %>% arrange(num) %>% View() #OK
+exp.values.combined.nest.r30min$data[[1]] %>% str() # factor...
+# ref 1 hr
+exp.values.combined.nest.r1hr <- exp.values.combined %>% dplyr::select(value,trt,time,rep,element) %>%
+  mutate(trt=factor(trt,levels=c("mock","IAA")),time=factor(time,levels=c("1hr","30min","3hr"))) %>%
+  group_by(element) %>%
+  nest()
+head(exp.values.combined.nest.r1hr)
+exp.values.combined.nest.r1hr %>% summarize(num=n()) %>% arrange(num) %>% View() #OK
+exp.values.combined.nest.r1hr$data[[1]] %>% str() # factor...
+# ref 30 min
+exp.values.combined.nest.r30min <- exp.values.combined %>% dplyr::select(value,trt,time,rep,element) %>%
+  mutate(trt=factor(trt,levels=c("mock","IAA")),time=factor(time,levels=c("30min","1hr","3hr"))) %>%
+  group_by(element) %>%
+  nest()
+head(exp.values.combined.nest.r30min)
+exp.values.combined.nest.r30min %>% summarize(num=n()) %>% arrange(num) %>% View() #OK
+exp.values.combined.nest.r30min$data[[1]] %>% str() # factor...
+# ref 3 hr
+exp.values.combined.nest.r3hr <- exp.values.combined %>% dplyr::select(value,trt,time,rep,element) %>%
+  mutate(trt=factor(trt,levels=c("mock","IAA")),time=factor(time,levels=c("3hr","30min","1hr"))) %>%
+  group_by(element) %>%
+  nest()
+head(exp.values.combined.nest.r3hr)
+exp.values.combined.nest.r3hr %>% summarize(num=n()) %>% arrange(num) %>% View() #OK
+exp.values.combined.nest.r3hr$data[[1]] %>% str() # factor...
+
+
+```
+
+# do a fit for each element
+```{r eval=TRUE, warning=FALSE}
+# ref 30min
+fits.r30min <- exp.values.combined.nest.r30min %>% #head(100) %>% 
+  #magrittr::extract(1:10,) %>% # comment out this line to do full set; uncomment for testing on small set.
+  mutate(fit.lmer.ATH1 = map(data, dofit.lmer.ATH1),
+         lmersingular = map_lgl(fit.lmer.ATH1, isSingular))
+# ref 1 hr
+fits.r1hr <- exp.values.combined.nest.r1hr %>% #head(100) %>% 
+  #magrittr::extract(1:10,) %>% # comment out this line to do full set; uncomment for testing on small set.
+  mutate(fit.lmer.ATH1 = map(data, dofit.lmer.ATH1),
+         lmersingular = map_lgl(fit.lmer.ATH1, isSingular))
+
+# ref 3 hr
+fits.r3hr <- exp.values.combined.nest.r3hr %>% #head(100) %>% 
+  #magrittr::extract(1:10,) %>% # comment out this line to do full set; uncomment for testing on small set.
+  mutate(fit.lmer.ATH1 = map(data, dofit.lmer.ATH1),
+         lmersingular = map_lgl(fit.lmer.ATH1, isSingular))
+
+```
+
+# add model summaries (5-10 minutes) using broom package (read "introduction to broom" vegnet)
+```{r eval=TRUE}
+# ref 30 min
+fits.r30min.summary <- fits.r30min %>%
+  mutate(glancelmer = map(fit.lmer.ATH1, broom::glance),
+         tidylmer = map(fit.lmer.ATH1, broom::tidy)
+  ) # see tidy.lm
+# ref 30 min
+fits.r1hr.summary <- fits.r1hr %>%
+  mutate(glancelmer = map(fit.lmer.ATH1, broom::glance),
+         tidylmer = map(fit.lmer.ATH1, broom::tidy)
+  ) # see tidy.lm
+# ref 3hr
+fits.r3hr.summary <- fits.r3hr %>%
+  mutate(glancelmer = map(fit.lmer.ATH1, broom::glance),
+         tidylmer = map(fit.lmer.ATH1, broom::tidy)
+  ) # see tidy.lm
+```
+
+# unnesting by unnest() 
+```{r}
+fits.r30min.summary %>% unnest(tidylmer) %>% head(100) %>% View()
+```
+
+# make a 1 row summary of the tidy results (modified from copy from J's script "SingleGeneLME_DGE.Rmd")
+# r30min summary.table.all
+```{r eval=TRUE}
+# r30min
+fits.r30min.summary.table.all <- fits.r30min.summary %>% unnest(tidylmer, .drop = TRUE) %>%
+  dplyr::select(element, term, estimate, std.error, p.value) %>%
+  na.omit() %>%
+  mutate(p.value = ifelse(term=="(Intercept)", NA, p.value), # we don't care about intercept p-value and don't want it to mess up FDR
+         FDR = p.adjust(p.value, "fdr")) %>%
+  gather(key="key", value="value", estimate, std.error, p.value, FDR) %>%
+  mutate(key=str_c(key, "_", term)) %>%
+  dplyr::select(-term) %>%
+  spread(key=key, value=value) %>% 
+  arrange(FDR_trtIAA) 
+fits.r30min.summary.table.all %>% head(10) %>% View()
+# check data with YUC8 *253794_AT (not significant?!)
+fits.r30min.summary.table.all %>% filter(element=="253794_at") %>% View()
+# IAA19 258399_AT
+fits.r30min.summary.table.all %>% filter(element=="258399_at") %>% View()
+# IAA29 253423_at
+fits.r30min.summary.table.all %>% filter(element=="253423_at") %>% View()
+# how many DEGs?
+fits.r30min.summary.table.all %>% filter(FDR_trtIAA < 0.05) %>% dim() # trt*time model
+write_csv(fits.r30min.summary.table.all,path=file.path("intermediate","ExpressionSet_ME00336_IAA","Goda.IAA.fits.r30min.summary.table.all.csv.gz"))
+```
+
+# r1hr summary.table.all
+```{r eval=TRUE}
+# r1hr
+fits.r1hr.summary.table.all <- fits.r1hr.summary %>% unnest(tidylmer, .drop = TRUE) %>%
+  dplyr::select(element, term, estimate, std.error, p.value) %>%
+  na.omit() %>%
+  mutate(p.value = ifelse(term=="(Intercept)", NA, p.value), # we don't care about intercept p-value and don't want it to mess up FDR
+         FDR = p.adjust(p.value, "fdr")) %>%
+  gather(key="key", value="value", estimate, std.error, p.value, FDR) %>%
+  mutate(key=str_c(key, "_", term)) %>%
+  dplyr::select(-term) %>%
+  spread(key=key, value=value) %>% 
+  arrange(FDR_trtIAA) 
+fits.r1hr.summary.table.all %>% head(10) %>% View()
+# check data with YUC8 *253794_AT (not significant?!)
+fits.r1hr.summary.table.all %>% filter(element=="253794_at") %>% View()
+# IAA19 258399_AT
+fits.r1hr.summary.table.all %>% filter(element=="258399_at") %>% View()
+# IAA29 253423_at
+fits.r1hr.summary.table.all %>% filter(element=="253423_at") %>% View()
+# how many DEGs?
+fits.r1hr.summary.table.all %>% filter(FDR_trtIAA < 0.05) %>% dim() # trt*time model
+write_csv(fits.r1hr.summary.table.all,path=file.path("intermediate","ExpressionSet_ME00336_IAA","Goda.IAA.fits.r1hr.summary.table.all.csv.gz"))
+```
+
+# r3hr summary.table.all
+```{r eval=TRUE}
+# r3hr
+fits.r3hr.summary.table.all <- fits.r3hr.summary %>% unnest(tidylmer, .drop = TRUE) %>%
+  dplyr::select(element, term, estimate, std.error, p.value) %>%
+  na.omit() %>%
+  mutate(p.value = ifelse(term=="(Intercept)", NA, p.value), # we don't care about intercept p-value and don't want it to mess up FDR
+         FDR = p.adjust(p.value, "fdr")) %>%
+  gather(key="key", value="value", estimate, std.error, p.value, FDR) %>%
+  mutate(key=str_c(key, "_", term)) %>%
+  dplyr::select(-term) %>%
+  spread(key=key, value=value) %>% 
+  arrange(FDR_trtIAA) 
+fits.r3hr.summary.table.all %>% head(10) %>% View()
+# check data with YUC8 *253794_AT (not significant?!)
+fits.r3hr.summary.table.all %>% filter(element=="253794_at") %>% View()
+# IAA19 258399_AT
+fits.r3hr.summary.table.all %>% filter(element=="258399_at") %>% View()
+# IAA29 253423_at
+fits.r3hr.summary.table.all %>% filter(element=="253423_at") %>% View()
+# how many DEGs?
+fits.r3hr.summary.table.all %>% filter(FDR_trtIAA < 0.05) %>% dim() # trt*time model
+write_csv(fits.r3hr.summary.table.all,path=file.path("intermediate","ExpressionSet_ME00336_IAA","Goda.IAA.fits.r3hr.summary.table.all.csv.gz"))
+```
+
+# How to calculate logFC? (log(IAA/mock))
+# read root.fits.summary.table.all 
+```{r}
+fits.r1hr.summary.table.all<-read_csv(file.path("intermediate","ExpressionSet_ME00336_IAA","Goda.IAA.fits.r1hr.summary.table.all.csv.gz"))
+fits.r1hr.summary.table.all
+# only this works
+fits.r1hr.element.exp.value <- fits.r1hr.summary %>% 
+  #head(10) %>% 
+  mutate(predicted.values=map(fit.lmer.ATH1,predict)) %>% unnest(c(predicted.values,data) ) %>% inner_join(affyData2unique, by="element")  %>% dplyr::select(element,predicted.values,AGI,description,trt,time,rep)
+
+# fits.element.exp.value
+#check data with YUC8 *253794_AT
+fits.r1hr.element.exp.value %>% filter(element=="253794_at")
+# IAA19 258399_AT
+fits.r1hr.element.exp.value %>% filter(element=="258399_at") %>% View()
+
+# save fits.element.exp.value Goda.IAA.fits.summary.table.all.csv.gz
+write_csv(fits.r1hr.element.exp.value,file.path("intermediate","ExpressionSet_ME00336_IAA","IAA.Goda.fits.r1hr.element.exp.value.csv.gz"))
+# calculate mean value per element, treatment
+fits.r1hr.element.exp.value.mean <- fits.r1hr.element.exp.value %>%
+  group_by(element,trt,time) %>% 
+  summarise(mean.element=mean(predicted.values)) %>% 
+  pivot_wider(names_from=trt,values_from=mean.element) %>%
+  inner_join(affyData2unique, by="element") # only one element per one locus
+#  check if "one" per one element
+ fits.r1hr.element.exp.value.mean %>% group_by(element) %>% summarize(num.element=n()) %>% arrange(num.element) %>% View()
+ # calculate log fold changes per each locus (one locus = one element)
+ fits.r1hr.summary.AGI.FC <- fits.r1hr.element.exp.value.mean %>% ungroup() %>%
+   group_by(AGI,time) %>% 
+   mutate(mean.FC.AGI=log(IAA/mock)) %>%
+  # add FDR_trtIAA (1hr, trt)
+  inner_join(fits.r1hr.summary.table.all %>% dplyr::select(element,`FDR_trtIAA`), by="element") # FDR for 1hr trt
+ fits.r1hr.summary.AGI.FC %>% View()
+ # check AGI number
+ fits.r1hr.summary.AGI.FC %>% group_by(AGI) %>% summarize(num.AGI=n()) %>% arrange(num.AGI) %>% View() # there is no  "no_match"
+# write
+write_csv(fits.r1hr.summary.AGI.FC,path=file.path("intermediate","ExpressionSet_ME00336_IAA","IAA.Goda.fits.r1hr.summary.AGI.FC.csv.gz")) # need to keep
+
+```
+
+# 30min trt FDR
+```{r}
+ # calculate log fold changes per each locus (one locus = one element)
+## start from exp.value.mean calculated from r1hr data (no need to change to r30min)
+ fits.r30min.summary.AGI.FC <- fits.r1hr.element.exp.value.mean %>% ungroup() %>%
+   group_by(AGI,time) %>% 
+   mutate(mean.FC.AGI=log(IAA/mock)) %>%
+  # add FDR_trtIAA (1hr, trt)
+  inner_join(fits.r30min.summary.table.all %>% dplyr::select(element,`FDR_trtIAA`), by="element") # FDR for 30min trt
+ fits.r30min.summary.AGI.FC %>% View()
+ # check AGI number
+ fits.r30min.summary.AGI.FC %>% group_by(AGI) %>% summarize(num.AGI=n()) %>% arrange(num.AGI) %>% View() # there is no  "no_match"
+# write
+write_csv(fits.r30nmin.summary.AGI.FC,path=file.path("intermediate","ExpressionSet_ME00336_IAA","IAA.Goda.fits.r30min.summary.AGI.FC.csv.gz")) # need to keep
+```
+
+# 3hr trt FDR
+```{r}
+ # calculate log fold changes per each locus (one locus = one element)
+## start from exp.value.mean calculated from r1hr data (no need to change to r3hr)
+ fits.r3hr.summary.AGI.FC <- fits.r1hr.element.exp.value.mean %>% ungroup() %>%
+   group_by(AGI,time) %>% 
+   mutate(mean.FC.AGI=log(IAA/mock)) %>%
+  # add FDR_trtIAA (1hr, trt)
+  inner_join(fits.r30min.summary.table.all %>% dplyr::select(element,`FDR_trtIAA`), by="element") # FDR for 3hr trt
+ fits.r3hr.summary.AGI.FC %>% View()
+ # check AGI number
+ fits.r3hr.summary.AGI.FC %>% group_by(AGI) %>% summarize(num.AGI=n()) %>% arrange(num.AGI) %>% View() # there is no  "no_match"
+# write
+write_csv(fits.r3hr.summary.AGI.FC,path=file.path("intermediate","ExpressionSet_ME00336_IAA","IAA.Goda.fits.r3hr.summary.AGI.FC.csv.gz")) # need to keep
+```
+
+# Calculate fold change across all time points for selecting top 100 genes in GSEA
+```{r}
+ # calculate log fold changes per each locus (one locus = one element)
+## start from exp.value.mean calculated from r1hr data (no need to change to r30min)
+ fits.alltime.summary.AGI.FC <- fits.r1hr.element.exp.value.mean %>% ungroup() %>%
+   group_by(AGI) %>% 
+   summarise(mock.mean=mean(mock),IAA.mean=mean(IAA)) 
+
+fits.alltime.summary.AGI.FC <- fits.alltime.summary.AGI.FC %>% 
+   mutate(mean.alltime.FC.AGI=log(IAA.mean/mock.mean))
+ fits.alltime.summary.AGI.FC %>% View()
+# write
+write_csv(fits.alltime.summary.AGI.FC,path=file.path("intermediate","ExpressionSet_ME00336_IAA","IAA.Goda.fits.alltime.summary.AGI.FC.csv.gz")) # need to keep
+```
+
+# expression pattern 
+```{r eval=TRUE}
+fits.r1hr.summary.AGI.FC <- read_csv(file.path("intermediate","ExpressionSet_ME00336_IAA","IAA.Goda.fits.r1hr.summary.AGI.FC.csv.gz"))
+fits.r1hr.element.exp.value <- read_csv(file.path("intermediate","ExpressionSet_ME00336_IAA","IAA.Goda.fits.r1hr.element.exp.value.csv.gz"))
+# relevel trt and time
+fits.r1hr.element.exp.value <- fits.r1hr.element.exp.value %>% mutate(time=factor(time,levels=c("30min","1hr","3hr")),trt=factor(trt,levels=c("mock","IAA")))
+fits.r1hr.element.exp.value <- fits.r1hr.element.exp.value %>% dplyr::rename(value=predicted.values)
+######################
+# IAA Goda 30min up
+gene.of.interest.FDR.30min.up <- fits.r30min.summary.AGI.FC %>% ungroup() %>% dplyr::rename(FDR=`FDR_trtIAA`) %>% filter(FDR<0.05 & mean.FC.AGI>0.58) %>% arrange(mean.FC.AGI) %>% dplyr::select(AGI,FDR)  
+print("logFC>0")
+p.30min.up<-expression.pattern.AT.graph.ATH1(target.genes.FDR=gene.of.interest.FDR.30min.up[1:5,],
+                              data=fits.r1hr.element.exp.value,
+                              sample.description=design,
+                              title="IAA Goda 30min up") + facet_grid(element~time,scale="free") # good
+p.30min.up # needs to work
+ggsave(p.30min.up,filename=file.path("intermediate","ExpressionSet_ME00336_IAA","IAA.Goda.30nin.up.png"))
+# IAA Goda 30min down
+gene.of.interest.FDR.30min.down <- fits.r30min.summary.AGI.FC %>% ungroup() %>% dplyr::rename(FDR=`FDR_trtIAA`) %>% filter(FDR<0.05 & mean.FC.AGI< -0.58) %>% arrange(mean.FC.AGI) %>% dplyr::select(AGI,FDR)  
+print("logFC<0")
+p.30min.down<-expression.pattern.AT.graph.ATH1(target.genes.FDR=gene.of.interest.FDR.30min.down[1:5,],
+                              data=fits.r1hr.element.exp.value,
+                              sample.description=design,
+                              title="IAA Goda 30min down") + facet_grid(element~time,scale="free")# good
+p.30min.down
+ggsave(p.30min.down,filename=file.path("intermediate","ExpressionSet_ME00336_IAA","IAA.Goda.30min.down.png"))
+
+
+######################
+# IAA Goda 1hr up
+gene.of.interest.FDR.1hr.up <- fits.r1hr.summary.AGI.FC %>% ungroup() %>% dplyr::rename(FDR=`FDR_trtIAA`) %>% filter(FDR < 0.05 & mean.FC.AGI > 0.58) %>% arrange(mean.FC.AGI) %>% dplyr::select(AGI,FDR)  
+print("logFC>0")
+p.1hr.up<-expression.pattern.AT.graph.ATH1(target.genes.FDR=gene.of.interest.FDR.1hr.up[1:5,],
+                              data=fits.r1hr.element.exp.value,
+                              sample.description=design,
+                              title="IAA Goda 1hr up") + facet_grid(element~time,scale="free") # good
+p.1hr.up # needs to work
+ggsave(p.1hr.up,filename=file.path("intermediate","ExpressionSet_ME00336_IAA","IAA.Goda.1hr.up.png"))
+# IAA Goda 1hr down
+gene.of.interest.FDR.1hr.down <- fits.r1hr.summary.AGI.FC %>% ungroup() %>% dplyr::rename(FDR=`FDR_trtIAA`) %>% filter(FDR<0.05 & mean.FC.AGI< -0.58) %>% arrange(mean.FC.AGI) %>% dplyr::select(AGI,FDR)  
+print("logFC<0")
+p.1hr.down<-expression.pattern.AT.graph.ATH1(target.genes.FDR=gene.of.interest.FDR.1hr.down[1:5,],
+                              data=fits.r1hr.element.exp.value,
+                              sample.description=design,
+                              title="IAA Goda 1hr down") + facet_grid(element~time,scale="free")# good
+p.1hr.down
+ggsave(p.1hr.down,filename=file.path("intermediate","ExpressionSet_ME00336_IAA","IAA.Goda.1hr.down.png"))
+######################
+# IAA Goda 3hr up
+gene.of.interest.FDR.3hr.up <- fits.r3hr.summary.AGI.FC %>% ungroup() %>% dplyr::rename(FDR=`FDR_trtIAA`) %>% filter(FDR<0.05 & mean.FC.AGI>0.58) %>% arrange(mean.FC.AGI) %>% dplyr::select(AGI,FDR)  
+print("logFC>0")
+p.3hr.up<-expression.pattern.AT.graph.ATH1(target.genes.FDR=gene.of.interest.FDR.3hr.up[1:5,],
+                              data=fits.r1hr.element.exp.value,
+                              sample.description=design,
+                              title="IAA Goda 3hr up") + facet_grid(element~time,scale="free") # good
+p.3hr.up # needs to work
+ggsave(p.3hr.up,filename=file.path("intermediate","ExpressionSet_ME00336_IAA","IAA.Goda.3hr.up.png"))
+# IAA Goda 3hr down
+gene.of.interest.FDR.3hr.down <- fits.r3hr.summary.AGI.FC %>% ungroup() %>% dplyr::rename(FDR=`FDR_trtIAA`) %>% filter(FDR<0.05 & mean.FC.AGI< -0.58) %>% arrange(mean.FC.AGI) %>% dplyr::select(AGI,FDR)  
+print("logFC<0")
+p.3hr.down<-expression.pattern.AT.graph.ATH1(target.genes.FDR=gene.of.interest.FDR.3hr.down[1:5,],
+                              data=fits.r1hr.element.exp.value,
+                              sample.description=design,
+                              title="IAA Goda 3hr down") + facet_grid(element~time,scale="free")# good
+p.3hr.down
+ggsave(p.3hr.down,filename=file.path("intermediate","ExpressionSet_ME00336_IAA","IAA.Goda.3hr.down.png"))
+
+```
+
+# combine all up and all down (FDR < 0.05, FC > log2(1.5) or log2(0.5))
+```{r}
+IAA.up <- c(gene.of.interest.FDR.30min.up$AGI,gene.of.interest.FDR.1hr.up$AGI,gene.of.interest.FDR.3hr.up$AGI) %>% unique() %>%  
+IAA.down <- c(gene.of.interest.FDR.30min.down$AGI,gene.of.interest.FDR.1hr.down$AGI,gene.of.interest.FDR.3hr.down$AGI) %>% unique()
+```
+# How to calculate fold change for three time points?
+```{r}
+fits.alltime.summary.AGI.FC
+IAA.up.FC <- tibble(AGI=IAA.up) %>% left_join(fits.alltime.summary.AGI.FC,by="AGI") %>% arrange(desc(mean.alltime.FC.AGI))
+IAA.down.FC <- tibble(AGI=IAA.down) %>% left_join(fits.alltime.summary.AGI.FC,by="AGI") %>% arrange(mean.alltime.FC.AGI)
+# combine
+IAA.up.FC %>% bind_rows(IAA.down.FC) %>% dplyr::rename(logFC=mean.alltime.FC.AGI) %>% dplyr::select(AGI,logFC) %>% write_csv(file.path("custom_categories","plusIAA_Nemhauser_2006_seedlings.AGI.FC.csv.gz"))
+
+```
+
+# convert AGI into Br v3.0
+```{r}
+plusIAA_Nemhauser_2006_seedlings_up <- IAA.up.FC  %>% left_join(Br.v3.0anno.At.BLAST.highscore,by="AGI") %>% 
+  dplyr::select(name,mean.alltime.FC.AGI) %>% dplyr::rename(genes=name) %>% drop_na()
+
+plusIAA_Nemhauser_2006_seedlings_down <- IAA.down.FC  %>% left_join(Br.v3.0anno.At.BLAST.highscore,by="AGI") %>% 
+  dplyr::select(name,mean.alltime.FC.AGI) %>% dplyr::rename(genes=name) %>% drop_na()
+
+# combine them and  write csv
+plusIAA_Nemhauser_2006_seedlings <- plusIAA_Nemhauser_2006_seedlings_up %>% bind_rows(plusIAA_Nemhauser_2006_seedlings_down) 
+write_csv(plusIAA_Nemhauser_2006_seedlings,path=file.path("custom_categories","plusIAA_Nemhauser_2006_seedlings.Br.FC.csv.gz"))
+
+```
+
+
+
+# compare with Nemhauser 2006 table
+# convert BLup/down, IAAup/down ATG into Bra ID and write in csv. Manually add them to gmx files
+```{r}
+# reduce the redundancy in  (112418)
+Br.v3.0anno.At.BLAST.highscore <- Br.v3.0.At.BLAST %>% group_by(name) %>% arrange(dplyr::desc(score)) %>% dplyr::slice(1)
+Br.v3.0anno.At.BLAST.highscore.unique <- Br.v3.0anno.At.BLAST.highscore %>% group_by(AGI) %>% arrange(dplyr::desc(score)) %>% dplyr::slice(1)
+
+Hormone_Nozue_2018 <- read_xlsx(file.path("~","Box","Nozue-SAS-Transcriptome-2018_final_data_output (Kazunari Nozue)","Nozue2018_SAStranscriptome_output","figs_tables","plant_physiol_submitted_w_legends","Supplemental_Dataset3_source_of_custom_categories.xlsx"),skip=15)
+#
+Hormone_Nozue_2018 %>% dplyr::select(IAAup,IAAdown) %>% pivot_longer(1:2,names_to="category",values_to="AGI") %>% mutate(AGI=str_to_upper(AGI)) %>% left_join(Br.v3.0anno.At.BLAST.highscore.unique,by="AGI") %>% dplyr::select(name,category) %>% drop_na() %>% arrange(category) %>% write_csv(file.path("intermediate","ExpressionSet_ME00336_IAA","Nozue_2018s.csv")) # use this for adding IAAup and IAAdown to gmx files
+
+# 
+tibble(AGI=IAA.up,IAA="up") %>% bind_rows(tibble(AGI=IAA.down,IAA="down")) %>% #dim() # 211 2
+left_join(Br.v3.0anno.At.BLAST.highscore.unique,by="AGI") %>% 
+write_csv(file.path("intermediate","ExpressionSet_ME00336_IAA","Nozue_LmerIAA.csv"))
+# overlap check by UpSetR package
+library(UpSetR)
+IAA.upset <- list(Table.IAAup=Hormone_Nozue_2018$IAAup,
+                  Table.IAAdown=Hormone_Nozue_2018$IAAdown,
+                  myLmer.IAAup=IAA.up,
+                  myLmer.IAAdown=IAA.down)
+png(file.path("intermediate","ExpressionSet_ME00336_IAA","myLmer_Table_comparison.UpSetR.png"),height=3,width=4,unit="in",res=300)
+upset(fromList(IAA.upset))
+dev.off()
+```
+
+# finding intersection gene by inner_join
+```{r}
+affyData2unique %>% dplyr::select("AGI","description") %>% inner_join(tibble(AGI=IAA.upset[["Table.IAAup"]],Table.IAAup="Table.IAAup"),by="AGI") %>% inner_join(tibble(AGI=IAA.upset[["myLmer.IAAup"]],myLmer.IAAup="myLmer.IAAup"),by="AGI") %>% View() # 122 genes which is consisten with UpsetR plot above
+```
+
+
+
+
+# Session info
+```{r}
+sessionInfo()
+```

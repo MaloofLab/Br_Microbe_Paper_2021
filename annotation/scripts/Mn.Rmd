@@ -1,0 +1,171 @@
+---
+title: "Mn_responsive_genes"
+output:
+  html_document:
+    df_print: paged
+editor_options:
+  chunk_output_type: console
+---
+
+* Data source
+
+|our purpose|Study|plant|samples|transcriptome platform|available data|available raw data|
+|----|----|--|------|--|--------|-|
+|Mn starvation |[Rodriguez-Celma 2016](https://www.nature.com/articles/srep35846)|Arabidopsis thaliana|Seedlings (14d old). The medium was composed of (mM): KNO3 (5), MgSO4 (2), Ca(NO3)2 (2), KH2PO4 (2.5) and (μM): H3BO3 (70), ZnSO4 (1), CuSO4 (0.5), Na2MoO4 (0.2), CoCl2 (0.01), FeEDTA (40), 1% (w/v) MES, supplemented with sucrose (43.8 mM) and solidified with 0.8% plant cell culture tested agar (Sigma A7921). The pH was adjusted to 5.5. Plants were grown for 14 d in media supplemented with 14 μM MnCl2 (+Mn) or without Mn (−Mn). Three replicates.|RNAseq|Only transcripts with a RPKM value larger than the square root of the median of the distribution of the RPKM values of all detected genes (10.95  = 3.31) were considered for further analysis. (Supplementary Data 1)|obtained from authors|
+
+
+```{r setup, include=FALSE}
+#library(knitr)
+knitr::opts_chunk$set(echo = TRUE,error=TRUE)
+#library(d3heatmap)
+#library(flexdashboard)
+library(edgeR);library(tidyverse)
+library(readr);library(readxl)
+library(stringr)
+# loading expression pattern graph
+source("Expression_pattern_graph.R")
+```
+
+# mapping read files by Kalisto
+
+# working in directories containing fastq files (working in Whitney/Br_microbiome_exp1_3_customcategory/Mn_Rodriguez-Celma_2016/Rodriguez-Celma_2016_RNAseq)
+```{r eval=FALSE}
+fastqfiles<-list.files(pattern="fastq")
+system(paste("fastqc ",fastqfiles,sep=""))
+```
+
+Build index
+```{r eval=FALSE}
+system("kallisto index -i TAIR10_cdna_20110103_representative_gene_model_kallisto_index TAIR10_cdna_20110103_representative_gene_model.gz")
+# This reference seq has been updated in 2012! Redo mapping (101018)
+system("kallisto index -i TAIR10_cdna_20110103_representative_gene_model_updated_kallisto_index TAIR10_cdna_20110103_representative_gene_model_updated")
+```
+mapping
+```{r eval=FALSE}
+# working in fastq file directory
+# making directory for mapped 
+system("mkdir ../kallisto_sam_out2")
+# go to fastq file directory
+# reading fastq files (in fastq file directory)
+#fastqfiles<-list.files(pattern="fastq.gz")
+# fastq files with single end 
+# fastqfiles.SE<- fastqfiles %>% as_tibble() %>% separate(value,into=c("SRA","type","compress"),sep="\\.") %>% separate(SRA,into=c("SRA","pair"),sep="_") %>% group_by(SRA) %>%summarize(num=n()) %>% filter(num==1) %>% select(SRA) %>% as_vector()
+# use indexed references in NGS/references/
+for(x in fastqfiles) {
+system(paste("kallisto quant -i ../../NGS/references/TAIR10_cdna_20110103_representative_gene_model_updated_kallisto_index  -o ../kallisto_sam_out2/",x," --single -l 250 -s 40 --pseudobam ",x," | samtools view -Sb - > ../kallisto_sam_out2/",x,"/",x,".bam",sep=""))
+setwd(paste("../kallisto_sam_out2/",x,sep=""))
+system(paste("samtools sort *.bam -o ",x,".sorted.bam",sep=""))
+system("samtools index *.sorted.bam")
+setwd("../../Rodriguez-Celma_2016_RNAseq")
+}
+```
+
+Normalize reads and create DGE objects
+
+# copy kallisto_sam_out2 directory in Whitney under input directory
+## get reads and create data frame
+
+```{r}
+files <- dir(file.path("intermediate","Mn_Rodriguez-Celma_2016","kallisto_sam_out2"), include.dirs = TRUE)
+files %>% head()
+```
+
+```{r}
+counts.list <- map(files, ~ read_tsv(
+  file=file.path("intermediate","Mn_Rodriguez-Celma_2016","kallisto_sam_out2",.,"abundance.tsv"),
+  col_types = "cdddd"))
+names(counts.list) <- files
+```
+
+```{r}
+counts.RodriguezCelma2016 <- sapply(counts.list, dplyr::select, est_counts) %>% 
+  bind_cols(counts.list[[1]][,"target_id"],.)
+counts.RodriguezCelma2016[is.na(counts.RodriguezCelma2016)] <- 0
+colnames(counts.RodriguezCelma2016) <- sub(".fastq.gz.est_counts","",colnames(counts.RodriguezCelma2016),fixed = TRUE)
+counts.RodriguezCelma2016
+```
+
+```{r}
+write_csv(counts.RodriguezCelma2016,file.path("intermediate","Mn_Rodriguez-Celma_2016","Mn_Rodriguez-Celma_2016_raw_counts.csv.gz"))
+```
+# format count for dge
+```{r}
+counts2 <- counts.RodriguezCelma2016 %>% 
+  as.data.frame() %>% 
+  column_to_rownames(var = "target_id") %>%
+  as.matrix() %>%
+  round(0)
+```
+# dge 
+```{r}
+dge <- DGEList(counts=counts2, 
+               samples=colnames(counts2), 
+               group=factor(rep(c("minusMn","ES"),each=3),levels=c("ES","minusMn"))
+                                )
+```
+
+# normalize
+
+```{r}
+dge <- calcNormFactors(dge)
+```
+# save
+```{r}
+save(dge, file=file.path("intermediate","Mn_Rodriguez-Celma_2016","Rodriguez-Celma_2016.Rdata"))
+```
+# DEG
+```{r}
+group<-factor(rep(c("minusMn","ES"),each=3),levels=c("ES","minusMn"))
+design <- model.matrix(~group)
+y <- estimateDisp(dge,design)
+fit <- glmFit(y,design)
+lrt <- glmLRT(fit,coef=2)
+Mn_deficiency.DEGs.all<-topTags(lrt,n = Inf,p.value = 1)$table
+
+```
+# Adding annotation 
+```{r}
+#At.gene.name <-read_tsv("https://www.arabidopsis.org/download_files/Subscriber_Data_Releases/TAIR_Data_20180630/gene_aliases_20180702.txt.gz") # Does work from home when I use Pulse Secure.
+# At.gene.name <- 
+#read_tsv("https://www.arabidopsis.org/download_files/Public_Data_Releases/TAIR_Data_20181231/Araport11_functional_descriptions_20181231.txt.gz") # does not exist anymore
+# updated one (Jan 21, 2020)
+#At.gene.name<-read_tsv("https://www.arabidopsis.org/download_files/Subscriber_Data_Releases/TAIR_Data_20191231/gene_aliases_20191231.txt.gz") # download file and remove all "" with TextWrangler etc
+At.gene.name<-read_tsv(file.path("..","Annotation","input","gene_aliases_20191231.txt")) 
+# combine redundant symbol
+At.gene.name <- At.gene.name %>% group_by(name) %>% summarise(symbol2=paste(symbol,collapse=";"),full_name=paste(full_name,collapse=";"))
+At.gene.name %>% dplyr::slice(100:110)
+At.gene.name %>% filter(name=="AT4G25350") # SHB1
+# add annotiona with full name objects (all)
+Mn_deficiency.DEGs.all.anno <- Mn_deficiency.DEGs.all %>% rownames_to_column(var="genes") %>% separate(genes,into=c("AGI","variant"),sep="\\.", remove=FALSE) %>% left_join(At.gene.name,by=c(AGI="name")) %>%  dplyr::select(AGI, logFC,logCPM,LR,PValue,FDR,symbol2, full_name)
+Mn_deficiency.DEGs.all.anno %>% dplyr::slice(1:100) # %>% View()
+# write csv (all)
+write.csv(Mn_deficiency.DEGs.all.anno,file=file.path("custom_categories","Mn_deficiency.Rodriguez-Celma_2016.DEGs.all.anno.csv.gz"))
+```
+
+# Expression pattern to confirm direction of logFC
+```{r}
+# read DEGs all
+Mn_deficiency.DEGs.all.anno<-read.csv(file=file.path("custom_categories","Mn_deficiency.Rodriguez-Celma_2016.DEGs.all.anno.csv.gz"))
+# loading dge
+load(file.path("intermediate","Mn_Rodriguez-Celma_2016","Rodriguez-Celma_2016.Rdata")) # this is wrong
+# cpm
+Mn.RodriguezCelma_2016.cpm<-cpm(dge) %>% as_tibble() %>% bind_cols(data.frame(transcript_ID=rownames(dge$counts)),.) %>% separate(transcript_ID,into=c("AGI","variant"),remove=FALSE)
+# sample.description
+sample.description.Mn.RodriguezCelma.2016<-dge$samples %>% as_tibble() %>% dplyr::rename(sample=samples)
+# expression pattern of upregulated genes upon Mn deficienty
+   gene.of.interest.FDR.up <- Mn_deficiency.DEGs.all.anno %>% filter(FDR< 0.05,logFC>0) %>%
+     dplyr::select(AGI,logFC,FDR) %>% arrange(FDR)
+   print("logFC>0")
+expression.pattern.AT.graph.cpm(target.genes.FDR=gene.of.interest.FDR.up[1:5,],data=Mn.RodriguezCelma_2016.cpm,sample.description=sample.description.Mn.RodriguezCelma.2016,title="Mn up")
+# down-regulated genes upon Mn deficienty
+   print("logFC<0")
+gene.of.interest.FDR.down <- Mn_deficiency.DEGs.all.anno %>% filter(FDR< 0.05,logFC<0) %>%
+     dplyr::select(AGI,logFC,FDR) %>% arrange(FDR)
+expression.pattern.AT.graph.cpm(target.genes.FDR=gene.of.interest.FDR.down[1:5,],data=Mn.RodriguezCelma_2016.cpm,sample.description=sample.description.Mn.RodriguezCelma.2016,title="Mn down")
+
+```
+
+# Session info
+```{r}
+sessionInfo()
+```

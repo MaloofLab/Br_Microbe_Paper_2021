@@ -1,0 +1,102 @@
+---
+title: "Nishida_2017 many elements"
+output:
+  html_document:
+    df_print: paged
+editor_options: 
+  chunk_output_type: console
+---
+
+ deficiency responsive genes.
+
+# prep
+```{r setup, include=FALSE}
+#library(knitr)
+knitr::opts_chunk$set(echo = TRUE,error=TRUE)
+#library(d3heatmap)
+#library(flexdashboard)
+library(edgeR);library(tidyverse)
+library(readr);library(readxl)
+library(stringr)
+# https://bioconductor.org/packages/devel/workflows/vignettes/maEndToEnd/inst/doc/MA-Workflow.html
+# for expression pattern
+source("Expression_pattern_graph.R")
+source("addAGIAnno.R")
+source("multiplecomparison.edgeR.DEG.R")
+```
+
+* Downloading fastq files
+```{r eval=FALSE}
+system("while read line; do /usr/local/stow/sratoolkit.2.9.2-ubuntu64/bin/fastq-dump --split-files --gzip ${line}; done < Run.txt") # error? The second trial worked.
+```
+
+mapping (paired end)
+```{r eval=FALSE}
+# working in fastq file directory
+# making directory for mapped 
+system("mkdir kallisto_out")
+# go to fastq file directory
+# reading fastq files (in fastq file directory)
+fastqfiles<-list.files(pattern="fastq.gz")
+# fastq files with paired end 
+fastqfiles.title<-gsub("(DRR\\d+)(\\_)(1|2)(.fastq.gz)","\\1",fastqfiles) # works
+
+for(x in fastqfiles.title2) {
+system(paste("kallisto quant -i ../../NGS/references/TAIR10_cdna_20110103_representative_gene_model_updated_kallisto_index  -o kallisto_out/",x," ",x,"_1.fastq.gz ",x,"_2.fastq.gz", sep="") )
+}
+```
+#### under construction ####
+# design
+* download SraRunTable.txt from [RunSelector MetaData](https://www.ncbi.nlm.nih.gov/Traces/study/?acc=SRP093743&o=acc_s%3Aa)
+
+```{r}
+design <- read_csv(file.path("intermediate","Nishida_2017","SraRunTable_Nishida_2017.txt"))  
+design <- design %>% #View() 
+  separate(sample_name,c("trt","rep"),sep="_")
+```
+
+# copy kallisto_out directory in Whitney under input directory
+## get reads and create data frame
+```{r}
+files <- dir(file.path("intermediate","Nishida_2017","kallisto_out"), include.dirs = TRUE) # rename kallisto out folder
+files %>% head()
+```
+
+```{r}
+counts.list <- map(files, ~ read_tsv(
+  file=file.path("intermediate","Nishida_2017","kallisto_out",.,"abundance.tsv.gz"),
+  col_types = "cdddd"))
+names(counts.list) <- files
+```
+
+```{r}
+counts <- sapply(counts.list, dplyr::select, est_counts) %>% 
+  bind_cols(counts.list[[1]][,"target_id"],.)
+counts[is.na(counts)] <- 0
+colnames(counts) <- sub(".est_counts","",colnames(counts),fixed = TRUE)
+counts %>% View()
+```
+
+# Note: better to keep tissue info in group to double check final logFC data or graph?
+
+# start DEG analysis module
+* input is "counts" and "design". output is one table with all genes with expression level (cpm) for each treatment and logFC, and FDR for treatment, and annotation 
+* counts2 colnames and group from design object should be matched.
+
+# 
+```{r}
+group <- design %>% pull(trt) %>% as_factor() %>% fct_relevel("Ctrl")
+group
+DEGfilename <- "Nishida_2017_root.DEGs.csv.gz"
+dge.object.filepath.name <- file.path("intermediate","Nishida_2017","Nishida_2017_root.dge.Rdata")
+expression.plot <- "Nishida_2017_root"
+```
+# DEG analysis (one treatment)
+* Outputs: edgeR DEG table with FDR
+```{r}
+multiplecomparison.edgeR.DEG(counts=counts,
+                        group=group,
+                        DEGfilename=DEGfilename,
+                        dge.object.filepath.name=dge.object.filepath.name,
+                        expression.plot=expression.plot)
+```

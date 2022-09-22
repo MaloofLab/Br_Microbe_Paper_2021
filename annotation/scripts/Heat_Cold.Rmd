@@ -1,0 +1,706 @@
+---
+title: "Heat_Cold_responsive_genes"
+output:
+  html_document:
+    df_print: paged
+editor_options:
+  chunk_output_type: console
+---
+
+Purpose:
+* Analize ATH1 microarray raw data () by lmer and broom.mixed packages for tidy way. 
+
+|our purpose|Study|plant|samples|transcriptome platform|available data|available raw data|
+|----|----|--|------------|--|----|-|
+|heat or cold responsive|Kilian 2013|Arabidopsis thaliana|For heat, 38 degrees, 3 hours.  The stress treatments were initiated in parallel 18 days after sowing and 3 h after dark/light transition. The parallel performance of all stress treatments excluded differential circadian effects which could superimpose stress‐induced gene expression. For stress treatments, the plants were carefully transferred from the standard phytochamber to the laboratory where all treatments were performed and then returned to the growth chamber until harvesting. For harvesting, the plants were removed from the raft and the roots were cut off. From one box only either the shoot or root material of nine plants was harvested and pooled to avoid handling stress in the other respective tissue and to minimize physiological differences between single plants. The entire harvest procedure was completed within less than 10 min. Root and shoot samples were taken in two biological replicas 0 min, 30 min, 1 h, 3 h, 6 h, 12 h and 24 h after the onset of stress treatment. For cold, 4 degrees.  The stress treatments were initiated in parallel 18 days after sowing and 3 h after dark/light transition. The parallel performance of all stress treatments excluded differential circadian effects which could superimpose stress‐induced gene expression. For stress treatments, the plants were carefully transferred from the standard phytochamber to the laboratory where all treatments were performed and then returned to the growth chamber until harvesting. For harvesting, the plants were removed from the raft and the roots were cut off. From one box only either the shoot or root material of nine plants was harvested and pooled to avoid handling stress in the other respective tissue and to minimize physiological differences between single plants. The entire harvest procedure was completed within less than 10 min. Root and shoot samples were taken in two biological replicas 0 min, 30 min, 1 h, 3 h, 6 h, 12 h and 24 h after the onset of stress treatment.|Microarray (ATH1 chip)| |[GSE5620](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE5620), [GSE5621](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE5621), [GSE5628](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE5628)|
+
+# installation
+```{r eval=FALSE, include=FALSE}
+install.packages("tidyverse")
+install.packages("broom")
+install.packages("broom.mixed")
+install.packages("lmerTest")
+install.packages("rmarkdown")
+# https://bioconductor.org/packages/devel/workflows/vignettes/maEndToEnd/inst/doc/MA-Workflow.html
+install.packages("devtools")
+library(devtools)
+devtools::install_github("r-lib/remotes")
+#library(remotes)
+#packageVersion("remotes") # has to be 1.1.1.9000 or later
+remotes::install_github("b-klaus/maEndToEnd", ref="master")
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install("timecourse")
+```
+
+# prep
+```{r setup, include=FALSE}
+library(lmerTest);library(broom);library(broom.mixed);library(tidyverse);library(lme4);library(affy)
+# https://bioconductor.org/packages/devel/workflows/vignettes/maEndToEnd/inst/doc/MA-Workflow.html
+source("Expression_pattern_graph.R")
+```
+# Read cel files and normalize data (copied from "RNAseqVSmicroarray_publication_final.R")
+```{r eval=TRUE}
+cel.filename<-list.files(pattern=".CEL$","") # no directory info
+cel.filename2<-list.files(pattern=".CEL.gz",path=file.path("","Volumes","data_work","Data8","Microarray","Kilian_2013_heat","ATH1_CEL"),full.names=TRUE) # "" is needed for file.path()!!!  with directory info
+
+cel.filename.control<-list.files(pattern=".CEL.gz",path=file.path("","Volumes","data_work","Data8","Microarray","Kilian_2013_heat_cold","GSE5620_RAW"),full.names=TRUE) # "" is needed for file.path()!!!  with directory info
+cel.filename.heat<-list.files(pattern=".CEL.gz",path=file.path("","Volumes","data_work","Data8","Microarray","Kilian_2013_heat_cold","GSE5628_RAW"),full.names=TRUE) # "" is needed for file.path()!!!  with directory info
+cel.filename.cold<-list.files(pattern=".CEL.gz",path=file.path("","Volumes","data_work","Data8","Microarray","Kilian_2013_heat_cold","GSE5621_RAW"),full.names=TRUE) # "" is needed for file.path()!!!  with directory info
+
+# 
+Data1<-ReadAffy(filenames =c(cel.filename.control,cel.filename.heat,cel.filename.cold)) 
+Data1
+eset <- rma(Data1) # normalize chips (old way)
+# using expresso (see affy vignett)
+ eset.expresso<-expresso(Data1,normalize.method="qspline",
+               bgcorrect.method="rma",pmcorrect.method="pmonly",
+               summary.method="liwong")
+ class(eset.expresso) # ExpressionSet object. See Biobase vignette
+ head(eset.expresso)
+ exprs(eset.expresso) %>% head()# expression data
+ experimentData(eset.expresso)
+```
+# read probe ID and AGI
+```{r eval=TRUE}
+affyData <- read_csv(file.path("..","Annotation","input","affy_ATH1_array_elements-2010-12-20.csv")) #read TAIR annotation data from file (TAIR10)
+affyData2<-affyData[,c("array_element_name","is_control","locus","description","chromosome","start","stop")]
+names(affyData2) <- c("element","is.control","AGI","description","chromosome","start","stop")#get rid of underlines
+head(affyData2)
+# only unique element per AGI (is this OK? ASk Julin)
+affyData2.elementPerAGI.table<- affyData2 %>% group_by(AGI) %>% summarize(n=n())
+table(affyData2.elementPerAGI.table$n)
+affyData2unique<-affyData2.elementPerAGI.table %>% filter(n<2) %>% left_join(affyData2,by="AGI")
+dim(affyData2unique) #[1] 21789     8 use this instead of affyData2
+dim(affyData2) #[1] 22810     7
+```
+
+
+# Make expression value tibble
+```{r eval=TRUE}
+featureNames(eset.expresso)  %>% head() # only probe name
+exp.values<-exprs(eset.expresso) %>% as_tibble(rownames="element")
+colnames(exp.values) <- colnames(exp.values) %>% str_remove(".CEL.gz")
+
+```
+
+# experimental design
+```{r eval=TRUE}
+design <- read_csv(file.path("intermediate","Heat_cold_Kilian_2007","Kilian2007.exp.design.csv")) %>% separate(condition,into=c("At","num","trt","rep"),sep="_",remove=TRUE) %>%
+  separate(trt,into=c("trt","tissue","time"),sep="-") #%>% View()
+
+# extract experiment data info
+design %>% View()
+# heat: root or shoot (omit "0h")
+design.heat.root <- design %>% filter(tissue=="Roots",trt %in% c("Control","Heatstress"),time %in% c("0.25h","0.5h","1.0h","3.0h"))
+design.heat.shoot <- design %>% filter(tissue=="Shoots",trt %in% c("Control","Heatstress"),time %in% c("0.25h","0.5h","1.0h","3.0h"))
+# cold: root or shoot (omit "0h")
+design.cold.root <- design %>% filter(tissue=="Roots",trt %in% c("Control","Cold"),time %in% c("0.5h","1.0h","3.0h","6.0h","12.0h","24.0h"))
+design.cold.shoot <- design %>% filter(tissue=="Shoots",trt %in% c("Control","Cold"),time %in% c("0.5h","1.0h","3.0h","6.0h","12.0h","24.0h"))
+
+```
+
+# subset data
+```{r eval=TRUE}
+# heat.root
+exp.values.heat.root <- exp.values %>% dplyr::select(element,design.heat.root %>% filter(!time=="0h") %>% pull(cel.filename))
+# heat.shoot
+exp.values.heat.shoot <- exp.values %>% dplyr::select(element,design.heat.shoot %>% filter(!time=="0h") %>% pull(cel.filename))
+# cold.root
+exp.values.cold.root <- exp.values %>% dplyr::select(element,design.cold.root %>% filter(!time=="0h") %>% pull(cel.filename))
+# cold.shoot
+exp.values.cold.shoot <- exp.values %>% dplyr::select(element,design.cold.shoot %>% filter(!time=="0h") %>% pull(cel.filename))
+```
+
+# Time course data analysis for microarray
+* https://link.springer.com/article/10.1186/1756-0500-3-81
+```{r eval=FALSE}
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install("timecourse")
+```
+
+# heat.root
+```{r}
+library(timecourse)
+exp.values.heat.root.matrix<-as.matrix(exp.values.heat.root[,-1])
+size <- matrix(2, nrow=dim(exp.values.heat.root)[1],ncol=2)
+trt <- design.heat.root$trt
+assay <- tolower(design.heat.root$rep)
+time <- design.heat.root$time %>% str_remove("h") %>% as.numeric()
+rownames(exp.values.heat.root.matrix) <- exp.values.heat.root$element
+MB.paired <- mb.long(exp.values.heat.root.matrix, method="paired",times=4,reps=size,time.grp=time,condition.grp=trt,rep.grp=assay)
+```
+
+# plotProfile()
+```{r}
+tibble(logHotellingT2=MB.paired$HotellingT2 %>% log()) %>% ggplot(aes(logHotellingT2)) + geom_histogram(binwidth=1)
+plotProfile(MB.paired, ranking = 1, gnames = rownames(exp.values.heat.root.matrix)) 
+exp.values.heat.root %>% filter(element == "256245_at") %>% View() # rank=1
+plotProfile(MB.paired, ranking = 2, gnames = rownames(exp.values.heat.root.matrix)) #250351_at
+plotProfile(MB.paired, ranking = 3, gnames = rownames(exp.values.heat.root.matrix)) 
+plotProfile(MB.paired, ranking = 4, gnames = rownames(exp.values.heat.root.matrix)) 
+plotProfile(MB.paired, ranking = 5, gnames = rownames(exp.values.heat.root.matrix)) 
+# arbitral threshold
+rownames(MB.paired$M)[MB.paired$HotellingT2>10^4] 
+```
+
+# 0 h vs 3 h lmer analysis (heat root)
+# lmer function
+```{r eval=TRUE}
+dofit.lmer.ATH1 <- function(genedata) { # gives a lot of singularity warnings
+  lmer(value ~ trt + (1|rep),
+       data=genedata)
+}
+```
+
+# format data for lmer
+```{r}
+exp.values.heat.root.nest <- exp.values.heat.root %>% gather("cell_file","value",-element) %>% left_join(design.heat.root,by=c("cell_file"="cel.filename")) %>% 
+  left_join(affyData2unique, by="element") %>% 
+  filter(time=="3.0h") %>%
+  dplyr::select(value,trt,rep,element) %>% 
+  mutate(trt=factor(trt,levels=c("Control","Heatstress"))) %>%
+  group_by(element) %>%
+  nest()
+exp.values.heat.root.nest$data[[1]]
+
+```
+
+# do a fit for each gene.  
+```{r eval=TRUE}
+Heat.Kilian_2007.root.fits <- exp.values.heat.root.nest %>% #%>% head(100) %>% 
+  #magrittr::extract(1:10,) %>% # comment out this line to do full set; uncomment for testing on small set.
+  mutate(fit.lmer.ATH1 = map(data, dofit.lmer.ATH1),
+         lmersingular = map_lgl(fit.lmer.ATH1, isSingular))
+head(Heat.Kilian_2007.root.fits)
+```
+
+# add model summaries (5-10 minutes) using broom package (read "introduction to broom" vignet)
+```{r eval=TRUE}
+Heat.Kilian_2007.root.fits.summary <- Heat.Kilian_2007.root.fits %>%
+  mutate(glancelmer = map(fit.lmer.ATH1, broom::glance),
+         tidylmer = map(fit.lmer.ATH1, broom::tidy)
+  ) # see tidy.lm
+#save(Fe.Kim2019.fits.summary,file=file.path("..","..","Fe.Kim2019.fits.summary.Rdata"))
+```
+
+# unnesting by unnest() 
+```{r}
+#load(file.path("..","..","Fe.Kim2019.fits.summary.Rdata"))
+Heat.Kilian_2007.root.fits.summary %>% unnest(tidylmer) %>% head(100) %>% View()
+```
+
+# make a 1 row summary of the tidy results (modified from copy from J's script "SingleGeneLME_DGE.Rmd")
+
+```{r eval=FALSE}
+Heat.Kilian_2007.root.fits.summary.table.all <- Heat.Kilian_2007.root.fits.summary %>% unnest(tidylmer, .drop = TRUE) %>%
+  dplyr::select(element, term, estimate, std.error, p.value) %>%
+  na.omit() %>%
+  mutate(term=str_replace(term, "genotype", "gt"),
+         p.value = ifelse(term=="(Intercept)", NA, p.value), # we don't care about intercept p-value and don't want it to mess up FDR
+         FDR = p.adjust(p.value, "fdr")) %>%
+  gather(key="key", value="value", estimate, std.error, p.value, FDR) %>%
+  mutate(key=str_c(key, "_", term)) %>%
+  dplyr::select(-term) %>%
+  spread(key=key, value=value) %>% 
+  arrange(`FDR_trtHeatstress`) #%>% head(100) %>% View()
+# number of DEGs
+Heat.Kilian_2007.root.fits.summary.table.all %>% filter(`FDR_trtHeatstress` < 0.05) %>% dim() # 10224 9
+#
+write_csv(Heat.Kilian_2007.root.fits.summary.table.all,path=file.path("intermediate","Heat_cold_Kilian_2007","Heat_Kilian_2007.root.fits.summary.table.all.csv.gz"))
+```
+
+
+# use 3.0h time point for calculating logFC
+```{r}
+# element.exp.value.heat.root.3h.mean <- exp.values.heat.root %>% gather("cel.filename","value",-element) %>% inner_join(design.heat.root[,c("cel.filename","trt","tissue","time")],by="cel.filename") %>% 
+#   filter(time=="3.0h") %>% # calculate mean value per element, treatment
+#   group_by(element,trt) %>% 
+#   summarise(mean.element=mean(value)) %>% 
+#   spread(trt,mean.element,-1) %>%
+#   inner_join(affyData2unique, by="element") # only one element per one locus
+# #  check if "one" per one element
+#  element.exp.value.heat.root.3h.mean %>% group_by(element) %>% summarize(num.element=n()) %>% arrange(num.element) %>% View()
+#  # calculate log fold changes per each locus (one locus = one element)
+#  AGI.exp.value.heat.root.3h.FC <- element.exp.value.heat.root.3h.mean %>% 
+#    group_by(AGI) %>% 
+#    mutate(mean.logFC.AGI=log(Heatstress/Control))
+# AGI.exp.value.heat.root.3h.FC %>% View()
+#  # check AGI number
+#  AGI.exp.value.heat.root.3h.FC %>% group_by(AGI) %>% summarize(num.AGI=n()) %>% arrange(num.AGI) %>% View() # there is no  "no_match"
+# # write
+# write_csv(AGI.exp.value.heat.root.3h.FC,path=file.path("custom_categories","Heat.root.Kilian_2013.AGI.exp.value.FC.csv.gz"))
+```
+
+# logFC calculation from fitted data
+```{r}
+Heat.Kilian_2007.root.fits.summary.table.all<-read_csv(file.path("intermediate","Heat_cold_Kilian_2007","Heat_Kilian_2007.root.fits.summary.table.all.csv.gz"))
+# only this works
+Heat.Kilian_2007.root.fits.summary.unnest <- Heat.Kilian_2007.root.fits.summary %>%
+    #head(10) %>% 
+  mutate(predicted.values=map(fit.lmer.ATH1,predict)) %>% unnest(predicted.values) 
+# adding samplename column
+samplename<-design.heat.root %>% filter(time=="3.0h") %>% unite(samplename,trt,tissue,rep,sep=".") %>% dplyr::select(samplename) %>% as_vector()
+
+# calculate predicted expression values (used also for expression graph)
+Heat.Kilian_2007.root.fits.element.exp.value <- Heat.Kilian_2007.root.fits.summary.unnest %>% ungroup() %>% left_join(affyData2unique, by="element") %>% group_by(element) %>% mutate(samplename=samplename)  %>% 
+  separate(samplename,c("trt","tissue","rep"),sep="\\.") %>% rename(value=predicted.values)
+### under construction ###
+Heat.Kilian_2007.root.fits.element.exp.value.mean <- Heat.Kilian_2007.root.fits.element.exp.value %>% 
+  group_by(element,trt) %>% 
+  summarise(mean.element=mean(value)) %>% 
+  spread(trt,mean.element,-1) %>%
+  left_join(affyData2unique, by="element")
+
+# calculate all element log fold change (FC)
+Heat.Kilian_2007.root.fits.element.exp.value.mean %>%
+  mutate(Heat.Kilian_2007.fits=log(Heatstress/Control)) %>%
+  # add FDR_trtHeatstress
+  left_join(Heat.Kilian_2007.root.fits.summary.table.all %>% dplyr::select(element,`FDR_trtHeatstress`), by="element") -> Heat.Kilian_2007.root.fits.summary.element.FC
+# check
+ Heat.Kilian_2007.root.fits.summary.element.FC %>% group_by(element) %>% summarize(num.element=n()) %>% arrange(num.element) %>% View()
+ # calculate log fold changes per each locus
+ Heat.Kilian_2007.root.fits.summary.AGI.FC <- Heat.Kilian_2007.root.fits.summary.element.FC %>% group_by(AGI) %>% summarise(mean.logFC.AGI=mean(Heat.Kilian_2007.fits)) %>% left_join(affyData2unique, by="AGI") %>%
+  # add FDR_trtHeatstress
+  left_join(Heat.Kilian_2007.root.fits.summary.table.all %>% dplyr::select(element,`FDR_trtHeatstress`), by="element") 
+ # check AGI number
+ Heat.Kilian_2007.root.fits.summary.AGI.FC %>% group_by(AGI) %>% summarize(num.AGI=n()) %>% arrange(num.AGI) %>% View() # there is "no_match"
+ # sort
+ Heat.Kilian_2007.root.fits.summary.AGI.FC %>% arrange(FDR_trtHeatstress)
+ # write
+write_csv(Heat.Kilian_2007.root.fits.summary.AGI.FC,path=file.path("custom_categories","Heat_Kilian_2007.root.fits.summary.AGI.FC.csv.gz"))
+
+```
+#### end of new logFC from fitted data
+
+
+
+
+# heat: shoot
+```{r}
+library(timecourse)
+exp.values.heat.shoot.matrix<-as.matrix(exp.values.heat.shoot[,-1])
+size <- matrix(2, nrow=dim(exp.values.heat.shoot)[1],ncol=2)
+trt <- design.heat.shoot$trt
+assay <- tolower(design.heat.shoot$rep)
+time <- design.heat.shoot$time %>% str_remove("h") %>% as.numeric()
+rownames(exp.values.heat.shoot.matrix) <- exp.values.heat.shoot$element
+MB.paired <- mb.long(exp.values.heat.shoot.matrix, method="paired",times=4,reps=size,time.grp=time,condition.grp=trt,rep.grp=assay)
+tibble(logHotellingT2=MB.paired$HotellingT2 %>% log()) %>% ggplot(aes(logHotellingT2)) + geom_histogram(binwidth=1)
+plotProfile(MB.paired, ranking = 1, gnames = rownames(exp.values.heat.shoot.matrix)) 
+exp.values.heat.shoot %>% filter(element == "256245_at") %>% View() # rank=1
+plotProfile(MB.paired, ranking = 2, gnames = rownames(exp.values.heat.shoot.matrix)) #248332_at
+plotProfile(MB.paired, ranking = 3, gnames = rownames(exp.values.heat.shoot.matrix)) 
+plotProfile(MB.paired, ranking = 4, gnames = rownames(exp.values.heat.shoot.matrix)) 
+plotProfile(MB.paired, ranking = 5, gnames = rownames(exp.values.heat.shoot.matrix)) 
+```
+
+# 
+```{r}
+exp.values.heat.shoot.nest <- exp.values.heat.shoot %>% gather("cell_file","value",-element) %>% left_join(design.heat.shoot,by=c("cell_file"="cel.filename")) %>% 
+  left_join(affyData2unique, by="element") %>% 
+  filter(time=="3.0h") %>%
+  dplyr::select(value,trt,rep,element) %>% 
+  mutate(trt=factor(trt,levels=c("Control","Heatstress"))) %>%
+  group_by(element) %>%
+  nest()
+exp.values.heat.shoot.nest$data[[1]]
+
+```
+
+# do a fit for each gene.  
+```{r eval=TRUE}
+Heat.Kilian_2007.shoot.fits <- exp.values.heat.shoot.nest %>% #%>% head(100) %>% 
+  #magrittr::extract(1:10,) %>% # comment out this line to do full set; uncomment for testing on small set.
+  mutate(fit.lmer.ATH1 = map(data, dofit.lmer.ATH1),
+         lmersingular = map_lgl(fit.lmer.ATH1, isSingular))
+head(Heat.Kilian_2007.shoot.fits)
+```
+
+# add model summaries (5-10 minutes) using broom package (read "introduction to broom" vignet)
+```{r eval=TRUE}
+Heat.Kilian_2007.shoot.fits.summary <- Heat.Kilian_2007.shoot.fits %>%
+  mutate(glancelmer = map(fit.lmer.ATH1, broom::glance),
+         tidylmer = map(fit.lmer.ATH1, broom::tidy)
+  ) # see tidy.lm
+#save(Fe.Kim2019.fits.summary,file=file.path("..","..","Fe.Kim2019.fits.summary.Rdata"))
+```
+
+# unnesting by unnest() 
+```{r}
+#load(file.path("..","..","Fe.Kim2019.fits.summary.Rdata"))
+Heat.Kilian_2007.shoot.fits.summary %>% unnest(tidylmer) %>% head(100) %>% View()
+```
+
+# make a 1 row summary of the tidy results (modified from copy from J's script "SingleGeneLME_DGE.Rmd")
+
+```{r eval=FALSE}
+Heat.Kilian_2007.shoot.fits.summary.table.all <- Heat.Kilian_2007.shoot.fits.summary %>% unnest(tidylmer, .drop = TRUE) %>%
+  dplyr::select(element, term, estimate, std.error, p.value) %>%
+  na.omit() %>%
+  mutate(term=str_replace(term, "genotype", "gt"),
+         p.value = ifelse(term=="(Intercept)", NA, p.value), # we don't care about intercept p-value and don't want it to mess up FDR
+         FDR = p.adjust(p.value, "fdr")) %>%
+  gather(key="key", value="value", estimate, std.error, p.value, FDR) %>%
+  mutate(key=str_c(key, "_", term)) %>%
+  dplyr::select(-term) %>%
+  spread(key=key, value=value) %>% 
+  arrange(`FDR_trtHeatstress`) #%>% head(100) %>% View()
+# number of DEGs
+Heat.Kilian_2007.shoot.fits.summary.table.all %>% filter(`FDR_trtHeatstress` < 0.05) %>% dim() # 10224 9
+#
+write_csv(Heat.Kilian_2007.shoot.fits.summary.table.all,path=file.path("intermediate","Heat_cold_Kilian_2007","Heat_Kilian_2007.shoot.fits.summary.table.all.csv.gz"))
+```
+
+
+# use 3.0h time point for calculating logFC
+```{r}
+# element.exp.value.heat.shoot.3h.mean <- exp.values.heat.shoot %>% gather("cel.filename","value",-element) %>% inner_join(design.heat.shoot[,c("cel.filename","trt","tissue","time")],by="cel.filename") %>% 
+#   filter(time=="3.0h") %>% # calculate mean value per element, treatment
+#   group_by(element,trt) %>% 
+#   summarise(mean.element=mean(value)) %>% 
+#   spread(trt,mean.element,-1) %>%
+#   inner_join(affyData2unique, by="element") # only one element per one locus
+# #  check if "one" per one element
+#  element.exp.value.heat.shoot.3h.mean %>% group_by(element) %>% summarize(num.element=n()) %>% arrange(num.element) %>% View()
+#  # calculate log fold changes per each locus (one locus = one element)
+#  AGI.exp.value.heat.shoot.3h.FC <- element.exp.value.heat.shoot.3h.mean %>% 
+#    group_by(AGI) %>% 
+#    mutate(mean.logFC.AGI=log(Heatstress/Control))
+# AGI.exp.value.heat.shoot.3h.FC %>% View()
+#  # check AGI number
+#  AGI.exp.value.heat.shoot.3h.FC %>% group_by(AGI) %>% summarize(num.AGI=n()) %>% arrange(num.AGI) %>% View() # there is no  "no_match"
+# # write
+# write_csv(AGI.exp.value.heat.shoot.3h.FC,path=file.path("custom_categories","Heat.shoot.Kilian_2013.AGI.exp.value.FC.csv.gz"))
+```
+
+# logFC calculation from fitted data
+```{r}
+Heat.Kilian_2007.shoot.fits.summary.table.all<-read_csv(file.path("intermediate","Heat_cold_Kilian_2007","Heat_Kilian_2007.shoot.fits.summary.table.all.csv.gz"))
+# only this works
+Heat.Kilian_2007.shoot.fits.summary.unnest <- Heat.Kilian_2007.shoot.fits.summary %>%
+    #head(10) %>% 
+  mutate(predicted.values=map(fit.lmer.ATH1,predict)) %>% unnest(predicted.values) 
+# adding samplename column
+samplename<-design.heat.shoot %>% filter(time=="3.0h") %>% unite(samplename,trt,tissue,rep,sep=".") %>% dplyr::select(samplename) %>% as_vector()
+
+# calculate predicted expression values (used also for expression graph)
+Heat.Kilian_2007.shoot.fits.element.exp.value <- Heat.Kilian_2007.shoot.fits.summary.unnest %>% ungroup() %>% left_join(affyData2unique, by="element") %>% group_by(element) %>% mutate(samplename=samplename)  %>% 
+  separate(samplename,c("trt","tissue","rep"),sep="\\.") %>% rename(value=predicted.values)
+### under construction ###
+Heat.Kilian_2007.shoot.fits.element.exp.value.mean <- Heat.Kilian_2007.shoot.fits.element.exp.value %>% 
+  group_by(element,trt) %>% 
+  summarise(mean.element=mean(value)) %>% 
+  spread(trt,mean.element,-1) %>%
+  left_join(affyData2unique, by="element")
+
+# calculate all element log fold change (FC)
+Heat.Kilian_2007.shoot.fits.element.exp.value.mean %>%
+  mutate(Heat.Kilian_2007.fits=log(Heatstress/Control)) %>%
+  # add FDR_trtHeatstress
+  left_join(Heat.Kilian_2007.shoot.fits.summary.table.all %>% dplyr::select(element,`FDR_trtHeatstress`), by="element") -> Heat.Kilian_2007.shoot.fits.summary.element.FC
+# check
+ Heat.Kilian_2007.shoot.fits.summary.element.FC %>% group_by(element) %>% summarize(num.element=n()) %>% arrange(num.element) %>% View()
+ # calculate log fold changes per each locus
+ Heat.Kilian_2007.shoot.fits.summary.AGI.FC <- Heat.Kilian_2007.shoot.fits.summary.element.FC %>% group_by(AGI) %>% summarise(mean.logFC.AGI=mean(Heat.Kilian_2007.fits)) %>% left_join(affyData2unique, by="AGI") %>%
+  # add FDR_trtHeatstress
+  left_join(Heat.Kilian_2007.shoot.fits.summary.table.all %>% dplyr::select(element,`FDR_trtHeatstress`), by="element") 
+ # check AGI number
+ Heat.Kilian_2007.shoot.fits.summary.AGI.FC %>% group_by(AGI) %>% summarize(num.AGI=n()) %>% arrange(num.AGI) %>% View() # there is "no_match"
+ # sort
+ Heat.Kilian_2007.shoot.fits.summary.AGI.FC %>% arrange(FDR_trtHeatstress)
+ # write
+write_csv(Heat.Kilian_2007.shoot.fits.summary.AGI.FC,path=file.path("custom_categories","Heat_Kilian_2007.shoot.fits.summary.AGI.FC.csv.gz"))
+
+```
+#### end of new logFC from fitted data
+
+
+# cold.root
+```{r}
+library(timecourse)
+exp.values.cold.root.matrix<-as.matrix(exp.values.cold.root[,-1])
+size <- matrix(2, nrow=dim(exp.values.cold.root)[1],ncol=2)
+trt <- design.cold.root$trt
+assay <- tolower(design.cold.root$rep)
+time <- design.cold.root$time %>% str_remove("h") %>% as.numeric()
+rownames(exp.values.cold.root.matrix) <- exp.values.cold.root$element
+MB.paired <- mb.long(exp.values.cold.root.matrix, method="paired",times=6,reps=size,time.grp=time,condition.grp=trt,rep.grp=assay)
+tibble(logHotellingT2=MB.paired$HotellingT2 %>% log()) %>% ggplot(aes(logHotellingT2)) + geom_histogram(binwidth=1)
+plotProfile(MB.paired, ranking = 1, gnames = rownames(exp.values.cold.root.matrix)) 
+exp.values.cold.root %>% filter(element == "259516_at") %>% View() # rank=1
+plotProfile(MB.paired, ranking = 2, gnames = rownames(exp.values.cold.root.matrix)) #259570_at
+plotProfile(MB.paired, ranking = 3, gnames = rownames(exp.values.cold.root.matrix)) 
+plotProfile(MB.paired, ranking = 4, gnames = rownames(exp.values.cold.root.matrix)) 
+plotProfile(MB.paired, ranking = 5, gnames = rownames(exp.values.cold.root.matrix)) 
+```
+
+# format data
+```{r}
+exp.values.cold.root.nest <- exp.values.cold.root %>% gather("cell_file","value",-element) %>% left_join(design.cold.root,by=c("cell_file"="cel.filename")) %>% 
+  left_join(affyData2unique, by="element") %>% 
+  filter(time=="24.0h") %>%
+  dplyr::select(value,trt,rep,element) %>% 
+  mutate(trt=factor(trt,levels=c("Control","Cold"))) %>%
+  group_by(element) %>%
+  nest()
+exp.values.cold.root.nest$data[[1]]
+
+```
+
+# do a fit for each gene.  
+```{r eval=TRUE}
+cold.Kilian_2007.root.fits <- exp.values.cold.root.nest %>% #%>% head(100) %>% 
+  #magrittr::extract(1:10,) %>% # comment out this line to do full set; uncomment for testing on small set.
+  mutate(fit.lmer.ATH1 = map(data, dofit.lmer.ATH1),
+         lmersingular = map_lgl(fit.lmer.ATH1, isSingular))
+head(cold.Kilian_2007.root.fits)
+```
+
+# add model summaries (5-10 minutes) using broom package (read "introduction to broom" vignet)
+```{r eval=TRUE}
+cold.Kilian_2007.root.fits.summary <- cold.Kilian_2007.root.fits %>%
+  mutate(glancelmer = map(fit.lmer.ATH1, broom::glance),
+         tidylmer = map(fit.lmer.ATH1, broom::tidy)
+  ) # see tidy.lm
+#save(Fe.Kim2019.fits.summary,file=file.path("..","..","Fe.Kim2019.fits.summary.Rdata"))
+```
+
+# unnesting by unnest() 
+```{r}
+#load(file.path("..","..","Fe.Kim2019.fits.summary.Rdata"))
+cold.Kilian_2007.root.fits.summary %>% unnest(tidylmer) %>% head(100) %>% View()
+```
+
+# make a 1 row summary of the tidy results (modified from copy from J's script "SingleGeneLME_DGE.Rmd")
+
+```{r eval=FALSE}
+cold.Kilian_2007.root.fits.summary.table.all <- cold.Kilian_2007.root.fits.summary %>% unnest(tidylmer, .drop = TRUE) %>%
+  dplyr::select(element, term, estimate, std.error, p.value) %>%
+  na.omit() %>%
+  mutate(term=str_replace(term, "genotype", "gt"),
+         p.value = ifelse(term=="(Intercept)", NA, p.value), # we don't care about intercept p-value and don't want it to mess up FDR
+         FDR = p.adjust(p.value, "fdr")) %>%
+  gather(key="key", value="value", estimate, std.error, p.value, FDR) %>%
+  mutate(key=str_c(key, "_", term)) %>%
+  dplyr::select(-term) %>%
+  spread(key=key, value=value) %>% 
+  arrange(`FDR_trtCold`) #%>% head(100) %>% View()
+# number of DEGs
+cold.Kilian_2007.root.fits.summary.table.all %>% filter(`FDR_trtCold` < 0.05) %>% dim() # 7340    9
+#
+write_csv(cold.Kilian_2007.root.fits.summary.table.all,path=file.path("intermediate","Heat_cold_Kilian_2007","cold_Kilian_2007.root.fits.summary.table.all.csv.gz"))
+```
+#### end of copy
+
+
+# logFC calculation from fitted data
+```{r}
+cold.Kilian_2007.root.fits.summary.table.all<-read_csv(file.path("intermediate","Heat_cold_Kilian_2007","cold_Kilian_2007.root.fits.summary.table.all.csv.gz"))
+# only this works
+cold.Kilian_2007.root.fits.summary.unnest <- cold.Kilian_2007.root.fits.summary %>%
+    #head(10) %>% 
+  mutate(predicted.values=map(fit.lmer.ATH1,predict)) %>% unnest(predicted.values) 
+# adding samplename column
+samplename<-design.cold.root %>% filter(time=="3.0h") %>% unite(samplename,trt,tissue,rep,sep=".") %>% dplyr::select(samplename) %>% as_vector()
+
+# calculate predicted expression values (used also for expression graph)
+cold.Kilian_2007.root.fits.element.exp.value <- cold.Kilian_2007.root.fits.summary.unnest %>% ungroup() %>% left_join(affyData2unique, by="element") %>% group_by(element) %>% mutate(samplename=samplename)  %>% 
+  separate(samplename,c("trt","tissue","rep"),sep="\\.") %>% rename(value=predicted.values)
+### under construction ###
+cold.Kilian_2007.root.fits.element.exp.value.mean <- cold.Kilian_2007.root.fits.element.exp.value %>% 
+  group_by(element,trt) %>% 
+  summarise(mean.element=mean(value)) %>% 
+  spread(trt,mean.element,-1) %>%
+  left_join(affyData2unique, by="element")
+
+# calculate all element log fold change (FC)
+cold.Kilian_2007.root.fits.element.exp.value.mean %>%
+  mutate(cold.Kilian_2007.fits=log(Cold/Control)) %>%
+  # add FDR_trtCold
+  left_join(cold.Kilian_2007.root.fits.summary.table.all %>% dplyr::select(element,`FDR_trtCold`), by="element") -> cold.Kilian_2007.root.fits.summary.element.FC
+# check
+ cold.Kilian_2007.root.fits.summary.element.FC %>% group_by(element) %>% summarize(num.element=n()) %>% arrange(num.element) %>% View()
+ # calculate log fold changes per each locus
+ cold.Kilian_2007.root.fits.summary.AGI.FC <- cold.Kilian_2007.root.fits.summary.element.FC %>% group_by(AGI) %>% summarise(mean.logFC.AGI=mean(cold.Kilian_2007.fits)) %>% left_join(affyData2unique, by="AGI") %>%
+  # add FDR_trtCold
+  left_join(cold.Kilian_2007.root.fits.summary.table.all %>% dplyr::select(element,`FDR_trtCold`), by="element") 
+ # check AGI number
+ cold.Kilian_2007.root.fits.summary.AGI.FC %>% group_by(AGI) %>% summarize(num.AGI=n()) %>% arrange(num.AGI) %>% View() # there is "no_match"
+ # sort
+ cold.Kilian_2007.root.fits.summary.AGI.FC %>% arrange(FDR_trtCold)
+ # write
+write_csv(cold.Kilian_2007.root.fits.summary.AGI.FC,path=file.path("custom_categories","cold_Kilian_2007.root.fits.summary.AGI.FC.csv.gz"))
+
+```
+#### end of new logFC from fitted data
+
+
+
+
+# shoot.shoot
+```{r}
+library(timecourse)
+exp.values.cold.shoot.matrix<-as.matrix(exp.values.cold.shoot[,-1])
+size <- matrix(2, nrow=dim(exp.values.cold.shoot)[1],ncol=2)
+trt <- design.cold.shoot$trt
+assay <- tolower(design.cold.shoot$rep)
+time <- design.cold.shoot$time %>% str_remove("h") %>% as.numeric()
+rownames(exp.values.cold.shoot.matrix) <- exp.values.cold.shoot$element
+MB.paired <- mb.long(exp.values.cold.shoot.matrix, method="paired",times=6,reps=size,time.grp=time,condition.grp=trt,rep.grp=assay)
+tibble(logHotellingT2=MB.paired$HotellingT2 %>% log()) %>% ggplot(aes(logHotellingT2)) + geom_histogram(binwidth=1)
+plotProfile(MB.paired, ranking = 1, gnames = rownames(exp.values.cold.shoot.matrix)) 
+exp.values.cold.shoot %>% filter(element == "259570_at") %>% View() # rank=1
+plotProfile(MB.paired, ranking = 2, gnames = rownames(exp.values.cold.shoot.matrix)) #248337_at
+plotProfile(MB.paired, ranking = 3, gnames = rownames(exp.values.cold.shoot.matrix)) 
+plotProfile(MB.paired, ranking = 4, gnames = rownames(exp.values.cold.shoot.matrix)) 
+plotProfile(MB.paired, ranking = 5, gnames = rownames(exp.values.cold.shoot.matrix)) 
+```
+
+# use 24.0h time point for calculating logFC
+```{r}
+# element.exp.value.cold.shoot.24h.mean <- exp.values.cold.shoot %>% gather("cel.filename","value",-element) %>% inner_join(design.cold.shoot[,c("cel.filename","trt","tissue","time")],by="cel.filename") %>% 
+#   filter(time=="24.0h") %>% # calculate mean value per element, treatment
+#   group_by(element,trt) %>% 
+#   summarise(mean.element=mean(value)) %>% 
+#   spread(trt,mean.element,-1) %>%
+#   inner_join(affyData2unique, by="element") # only one element per one locus
+# #  check if "one" per one element
+#  element.exp.value.cold.shoot.24h.mean %>% group_by(element) %>% summarize(num.element=n()) %>% arrange(num.element) %>% View()
+#  # calculate log fold changes per each locus (one locus = one element)
+#  AGI.exp.value.cold.shoot.24h.FC <- element.exp.value.cold.shoot.24h.mean %>% 
+#    group_by(AGI) %>% 
+#    mutate(mean.logFC.AGI=log(Cold/Control))
+# AGI.exp.value.cold.shoot.24h.FC %>% View()
+#  # check AGI number
+#  AGI.exp.value.cold.shoot.24h.FC %>% group_by(AGI) %>% summarize(num.AGI=n()) %>% arrange(num.AGI) %>% View() # there is no  "no_match"
+# # write
+# write_csv(AGI.exp.value.cold.shoot.24h.FC,path=file.path("custom_categories","cold.shoot.Kilian_2013.AGI.exp.value.FC.csv.gz"))
+```
+
+# format data
+```{r}
+exp.values.cold.shoot.nest <- exp.values.cold.shoot %>% gather("cell_file","value",-element) %>% left_join(design.cold.shoot,by=c("cell_file"="cel.filename")) %>% 
+  left_join(affyData2unique, by="element") %>% 
+  filter(time=="24.0h") %>%
+  dplyr::select(value,trt,rep,element) %>% 
+  mutate(trt=factor(trt,levels=c("Control","Cold"))) %>%
+  group_by(element) %>%
+  nest()
+exp.values.cold.shoot.nest$data[[1]]
+
+```
+
+# do a fit for each gene.  
+```{r eval=TRUE}
+cold.Kilian_2007.shoot.fits <- exp.values.cold.shoot.nest %>% #%>% head(100) %>% 
+  #magrittr::extract(1:10,) %>% # comment out this line to do full set; uncomment for testing on small set.
+  mutate(fit.lmer.ATH1 = map(data, dofit.lmer.ATH1),
+         lmersingular = map_lgl(fit.lmer.ATH1, isSingular))
+head(cold.Kilian_2007.shoot.fits)
+```
+
+# add model summaries (5-10 minutes) using broom package (read "introduction to broom" vignet)
+```{r eval=TRUE}
+cold.Kilian_2007.shoot.fits.summary <- cold.Kilian_2007.shoot.fits %>%
+  mutate(glancelmer = map(fit.lmer.ATH1, broom::glance),
+         tidylmer = map(fit.lmer.ATH1, broom::tidy)
+  ) # see tidy.lm
+#save(Fe.Kim2019.fits.summary,file=file.path("..","..","Fe.Kim2019.fits.summary.Rdata"))
+```
+
+# unnesting by unnest() 
+```{r}
+#load(file.path("..","..","Fe.Kim2019.fits.summary.Rdata"))
+cold.Kilian_2007.shoot.fits.summary %>% unnest(tidylmer) %>% head(100) %>% View()
+```
+
+# make a 1 row summary of the tidy results (modified from copy from J's script "SingleGeneLME_DGE.Rmd")
+
+```{r eval=FALSE}
+cold.Kilian_2007.shoot.fits.summary.table.all <- cold.Kilian_2007.shoot.fits.summary %>% unnest(tidylmer, .drop = TRUE) %>%
+  dplyr::select(element, term, estimate, std.error, p.value) %>%
+  na.omit() %>%
+  mutate(term=str_replace(term, "genotype", "gt"),
+         p.value = ifelse(term=="(Intercept)", NA, p.value), # we don't care about intercept p-value and don't want it to mess up FDR
+         FDR = p.adjust(p.value, "fdr")) %>%
+  gather(key="key", value="value", estimate, std.error, p.value, FDR) %>%
+  mutate(key=str_c(key, "_", term)) %>%
+  dplyr::select(-term) %>%
+  spread(key=key, value=value) %>% 
+  arrange(`FDR_trtCold`) #%>% head(100) %>% View()
+# number of DEGs
+cold.Kilian_2007.shoot.fits.summary.table.all %>% filter(`FDR_trtCold` < 0.05) %>% dim() #[1] 9363    9
+#
+write_csv(cold.Kilian_2007.shoot.fits.summary.table.all,path=file.path("intermediate","Heat_cold_Kilian_2007","cold_Kilian_2007.shoot.fits.summary.table.all.csv.gz"))
+```
+#### end of copy
+
+# use 24.0h time point for calculating logFC (needs to use predicted data)
+```{r}
+# element.exp.value.cold.root.24h.mean <- exp.values.cold.root %>% gather("cel.filename","value",-element) %>% inner_join(design.cold.root[,c("cel.filename","trt","tissue","time")],by="cel.filename") %>% 
+#   filter(time=="24.0h") %>% # calculate mean value per element, treatment
+#   group_by(element,trt) %>% 
+#   summarise(mean.element=mean(value)) %>% 
+#   spread(trt,mean.element,-1) %>%
+#   inner_join(affyData2unique, by="element") # only one element per one locus
+# #  check if "one" per one element
+#  element.exp.value.cold.root.24h.mean %>% group_by(element) %>% summarize(num.element=n()) %>% arrange(num.element) %>% View()
+#  # calculate log fold changes per each locus (one locus = one element)
+#  AGI.exp.value.cold.root.24h.FC <- element.exp.value.cold.root.24h.mean %>% 
+#    group_by(AGI) %>% 
+#    mutate(mean.logFC.AGI=log(Cold/Control))
+# AGI.exp.value.cold.root.24h.FC %>% View()
+#  # check AGI number
+#  AGI.exp.value.cold.root.24h.FC %>% group_by(AGI) %>% summarize(num.AGI=n()) %>% arrange(num.AGI) %>% View() # there is no  "no_match"
+# # write
+# write_csv(AGI.exp.value.cold.root.24h.FC,path=file.path("custom_categories","cold.root.Kilian_2013.AGI.exp.value.FC.csv.gz"))
+```
+
+
+# logFC calculation from fitted data
+```{r}
+cold.Kilian_2007.shoot.fits.summary.table.all<-read_csv(file.path("intermediate","Heat_cold_Kilian_2007","cold_Kilian_2007.shoot.fits.summary.table.all.csv.gz"))
+# only this works
+cold.Kilian_2007.shoot.fits.summary.unnest <- cold.Kilian_2007.shoot.fits.summary %>%
+    #head(10) %>% 
+  mutate(predicted.values=map(fit.lmer.ATH1,predict)) %>% unnest(predicted.values) 
+# adding samplename column
+samplename<-design.cold.shoot %>% filter(time=="3.0h") %>% unite(samplename,trt,tissue,rep,sep=".") %>% dplyr::select(samplename) %>% as_vector()
+
+# calculate predicted expression values (used also for expression graph)
+cold.Kilian_2007.shoot.fits.element.exp.value <- cold.Kilian_2007.shoot.fits.summary.unnest %>% ungroup() %>% left_join(affyData2unique, by="element") %>% group_by(element) %>% mutate(samplename=samplename)  %>% 
+  separate(samplename,c("trt","tissue","rep"),sep="\\.") %>% rename(value=predicted.values)
+# calculate mean
+cold.Kilian_2007.shoot.fits.element.exp.value.mean <- cold.Kilian_2007.shoot.fits.element.exp.value %>% 
+  group_by(element,trt) %>% 
+  summarise(mean.element=mean(value)) %>% 
+  spread(trt,mean.element,-1) %>%
+  left_join(affyData2unique, by="element")
+
+# calculate all element log fold change (FC)
+cold.Kilian_2007.shoot.fits.element.exp.value.mean %>%
+  mutate(cold.Kilian_2007.fits=log(Cold/Control)) %>%
+  # add FDR_trtCold
+  left_join(cold.Kilian_2007.shoot.fits.summary.table.all %>% dplyr::select(element,`FDR_trtCold`), by="element") -> cold.Kilian_2007.shoot.fits.summary.element.FC
+# check
+ cold.Kilian_2007.shoot.fits.summary.element.FC %>% group_by(element) %>% summarize(num.element=n()) %>% arrange(num.element) %>% View()
+ # calculate log fold changes per each locus
+ cold.Kilian_2007.shoot.fits.summary.AGI.FC <- cold.Kilian_2007.shoot.fits.summary.element.FC %>% group_by(AGI) %>% summarise(mean.logFC.AGI=mean(cold.Kilian_2007.fits)) %>% left_join(affyData2unique, by="AGI") %>%
+  # add FDR_trtCold
+  left_join(cold.Kilian_2007.shoot.fits.summary.table.all %>% dplyr::select(element,`FDR_trtCold`), by="element") 
+ # check AGI number
+ cold.Kilian_2007.shoot.fits.summary.AGI.FC %>% group_by(AGI) %>% summarize(num.AGI=n()) %>% arrange(num.AGI) %>% View() # there is "no_match"
+ # sort
+ cold.Kilian_2007.shoot.fits.summary.AGI.FC %>% arrange(FDR_trtCold)
+ # write
+write_csv(cold.Kilian_2007.shoot.fits.summary.AGI.FC,path=file.path("custom_categories","cold_Kilian_2007.shoot.fits.summary.AGI.FC.csv.gz"))
+
+```
+#### end of new logFC from fitted data
+
+# Session info
+```{r}
+sessionInfo()
+```

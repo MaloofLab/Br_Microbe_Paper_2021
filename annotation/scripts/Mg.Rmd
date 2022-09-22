@@ -1,0 +1,174 @@
+---
+title: "Mg"
+output:
+  html_document:
+    df_print: paged
+---
+
+Phosphate deficiency responsive genes.
+
+|our purpose|Study|plant|samples|transcriptome platform|available data|available raw data|
+|----|----|--|------|--|--------|-|
+|Mg deficiency responsive genes|[Niu et al. 2016](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0149301)|Arabidopsis thaliana|Col-) growth in 22C, 80 RH, 10hr light in 24 hr, 120 micromol light, three levels of MgSO4 (1k microM Mg-Control, 1 microM Mg-Low, 10k microM Mg-High, two CO2 levels (350 and 800 ppm)  all combinations, ph adjustmed to 6.0. Plant grown hydroponics for 5 weeks before treatments. Tissue collection began at 7 d after treatments. Two samples each pooled from eight independent plants. Both roots and shoots. |RNAseq|QC using FastQC using TopHat; Cuffdiff for DGE with FDR < 0.05. 6 million pair end reads represent 74% of transcripts|[GSE64501](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE64501)|
+
+# prep
+```{r setup, include=FALSE}
+#library(knitr)
+knitr::opts_chunk$set(echo = TRUE,error=TRUE)
+#library(d3heatmap)
+#library(flexdashboard)
+library(edgeR);library(tidyverse)
+library(readr);library(readxl)
+library(stringr)
+# for microarray 
+library(lmerTest);library(broom);library(broom.mixed);library(lme4);library(affy)
+# https://bioconductor.org/packages/devel/workflows/vignettes/maEndToEnd/inst/doc/MA-Workflow.html
+# for expression pattern
+source("Expression_pattern_graph.R")
+source("addAGIAnno.R")
+source("threecomparison.edgeR.DEG.R")
+```
+* For some reasons, sratoolkit name has to be changed into current one. (Feb 19, 2020) (Niu_2016_Mg folder)
+```{r eval=FALSE}
+system("while read line; do /usr/local/stow/sratoolkit.2.9.2-ubuntu64/bin/fastq-dump --split-files --gzip ${line}; done < SRR_Acc_List.txt")
+```
+
+mapping (paired end)
+```{r eval=FALSE}
+# working in fastq file directory
+# making directory for mapped 
+system("mkdir ../kallisto_out")
+# go to fastq file directory
+# reading fastq files (in fastq file directory)
+fastqfiles<-list.files(pattern="fastq.gz")
+# fastq files with paired end 
+fastqfiles.title<-gsub("(SRR\\d+)(\\_)(1|2)(.fastq.gz)","\\1",fastqfiles) # works
+for(x in fastqfiles.title) {
+system(paste("kallisto quant -i ../../NGS/references/TAIR10_cdna_20110103_representative_gene_model_updated_kallisto_index  -o kallisto_out/",x," ",x,"_1.fastq.gz ",x,"_2.fastq.gz", sep="") )
+}
+```
+
+# copy kallisto_out directory in Whitney under input directory (under construction)
+## get reads and create data frame 
+```{r}
+files <- dir(file.path("intermediate","Mg_Niu_2016","kallisto_out"), include.dirs = TRUE) # rename kallisto out folder
+files %>% head()
+```
+
+# design
+```{r}
+# SRR1734689
+# SRR1734690
+# SRR1734691
+# SRR1734692
+# SRR1734693
+# SRR1734694
+# SRR1734695
+# SRR1734696
+# SRR1734697
+# SRR1734698
+# SRR1734699
+# SRR1734700
+# SRR1734701
+# SRR1734702
+# SRR1734703
+# SRR1734704
+# SRR1734705
+# SRR1734706
+# SRR1734707
+# SRR1734708
+# SRR1734709
+# SRR1734710
+# SRR1734711
+# SRR1734712
+design <- read_csv(file.path("intermediate","Mg_Niu_2016","SraRunTable_Mg_Niu_2016.txt")) %>% mutate(trt1=str_replace(CO2,"350[[:print:]]+","ambientCO2") %>% str_replace("800[[:print:]]+","elevatedCO2")) %>%
+mutate(trt2=str_replace(mgso4,"[[:print:]]+low[[:print:]]+","lowMg") %>% str_replace("[[:print:]]+control[[:print:]]+","controlMg") %>% str_replace("[[:print:]]+high[[:print:]]+","highMg")) %>%
+  dplyr::select(Run,tissue,trt1,trt2) %>% unite(group,c(tissue,trt2),remove=FALSE)
+# separate root and shoot
+design.root.ambientCO2 <- design %>% filter(tissue=="Root",trt1=="ambientCO2");design.root.ambientCO2
+design.shoot.ambientCO2 <- design %>% filter(tissue=="Shoot",trt1=="ambientCO2");design.shoot.ambientCO2
+```
+
+```{r}
+counts.list <- map(files, ~ read_tsv(
+  file=file.path("intermediate","Mg_Niu_2016","kallisto_out",.,"abundance.tsv"),
+  col_types = "cdddd"))
+names(counts.list) <- files
+```
+
+```{r}
+counts <- sapply(counts.list, dplyr::select, est_counts) %>% 
+  bind_cols(counts.list[[1]][,"target_id"],.)
+counts[is.na(counts)] <- 0
+colnames(counts) <- sub(".est_counts","",colnames(counts),fixed = TRUE)
+counts
+# only Col-0 and separate root and shoot. subset counts by tissue 
+counts.root <- counts %>% dplyr::select("target_id",design.root.ambientCO2 %>% pull(Run)) 
+counts.shoot <-counts %>% dplyr::select("target_id",design.shoot.ambientCO2 %>% pull(Run))
+```
+
+# Note: better to keep tissue info in group to double check final logFC data or graph?
+# start DEG analysis module
+* input is "counts" and "design". output is one table with all genes with expression level (cpm) for each treatment and logFC, and FDR for treatment, and annotation 
+* counts2 colnames and group from design object should be matched.
+
+# root
+```{r}
+counts <- counts.root
+group <- design.root.ambientCO2 %>% pull(group) %>% as_factor() %>% fct_relevel("Root_controlMg")
+group
+DEG1filename <- "Mg_high_Niu_2016_root.DEGs.csv.gz"
+DEG2filename <- "Mg_low_Niu_2016_root.DEGs.csv.gz"
+
+dge.object.filepath.name <- file.path("intermediate","Mg_Niu_2016","Mg_Niu_2016_root_ambientCO2.dge.Rdata")
+expression1.up.plot <- "Mg_high_Niu_2016_root_ambientCO2.up.png" # coef=2 is high in group
+expression1.down.plot <- "Mg_high_Niu_2016_root_ambientCO2.down.png" # coef=2 is high in group
+expression2.up.plot <- "Mg_low_Niu_2016_root_ambientCO2.up.png" # coef=3 is low in group
+expression2.down.plot <- "Mg_low_Niu_2016_root_ambientCO2.down.png" # coef=3 is low in group
+
+```
+# DEG analysis (one treatment)
+* Outputs: edgeR DEG table with FDR
+```{r}
+threecomparison.edgeR.DEG(counts=counts,
+                        group=group, 
+                        DEG1filename=DEG1filename,
+                        DEG2filename=DEG2filename,
+                        dge.object.filepath.name=dge.object.filepath.name,
+                        expression1.up.plot=expression1.up.plot,
+                        expression1.down.plot=expression1.down.plot,
+                        expression2.up.plot=expression2.up.plot,
+                        expression2.down.plot=expression2.down.plot
+                        )
+```
+
+# shoot
+```{r}
+counts <- counts.shoot
+group <- design.shoot.ambientCO2 %>% pull(group) %>% as_factor() %>% fct_relevel("Shoot_controlMg")
+group
+DEG1filename <- "Mg_high_Niu_2016_shoot.DEGs.csv.gz"
+DEG2filename <- "Mg_low_Niu_2016_shoot.DEGs.csv.gz"
+
+dge.object.filepath.name <- file.path("intermediate","Mg_Niu_2016","Mg_Niu_2016_shoot_ambientCO2.dge.Rdata")
+expression1.up.plot <- "Mg_high_Niu_2016_shoot_ambientCO2.up.png" # coef=2 is high in group
+expression1.down.plot <- "Mg_high_Niu_2016_shoot_ambientCO2.down.png" # coef=2 is high in group
+expression2.up.plot <- "Mg_low_Niu_2016_shoot_ambientCO2.up.png" # coef=3 is low in group
+expression2.down.plot <- "Mg_low_Niu_2016_shoot_ambientCO2.down.png" # coef=3 is low in group
+
+```
+# DEG analysis (one treatment)
+* Outputs: edgeR DEG table with FDR
+```{r}
+threecomparison.edgeR.DEG(counts=counts,
+                        group=group, 
+                        DEG1filename=DEG1filename,
+                        DEG2filename=DEG2filename,
+                        dge.object.filepath.name=dge.object.filepath.name,
+                        expression1.up.plot=expression1.up.plot,
+                        expression1.down.plot=expression1.down.plot,
+                        expression2.up.plot=expression2.up.plot,
+                        expression2.down.plot=expression2.down.plot
+                        )
+```
+

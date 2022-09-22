@@ -1,0 +1,358 @@
+---
+title: "N_deficiency (minusN) responsive_genes"
+output:
+  html_document:
+    df_print: paged
+editor_options:
+  chunk_output_type: console
+---
+
+Purpose:
+* Analize ATH1 microarray raw data () by lmer and broom.mixed packages for tidy way. 
+
+|our purpose|Study|plant|samples|transcriptome platform|available data|available raw data|
+|----|----|--|------|--|--------|-|
+|N starvation|[Bi et al. 2007](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1994689)|
+Arabidopsis thaliana|Shoots of 3-week-old wild-type plants.  There were three nitrate levels (treatments) in the experiment with the 3 mM nitrate as sufficient, 1 mM nitrate as the mild N-limiting condition and 0.3 mM nitrate as the severe N-limiting condition|Microarray (ATH1 chip)|FoldChange of some genes are listed in tables but not all genes.  All DGE listed in supplementary excel sheet but not FoldChange.  May not be useful...|[NASCARRAYS-408](http://bar.utoronto.ca/NASCArrays/index.php?ExpID=408)|
+
+To Do
+* This is not ATH1. Stop working on it.
+* Expression pattern graph
+* Knit to finalize analysis.
+
+# installation
+```{r eval=FALSE, include=FALSE}
+install.packages("tidyverse")
+install.packages("broom")
+install.packages("broom.mixed")
+install.packages("lmerTest")
+install.packages("rmarkdown")
+# https://bioconductor.org/packages/devel/workflows/vignettes/maEndToEnd/inst/doc/MA-Workflow.html
+install.packages("devtools")
+library(devtools)
+devtools::install_github("r-lib/remotes")
+#library(remotes)
+#packageVersion("remotes") # has to be 1.1.1.9000 or later
+remotes::install_github("b-klaus/maEndToEnd", ref="master")
+```
+
+# prep
+```{r setup, include=FALSE}
+library(lmerTest);library(broom);library(broom.mixed);library(tidyverse);library(lme4);library(affy)
+# https://bioconductor.org/packages/devel/workflows/vignettes/maEndToEnd/inst/doc/MA-Workflow.html
+source("Expression_pattern_graph.R")
+```
+# Read cel files and normalize data (copied from "RNAseqVSmicroarray_publication_final.R")
+```{r eval=TRUE}
+cel.filename<-list.files(pattern=".cel$") # no directory info
+cel.filename2<-list.files(pattern=".cel",path=file.path("","Volumes","data_work","Data8","Microarray","minusN_Bi_2007","Exp408"),full.names=TRUE) # "" is needed for file.path()!!!  with directory info
+Data1<-ReadAffy(filenames =cel.filename2) 
+head(Data1)
+eset <- rma(Data1) # normalize chips (old way)
+# using expresso (see affy vignett)
+ eset.expresso<-expresso(Data1,normalize.method="qspline",
+               bgcorrect.method="rma",pmcorrect.method="pmonly",
+               summary.method="liwong")
+ class(eset.expresso) # ExpressionSet object. See Biobase vignette
+ head(eset.expresso)
+ exprs(eset.expresso) %>% head()# expression data
+ experimentData(eset.expresso)
+```
+# read probe ID and AGI
+```{r eval=TRUE}
+affyData <- read_csv(file.path("..","Annotation","input","affy_ATH1_array_elements-2010-12-20.csv")) #read TAIR annotation data from file (TAIR10)
+affyData2<-affyData[,c("array_element_name","is_control","locus","description","chromosome","start","stop")]
+names(affyData2) <- c("element","is.control","AGI","description","chromosome","start","stop")#get rid of underlines
+head(affyData2)
+# only unique element per AGI (is this OK? ASk Julin)
+affyData2.elementPerAGI.table<- affyData2 %>% group_by(AGI) %>% summarize(n=n())
+table(affyData2.elementPerAGI.table$n)
+affyData2unique<-affyData2.elementPerAGI.table %>% filter(n<2) %>% left_join(affyData2,by="AGI")
+dim(affyData2unique) #[1] 21789     8 use this instead of affyData2
+dim(affyData2) #[1] 22810     7
+```
+
+
+# Make expression value tibble
+```{r eval=TRUE}
+featureNames(eset.expresso)  # only probe name
+exp.values<-exprs(eset.expresso) %>% as_tibble(rownames="element") 
+```
+
+# experimental design
+```{r eval=TRUE}
+# extract experiment data info
+cel.filename<-list.files(pattern=".CEL.gz",path=file.path("","Volumes","data_work","Data8","Microarray","Bi_2007_minusN","Exp408"),full.names=FALSE) # "" is needed for file.path()!!!  with directory info
+
+
+# design (under construction)
+design <- tibble(cel_file=cel.filename) %>% mutate(cel_file2=str_replace(cel_file,"Wild-type","WT")) %>% separate(cel_file2,into=c("NRID","Wang","num","condition","rep","extra"),extra="drop",sep="_") %>% mutate(condition=str_replace(condition,"K-nitrate","KNO3"),condition=str_replace(condition,"KCL","KCl")) %>% 
+  separate(condition,into=c("gt1","gt2","conc","unit","trt","time","unit2","tissue")) %>% mutate(rep=str_replace(rep,"Rep",""),tissue=str_replace(tissue,"s$","")) %>% dplyr::select(cel_file,gt1,trt,tissue,rep)
+#
+design
+# root or shoot
+design.root <- design %>% filter(tissue=="root") 
+design.shoot <- design %>% filter(tissue=="shoot") 
+```
+
+# combine
+```{r eval=TRUE}
+exp.values.combined <- exp.values %>% gather("cel_file","value",-element) %>% left_join(design,by="cel_file") %>% 
+  left_join(affyData2, by="element") 
+# check 10 genes
+exp.values.combined %>% arrange(AGI) %>% head(10)
+# factor
+exp.values.combined %>% mutate(trt=factor(trt, levels=c("KNO3","KCl")),rep=as.character(rep)) %>% str() # N deficiency
+# write in csv file
+write_csv(exp.values.combined,path=file.path("intermediate","minusN_Bi_2007","exp.values.combined.csv.gz"))
+```
+
+# lmer function
+```{r eval=TRUE}
+dofit.lmer.ATH1 <- function(genedata) { # gives a lot of singularity warnings
+  lmer(value ~ trt + (1|rep),
+       data=genedata)
+}
+```
+
+# root
+# organize the data to make it easy to fit a model to each element (not gene)
+```{r eval=TRUE}
+exp.values.combined <- read_csv(file.path("intermediate","minusN_Bi_2007","exp.values.combined.csv.gz"))
+exp.values.combined.root.nest <- exp.values.combined %>% filter(tissue=="root") %>% select(value,trt,rep,element) %>%
+  mutate(trt=factor(trt,levels=c("KNO3","KCl"))) %>%
+  group_by(element) %>%
+  nest()
+head(exp.values.combined.root.nest)
+exp.values.combined.root.nest %>% summarize(num=n()) %>% arrange(num) %>% View() #OK
+exp.values.combined.root.nest$data[[1]] %>% str() # factor...
+```
+
+# do a fit for each element
+```{r eval=TRUE, warning=FALSE}
+root.fits <- exp.values.combined.root.nest %>% #head(100) %>% 
+  #magrittr::extract(1:10,) %>% # comment out this line to do full set; uncomment for testing on small set.
+  mutate(fit.lmer.ATH1 = map(data, dofit.lmer.ATH1),
+         lmersingular = map_lgl(fit.lmer.ATH1, isSingular))
+head(root.fits)
+```
+
+# add model summaries (5-10 minutes) using broom package (read "introduction to broom" vegnet)
+```{r eval=TRUE}
+root.fits.summary <- root.fits %>%
+  mutate(glancelmer = map(fit.lmer.ATH1, broom::glance),
+         tidylmer = map(fit.lmer.ATH1, broom::tidy)
+  ) # see tidy.lm
+```
+
+# unnesting by unnest() 
+```{r}
+root.fits.summary %>% unnest(tidylmer) %>% head(100) %>% View()
+```
+
+# make a 1 row summary of the tidy results (modified from copy from J's script "SingleGeneLME_DGE.Rmd")
+
+```{r eval=TRUE}
+root.fits.summary.table.all <- root.fits.summary %>% unnest(tidylmer, .drop = TRUE) %>%
+  select(element, term, estimate, std.error, p.value) %>%
+  na.omit() %>%
+  mutate(p.value = ifelse(term=="(Intercept)", NA, p.value), # we don't care about intercept p-value and don't want it to mess up FDR
+         FDR = p.adjust(p.value, "fdr")) %>%
+  gather(key="key", value="value", estimate, std.error, p.value, FDR) %>%
+  mutate(key=str_c(key, "_", term)) %>%
+  select(-term) %>%
+  spread(key=key, value=value) %>% 
+  arrange(FDR_trtKCl) #%>% head(100) %>% View()
+# how many DEGs?
+root.fits.summary.table.all %>% filter(FDR_trtKCl < 0.05) %>% dim()
+write_csv(root.fits.summary.table.all,path=file.path("custom_categories","minusN.Bi2007.root.fits.summary.table.all.csv.gz"))
+```
+
+# How to calculate logFC?
+# read root.fits.summary.table.all 
+```{r}
+root.fits.summary.table.all<-read_csv(file.path("custom_categories","N.Wang2013.root.fits.summary.table.all.csv.gz"))
+root.fits.summary.table.all
+# 
+# only this works
+fits.summary.unnest<-root.fits.summary %>% 
+  #head(10) %>% 
+  mutate(predicted.values=map(fit.lmer.ATH1,predict)) %>% unnest(predicted.values) 
+# adding samplename column
+samplename<-design.root %>% unite(samplename,trt,rep,sep=".") %>% dplyr::select(samplename) %>% as_vector()
+# calculate predicted expression values (used also for expression graph)
+fits.element.exp.value<-fits.summary.unnest %>% ungroup() %>% inner_join(affyData2unique, by="element") %>% group_by(element) %>% mutate(samplename=samplename)  %>% 
+  separate(samplename,c("trt","rep"),sep="\\.") %>% rename(value=predicted.values) %>% dplyr::select(element,value,AGI,description,trt,rep)
+# save fits.element.exp.value
+write_csv(fits.element.exp.value,file.path("custom_categories","N.Wang2013.root.fits.element.exp.value.csv.gz"))
+# calculate mean value per element, treatment
+fits.element.exp.value.mean <- fits.element.exp.value %>%
+  group_by(element,trt) %>% 
+  summarise(mean.element=mean(value)) %>% 
+  spread(trt,mean.element,-1) %>%
+  inner_join(affyData2unique, by="element") # only one element per one locus
+#  check if "one" per one element
+ fits.element.exp.value.mean %>% group_by(element) %>% summarize(num.element=n()) %>% arrange(num.element) %>% View()
+ # calculate log fold changes per each locus (one locus = one element)
+ fits.summary.AGI.FC <- fits.element.exp.value.mean %>% 
+   group_by(AGI) %>% 
+   mutate(mean.FC.AGI=log(KCl/KNO3)) %>%
+  # add FDR_trtKCl
+  inner_join(root.fits.summary.table.all 
+            %>% dplyr::select(element,`FDR_trtKCl`), by="element") 
+ fits.summary.AGI.FC %>% View()
+ # check AGI number
+ fits.summary.AGI.FC %>% group_by(AGI) %>% summarize(num.AGI=n()) %>% arrange(num.AGI) %>% View() # there is no  "no_match"
+# write
+write_csv(fits.summary.AGI.FC,path=file.path("custom_categories","N_Wang2013.root.fits.summary.AGI.FC.csv.gz"))
+```
+
+# shoot
+# organize the data to make it easy to fit a model to each element (not gene)
+```{r eval=TRUE}
+exp.values.combined <- read_csv(file.path("intermediate","N_Wang_2013","exp.values.combined.csv.gz"))
+exp.values.combined.shoot.nest <- exp.values.combined %>% filter(tissue=="shoot") %>% select(value,trt,rep,element) %>%
+  mutate(trt=factor(trt,levels=c("KNO3","KCl"))) %>%
+  group_by(element) %>%
+  nest()
+exp.values.combined.shoot.nest[1,2] %>% unnest(data)
+exp.values.combined.shoot.nest %>% summarize(num=n()) %>% arrange(num) %>% View() #OK
+exp.values.combined.shoot.nest$data[[1]] %>% str() # factor...
+```
+
+# do a fit for each element
+```{r eval=TRUE, warning=FALSE}
+shoot.fits <- exp.values.combined.shoot.nest %>% #head(100) %>% 
+  #magrittr::extract(1:10,) %>% # comment out this line to do full set; uncomment for testing on small set.
+  mutate(fit.lmer.ATH1 = map(data, dofit.lmer.ATH1),
+         lmersingular = map_lgl(fit.lmer.ATH1, isSingular))
+head(shoot.fits)
+```
+
+# add model summaries (5-10 minutes) using broom package (read "introduction to broom" vegnet)
+```{r eval=TRUE}
+shoot.fits.summary <- shoot.fits %>%
+  mutate(glancelmer = map(fit.lmer.ATH1, broom::glance),
+         tidylmer = map(fit.lmer.ATH1, broom::tidy)
+  ) # see tidy.lm
+```
+
+# unnesting by unnest() 
+```{r}
+shoot.fits.summary %>% unnest(tidylmer) %>% head(100) %>% View()
+```
+
+# make a 1 row summary of the tidy results (modified from copy from J's script "SingleGeneLME_DGE.Rmd")
+
+```{r eval=TRUE}
+shoot.fits.summary.table.all <- shoot.fits.summary %>% unnest(tidylmer, .drop = TRUE) %>%
+  select(element, term, estimate, std.error, p.value) %>%
+  na.omit() %>%
+  mutate(p.value = ifelse(term=="(Intercept)", NA, p.value), # we don't care about intercept p-value and don't want it to mess up FDR
+         FDR = p.adjust(p.value, "fdr")) %>%
+  gather(key="key", value="value", estimate, std.error, p.value, FDR) %>%
+  mutate(key=str_c(key, "_", term)) %>%
+  select(-term) %>%
+  spread(key=key, value=value) %>% 
+  arrange(FDR_trtKCl) #%>% head(100) %>% View()
+# how many DEGs?
+shoot.fits.summary.table.all %>% filter(FDR_trtKCl < 0.05) %>% dim()
+write_csv(shoot.fits.summary.table.all,path=file.path("custom_categories","N.Wang2013.shoot.fits.summary.table.all.csv.gz"))
+```
+
+# How to calculate logFC?
+# read shoot.fits.summary.table.all 
+```{r}
+shoot.fits.summary.table.all<-read_csv(file.path("custom_categories","N.Wang2013.shoot.fits.summary.table.all.csv.gz"))
+shoot.fits.summary.table.all
+# 
+# only this works
+fits.summary.unnest<-shoot.fits.summary %>% 
+  #head(10) %>% 
+  mutate(predicted.values=map(fit.lmer.ATH1,predict)) %>% unnest(predicted.values) 
+# adding samplename column
+samplename<-design.shoot %>% unite(samplename,trt,rep,sep=".") %>% dplyr::select(samplename) %>% as_vector()
+# calculate predicted expression values (used also for expression graph)
+fits.element.exp.value<-fits.summary.unnest %>% ungroup() %>% inner_join(affyData2unique, by="element") %>% group_by(element) %>% mutate(samplename=samplename)  %>% 
+  separate(samplename,c("trt","rep"),sep="\\.") %>% rename(value=predicted.values) %>% dplyr::select(element,value,AGI,description,trt,rep)
+write_csv(fits.element.exp.value,file.path("custom_categories","N.Wang2013.shoot.fits.element.exp.value.csv.gz"))
+# calculate mean value per element, treatment
+fits.element.exp.value.mean <- fits.element.exp.value %>%
+  group_by(element,trt) %>% 
+  summarise(mean.element=mean(value)) %>% 
+  spread(trt,mean.element,-1) %>%
+  inner_join(affyData2unique, by="element") # only one element per one locus
+#  check if "one" per one element
+ fits.element.exp.value.mean %>% group_by(element) %>% summarize(num.element=n()) %>% arrange(num.element) %>% View()
+ # calculate log fold changes per each locus (one locus = one element)
+ fits.summary.AGI.FC <- fits.element.exp.value.mean %>% 
+   group_by(AGI) %>% 
+   mutate(mean.FC.AGI=log(KCl/KNO3)) %>%
+  # add FDR_trtKCl
+  inner_join(shoot.fits.summary.table.all 
+            %>% dplyr::select(element,`FDR_trtKCl`), by="element") 
+ fits.summary.AGI.FC %>% View()
+ # check AGI number
+ fits.summary.AGI.FC %>% group_by(AGI) %>% summarize(num.AGI=n()) %>% arrange(num.AGI) %>% View() # there is no  "no_match"
+# write
+write_csv(fits.summary.AGI.FC,path=file.path("custom_categories","N_Wang2013.shoot.fits.summary.AGI.FC.csv.gz"))
+```
+
+# expression pattern (root)
+```{r eval=TRUE}
+fits.summary.AGI.FC <- read_csv(file.path("custom_categories","N_Wang2013.root.fits.summary.AGI.FC.csv.gz"))
+fits.element.exp.value <- read_csv(file.path("custom_categories","N.Wang2013.root.fits.element.exp.value.csv.gz"))
+# N_Wang2013 N deficienty
+gene.of.interest.FDR.up <- fits.summary.AGI.FC %>% ungroup() %>% rename(FDR=`FDR_trtKCl`) %>% filter(FDR<0.05,mean.FC.AGI>0) %>% dplyr::select(AGI,FDR) %>% arrange(FDR) 
+print("logFC>0")
+p.up<-expression.pattern.AT.graph.ATH1(target.genes.FDR=gene.of.interest.FDR.up[1:5,],
+                              data=fits.element.exp.value,
+                              sample.description=design,
+                              title="N_Wang2013 root -N up") # good
+p.up
+ggsave(p.up,filename=file.path("custom_categories","N_Wang2013_root.up.png"))
+expression.down.plot <- "N_Wang2013_root.down.png"
+
+# N_Wang2013 N deficienty down
+gene.of.interest.FDR.down <- fits.summary.AGI.FC %>% ungroup() %>% rename(FDR=`FDR_trtKCl`) %>% filter(FDR<0.05,mean.FC.AGI<0) %>% dplyr::select(AGI,FDR) %>% arrange(FDR) 
+print("logFC<0")
+p.down<-expression.pattern.AT.graph.ATH1(target.genes.FDR=gene.of.interest.FDR.down[1:5,],
+                              data=fits.element.exp.value,
+                              sample.description=design,
+                              title="N_Wang2013 root -N down") # good
+p.down
+ggsave(p.down,filename=file.path("custom_categories","N_Wang2013_root.down.png"))
+
+```
+
+# expression pattern (shoot)
+```{r eval=TRUE}
+fits.summary.AGI.FC <- read_csv(file.path("custom_categories","N_Wang2013.shoot.fits.summary.AGI.FC.csv.gz"))
+fits.element.exp.value <- read_csv(file.path("custom_categories","N.Wang2013.shoot.fits.element.exp.value.csv.gz"))
+# N_Wang2013 N deficienty
+gene.of.interest.FDR.up <- fits.summary.AGI.FC %>% ungroup() %>% rename(FDR=`FDR_trtKCl`) %>% filter(FDR<0.05,mean.FC.AGI>0) %>% dplyr::select(AGI,FDR) %>% arrange(FDR) 
+print("logFC>0")
+p.up<-expression.pattern.AT.graph.ATH1(target.genes.FDR=gene.of.interest.FDR.up[1:5,],
+                              data=fits.element.exp.value,
+                              sample.description=design,
+                              title="N_Wang2013 shoot -N up") # good
+p.up
+ggsave(p.up,filename=file.path("custom_categories","N_Wang2013_shoot.up.png"))
+expression.down.plot <- "N_Wang2013_shoot.down.png"
+
+# N_Wang2013 N deficienty down
+gene.of.interest.FDR.down <- fits.summary.AGI.FC %>% ungroup() %>% rename(FDR=`FDR_trtKCl`) %>% filter(FDR<0.05,mean.FC.AGI<0) %>% dplyr::select(AGI,FDR) %>% arrange(FDR) 
+print("logFC<0")
+p.down<-expression.pattern.AT.graph.ATH1(target.genes.FDR=gene.of.interest.FDR.down[1:5,],
+                              data=fits.element.exp.value,
+                              sample.description=design,
+                              title="N_Wang2013 shoot -N down") # good
+p.down
+ggsave(p.down,filename=file.path("custom_categories","N_Wang2013_shoot.down.png"))
+
+```
+
+# Session info
+```{r}
+sessionInfo()
+```

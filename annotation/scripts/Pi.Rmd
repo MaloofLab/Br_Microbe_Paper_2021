@@ -1,0 +1,191 @@
+---
+title: "Phosphate"
+output:
+  html_document:
+    df_print: paged
+editor_options: 
+  chunk_output_type: inline
+---
+
+* To Do
+  + cleanup scripts, especially correct directory names.
+
+Phosphate deficiency responsive genes.
+
+|our purpose|Study|plant|samples|transcriptome platform|available data|available raw data|
+|----|----|--|------|--|--------|-|
+|Pi deficiency responsive genes|[Liu et al. 2016](https://www.pnas.org/content/116/50/24933)|Arabidopsis thaliana|Col-0 and T-DNA insertion mutants examined P+ P- conditions; tissue collected for RNA-seq on 11-13 day old seedlings|RNAseq|Supplementary Data 1. RNA-seq analyses of WT and p25S;1-GFP-overexpressing plants grown under Pi-sufficient and -deficient conditions|[GEO - GSE74856](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE74856)|
+
+# installation
+```{r eval=FALSE, include=FALSE}
+install.packages("tidyverse")
+install.packages("broom")
+install.packages("broom.mixed")
+install.packages("lmerTest")
+install.packages("rmarkdown")
+# https://bioconductor.org/packages/devel/workflows/vignettes/maEndToEnd/inst/doc/MA-Workflow.html
+install.packages("devtools")
+library(devtools)
+devtools::install_github("r-lib/remotes")
+#library(remotes)
+#packageVersion("remotes") # has to be 1.1.1.9000 or later
+remotes::install_github("b-klaus/maEndToEnd", ref="master")
+```
+
+# prep
+```{r setup, include=FALSE}
+#library(knitr)
+knitr::opts_chunk$set(echo = TRUE,error=TRUE)
+#library(d3heatmap)
+#library(flexdashboard)
+library(edgeR);library(tidyverse)
+library(readr);library(readxl)
+library(stringr)
+# for microarray 
+library(lmerTest);library(broom);library(broom.mixed);library(lme4);library(affy)
+# https://bioconductor.org/packages/devel/workflows/vignettes/maEndToEnd/inst/doc/MA-Workflow.html
+# for expression pattern
+source("Expression_pattern_graph.R")
+source("addAGIAnno.R")
+source("threecomparison.edgeR.DEG.R")
+```
+
+* wroking Br_microbiome_exp1_3_customcategory/Pi_Liu_2016/
+* downloading fastq files (select files in SRA selector and donwload SRR_Acc_List.txt) (done)
+* Only Col samples downloaded
+```{r eval=FALSE}
+while read line; do /usr/local/stow/sratoolkit.2.9./bin/fastq-dump --split-files --gzip ${line}; done < SRR_Acc_List.txt 
+# missing libraries downloaded
+while read line; do /usr/local/stow/sratoolkit.2.9.2-ubuntu64/bin/fastq-dump --split-files --gzip ${line}; done < SRRb
+```
+
+mapping (on going)
+```{r eval=FALSE}
+# working in fastq file directory
+# making directory for mapped 
+system("mkdir kallisto_out")
+# go to fastq file directory
+# reading fastq files (in fastq file directory)
+fastqfiles<-list.files(pattern="fastq.gz")
+# fastq files with paired end 
+fastqfiles.title<-gsub("(SRR\\d+)(\\_)(1|2)(.fastq.gz)","\\1",fastqfiles) # works
+# for missing fastqfiles
+fastqfiles.title<-"SRR2932420"
+for(x in fastqfiles.title) {
+system(paste("kallisto quant -i ../../NGS/references/TAIR10_cdna_20110103_representative_gene_model_updated_kallisto_index  -o kallisto_out/",x," ",x,"_1.fastq.gz ",x,"_2.fastq.gz", sep="") )
+}
+```
+
+# copy kallisto_out directory in Whitney under input directory
+## get reads and create data frame
+```{r}
+files <- dir(file.path("intermediate","Pi_Liu_2016","kallisto_out"), include.dirs = TRUE) # rename kallisto out folder
+files
+```
+
+# design
+* download SraRunTable.txt from [RunSelector MetaData](https://www.ncbi.nlm.nih.gov/Traces/study/?acc=SRP093743&o=acc_s%3Aa)
+
+```{r}
+design <- read_csv(file.path("intermediate","Pi_Liu_2016","SraRunTable_Pi_Liu_2016.txt")) %>%
+  dplyr::select(Run,plant,time,tissue,treatment) %>%   
+  mutate(treatment=str_replace_all(treatment," ","_")) %>% 
+  # 10 days is actually 0 day (10 day + 1 or 3 days -P treatment)
+  mutate(time=str_replace_all(time," ","_")) %>% 
+  mutate(time=str_replace_all(time,"10_day","0_day")) %>%
+  unite(group,c(plant,time,tissue,treatment),remove=FALSE) %>%
+  rename(trt=treatment,gt=plant)
+str(design)
+# separate root and shoot
+design.root <- design %>% filter(tissue=="root", gt=="Col-0");design.root
+design.shoot <- design %>% filter(tissue=="shoot",gt=="Col-0");design.shoot
+```
+# 
+```{r}
+counts.list <- map(files, ~ read_tsv(
+  file=file.path("intermediate","Pi_Liu_2016","kallisto_out",.,"abundance.tsv"),
+  col_types = "cdddd"))
+names(counts.list) <- files
+```
+
+```{r}
+counts <- sapply(counts.list, dplyr::select, est_counts) %>% 
+  bind_cols(counts.list[[1]][,"target_id"],.)
+counts[is.na(counts)] <- 0
+colnames(counts) <- sub(".est_counts","",colnames(counts),fixed = TRUE)
+counts
+# only Col-0 and separate root and shoot. subset counts by tissue 
+counts.root <- counts %>% dplyr::select("target_id",design.root %>% pull(Run)) 
+counts.shoot <- counts %>% dplyr::select("target_id",design.shoot %>% pull(Run)) 
+```
+
+# Note: better to keep tissue info in group to double check final logFC data or graph?
+# start DEG analysis module
+* input is "counts" and "design". output is one table with all genes with expression level (cpm) for each treatment and logFC, and FDR for treatment, and annotation 
+* counts2 colnames and group from design object should be matched.
+
+# root
+```{r}
+counts <- counts.root
+group <- design.root %>% pull(group) %>% as_factor() %>% fct_relevel("Col-0_0_day_root_Pi_sufficiency")
+group
+DEG1filename <- "minusPi_1d_Liu_2016_root.DEGs.csv.gz"
+DEG2filename <- "minusPi_3d_Liu_2016_root.DEGs.csv.gz"
+
+dge.object.filepath.name <- file.path("intermediate","Pi_Liu_2016","minusPi_Liu_2016_root.dge.Rdata")
+expression1.up.plot <- "minusPi_1d_Liu_2016_root.up.png" # coef=2 is 1d in group
+expression1.down.plot <- "minusPi_1d_Liu_2016_root.down.png" # coef=2 is 1d in group
+expression2.up.plot <- "minusPi_3d_Liu_2016_root.up.png" # coef=3 is 3d in group
+expression2.down.plot <- "minusPi_3d_Liu_2016_root.down.png" # coef=3 is 3d in group
+```
+# DEG analysis (one treatment)
+
+* Outputs: edgeR DEG table with FDR
+## root
+```{r}
+threecomparison.edgeR.DEG(counts=counts,
+                        group=group, 
+                        DEG1filename=DEG1filename,
+                        DEG2filename=DEG2filename,
+                        dge.object.filepath.name=dge.object.filepath.name,
+                        expression1.up.plot=expression1.up.plot,
+                        expression1.down.plot=expression1.down.plot,
+                        expression2.up.plot=expression2.up.plot,
+                        expression2.down.plot=expression2.down.plot
+                        )
+```
+
+## shoot
+### file names
+```{r}
+counts <- counts.shoot
+group <- design.shoot %>% pull(group) %>% as_factor() %>% fct_relevel("Col-0_0_day_shoot_Pi_sufficiency")
+group
+DEG1filename <- "minusPi_1d_Liu_2016_shoot.DEGs.csv.gz"
+DEG2filename <- "minusPi_3d_Liu_2016_shoot.DEGs.csv.gz"
+
+dge.object.filepath.name <- file.path("intermediate","Pi_Liu_2016","minusPi_Liu_2016_shoot.dge.Rdata")
+expression1.up.plot <- "minusPi_1d_Liu_2016_shoot.up.png" # coef=2 is 1d in group
+expression1.down.plot <- "minusPi_1d_Liu_2016_shoot.down.png" # coef=2 is 1d in group
+expression2.up.plot <- "minusPi_3d_Liu_2016_shoot.up.png" # coef=3 is 3d in group
+expression2.down.plot <- "minusPi_3d_Liu_2016_shoot.down.png" # coef=3 is 3d in group
+```
+### DEG
+```{r}
+threecomparison.edgeR.DEG(counts=counts,
+                        group=group, 
+                        DEG1filename=DEG1filename,
+                        DEG2filename=DEG2filename,
+                        dge.object.filepath.name=dge.object.filepath.name,
+                        expression1.up.plot=expression1.up.plot,
+                        expression1.down.plot=expression1.down.plot,
+                        expression2.up.plot=expression2.up.plot,
+                        expression2.down.plot=expression2.down.plot
+                        )
+```
+
+# Session info
+```{r}
+sessionInfo()
+```
+

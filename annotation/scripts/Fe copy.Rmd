@@ -1,0 +1,462 @@
+---
+title: "iron"
+output:
+  html_document:
+    df_print: paged
+editor_options: 
+  chunk_output_type: console
+---
+
+* To Do
+  + cleanup scripts, especially correct directory names.
+  
+
+
+Iron deficiency responsive genes.
+
+|our purpose|Study|plant|samples|transcriptome platform|available data|available raw data|
+|----|----|--|------|--|--------|-|
+|Fe deficiency responsive genes|[Kim et al. 2019](https://www.pnas.org/content/116/50/24933)|Arabidopsis thaliana|RNA was harvested from root tissues from WT and uri plants grown on half-strength B5 for 2 weeks and then transferred to either +Fe or -Fe conditions for 3 days. Two biological replicates were prepared per genotype and per condition.|Microarray (ATH1). FC>1.5 or -1.5.|Dataset S1|[GEO GSE137201, Col +/- Fe](http://bar.utoronto.ca/NASCArrays/index.php?ExpID=480)|
+|Fe deficiency responsive genes|[Kailasam (2019)](https://doi.org/10.1111/nph.16440)|Arabidopsis thaliana|10d seedlings (1/2MS with 1% sucrose) + 2d +/1 Fe treatment.|RNAseq|Only RFKP and logFC. LogFC>2 or -2 is used for DEG.|[E-MTAB-8157]()	https://www.ebi.ac.uk/arrayexpress/experiments/E-MTAB-8157/)|
+
+
+# installation
+```{r eval=FALSE, include=FALSE}
+install.packages("tidyverse")
+install.packages("broom")
+install.packages("broom.mixed")
+install.packages("lmerTest")
+install.packages("rmarkdown")
+# https://bioconductor.org/packages/devel/workflows/vignettes/maEndToEnd/inst/doc/MA-Workflow.html
+install.packages("devtools")
+library(devtools)
+devtools::install_github("r-lib/remotes")
+#library(remotes)
+#packageVersion("remotes") # has to be 1.1.1.9000 or later
+remotes::install_github("b-klaus/maEndToEnd", ref="master")
+```
+
+# prep
+```{r setup, include=FALSE}
+#library(knitr)
+knitr::opts_chunk$set(echo = TRUE,error=TRUE)
+#library(d3heatmap)
+#library(flexdashboard)
+library(edgeR);library(tidyverse)
+library(readr);library(readxl)
+library(stringr)
+# for microarray 
+library(lmerTest);library(broom);library(broom.mixed);library(lme4);library(affy)
+# https://bioconductor.org/packages/devel/workflows/vignettes/maEndToEnd/inst/doc/MA-Workflow.html
+# for expression pattern
+source("Expression_pattern_graph.R")
+```
+
+# Kim 2019. Microarray (ATH1)
+Purpose:
+* Analize ATH1 microarray raw data () by lmer and broom.mixed packages for tidy way. See "Single Gene LME" done by Julin.
+
+# Read cel files and normalize data (copied from "RNAseqVSmicroarray_publication_final.R")
+```{r eval=TRUE}
+cel.filename<-list.files(pattern=".CEL$","/Volumes/data_work/Data8/Microarray/GSE137201_RAW") # no directory info
+cel.filename2<-list.files(pattern=".CEL$",path=file.path("","Volumes","data_work","Data8","Microarray","GSE137201_RAW"),full.names=TRUE) # "" is needed for file.path()!!!  with directory info
+Data1<-ReadAffy(filenames =cel.filename2) 
+head(Data1)
+eset <- rma(Data1) # normalize chips (old way)
+# using expresso (see affy vignett)
+ eset.expresso<-expresso(Data1,normalize.method="qspline",
+               bgcorrect.method="rma",pmcorrect.method="pmonly",
+               summary.method="liwong")
+ class(eset.expresso) # ExpressionSet object. See Biobase vignet
+ head(eset.expresso)
+ exprs(eset.expresso) # expression data
+ experimentData(eset.expresso) %>% head()
+ # write text file (affy package vignett, 3.3) not used
+# write.exprs(eset.expresso, file=file.path("..","output","eset.expresso.txt"))
+```
+# read probe ID and AGI
+```{r eval=TRUE}
+affyData <- read_csv(file.path("","Volumes","data_work","Data8","NGS_related","Arabidopsis_analysis","affy_ATH1_array_elements-2010-12-20.csv")) #read TAIR annotation data from file (TAIR10)
+affyData2<-affyData[,c("array_element_name","is_control","locus","description","chromosome","start","stop")]
+names(affyData2) <- c("element","is.control","AGI","description","chromosome","start","stop")#get rid of underlines
+head(affyData2)
+# only unique element per AGI (is this OK? ASk Julin)
+affyData2.elementPerAGI.table<- affyData2 %>% group_by(AGI) %>% summarize(n=n())
+table(affyData2.elementPerAGI.table$n)
+affyData2unique<-affyData2.elementPerAGI.table %>% filter(n<2) %>% left_join(affyData2,by="AGI")
+dim(affyData2unique) #[1] 21789     8 use this instead of affyData2
+dim(affyData2) #[1] 22810     7
+```
+
+# Make expression value tibble
+```{r eval=TRUE}
+featureNames(eset.expresso)  # only probe name
+exp.values.Fe.Kim2019<-exprs(eset.expresso) %>% as_tibble(rownames="element") 
+```
+
+
+# experimental design
+```{r eval=TRUE}
+cel.filename<-list.files(pattern=".CEL$","/Volumes/data_work/Data8/Microarray/GSE137201_RAW") # no directory info
+# GSM4072897	002184_SK1: WT -Fe Root Biological Rep1
+# GSM4072898	002185_SK2: WT -Fe Root Biological Rep2
+# GSM4072899	002186_SK3: uri -Fe Root Biological Rep1
+# GSM4072900	002187_SK4: uri -Fe Root Biological Rep2
+# GSM4072901	002276_SK5: WT +Fe Root Biological Rep1
+# GSM4072902	002277_SK6: WT +Fe Root Biological Rep2
+# GSM4072903	002278_SK7: uri +Fe Root Biological Rep1
+# GSM4072904	002279_SK8: uri +Fe Root Biological Rep2
+
+design.Kim2019<-tibble(cell_file=cel.filename,genotype=rep(rep(c("WT","uri"),each=2),2),trt=rep(c("Fe-","Fe+"),each=4),tissue="root",rep=rep(1:2,4))
+design.Kim2019
+```
+
+# combine
+```{r eval=TRUE}
+exp.values.Fe.Kim2019.combined <- exp.values.Fe.Kim2019 %>% gather("cell_file","value",-element) %>% left_join(design.Kim2019,by="cell_file") %>% 
+  left_join(affyData2unique, by="element") 
+# check 100 genes
+exp.values.Fe.Kim2019.combined %>% arrange(AGI) #%>% head(100)
+# factor
+exp.values.Fe.Kim2019.combined %>% mutate(genotype=factor(genotype,levels=c("WT","uri")),trt=factor(trt, levels=c("Fe+","Fe-")),rep=as.character(rep)) %>% str()
+# write in csv file
+write_csv(exp.values.Fe.Kim2019.combined,path=file.path("intermediate","Fe_Kim_2019","exp.values.Fe.Kim2019.combined.csv.gz"))
+```
+
+# lmer function
+```{r eval=TRUE}
+dofit.lmer.ATH1 <- function(genedata) { # gives a lot of singularity warnings
+  lmer(value ~ genotype*trt + (1|rep),
+       data=genedata)
+}
+```
+
+#organize the data to make it easy to fit a model to each element (not AGI)
+```{r eval=TRUE}
+exp.values.Fe.Kim2019.combined<-read_csv(file.path("intermediate","Fe_Kim_2019","exp.values.Fe.Kim2019.combined.csv.gz"))
+exp.values.Fe.Kim2019.combined.nest <- exp.values.Fe.Kim2019.combined %>% dplyr::select(value,genotype,trt,rep,element) %>% 
+  mutate(trt=factor(trt,levels=c("Fe+","Fe-"))) %>%
+  group_by(element) %>%
+  nest()
+exp.values.Fe.Kim2019.combined.nest %>% summarize(num=n()) %>% arrange(num) %>% head() #%>% View() #OK
+exp.values.Fe.Kim2019.combined.nest$data[[1]] %>% str() # factor!
+
+```
+
+# do a fit for each gene.  
+```{r eval=TRUE}
+Fe.Kim2019.fits <- exp.values.Fe.Kim2019.combined.nest %>% #%>% head(100) %>% 
+  #magrittr::extract(1:10,) %>% # comment out this line to do full set; uncomment for testing on small set.
+  mutate(fit.lmer.ATH1 = map(data, dofit.lmer.ATH1),
+         lmersingular = map_lgl(fit.lmer.ATH1, isSingular))
+head(Fe.Kim2019.fits)
+
+```
+
+# add model summaries (5-10 minutes) using broom package (read "introduction to broom" vegnet)
+```{r eval=TRUE}
+Fe.Kim2019.fits.summary <- Fe.Kim2019.fits %>%
+    magrittr::extract(1:10,) %>% # comment out this line to do full set; uncomment for testing on small set.
+  mutate(glancelmer = map(fit.lmer.ATH1, broom::glance),
+         tidylmer = map(fit.lmer.ATH1, broom::tidy)
+  ) # see tidy.lm
+#save(Fe.Kim2019.fits.summary,file=file.path("..","..","Fe.Kim2019.fits.summary.Rdata"))
+```
+
+# unnesting by unnest() 
+```{r}
+#load(file.path("..","..","Fe.Kim2019.fits.summary.Rdata"))
+Fe.Kim2019.fits.summary %>% unnest(tidylmer) %>% head(100) %>% View()
+```
+
+# make a 1 row summary of the tidy results (modified from copy from J's script "SingleGeneLME_DGE.Rmd")
+
+```{r eval=FALSE}
+Fe.Kim2019.fits.summary.table.all <- Fe.Kim2019.fits.summary %>% unnest(tidylmer, .drop = TRUE) %>%
+  dplyr::select(element, term, estimate, std.error, p.value) %>%
+  na.omit() %>%
+  mutate(term=str_replace(term, "genotype", "gt"),
+         p.value = ifelse(term=="(Intercept)", NA, p.value), # we don't care about intercept p-value and don't want it to mess up FDR
+         FDR = p.adjust(p.value, "fdr")) %>%
+  gather(key="key", value="value", estimate, std.error, p.value, FDR) %>%
+  mutate(key=str_c(key, "_", term)) %>%
+  dplyr::select(-term) %>%
+  spread(key=key, value=value) %>% 
+  arrange(`FDR_trtFe-`) #%>% head(100) %>% View()
+# number of DEGs
+Fe.Kim2019.fits.summary.table.all %>% filter(`FDR_trtFe-` < 0.05) %>% dim() # 7545 17
+#
+write_csv(Fe.Kim2019.fits.summary.table.all,path=file.path("intermediate","Fe_Kim_2019","Fe.Kim2019.fits.summary.table.all.csv.gz"))
+```
+# DGE table
+```{r}
+Fe.Kim2019.fits.summary.table.all<-read_csv(file.path("intermediate","Fe_Kim_2019","Fe.Kim2019.fits.summary.table.all.csv.gz"))
+# number of DEGs
+Fe.Kim2019.fits.summary.table.all %>% filter(`FDR_trtFe-` < 0.05) %>% dim() # 7545 17
+
+Fe.Kim2019.fits.summary.table.all %>% knitr::kable()
+```
+
+# How to calculate logFC?
+* One option is using ?lme4::predict.merMod, which worked
+* Another option is to add up estimate
+
+```{r}
+# 
+Fe.Kim2019.fits.summary.table.all<-read_csv(file.path("intermediate","Fe_Kim_2019","Fe.Kim2019.fits.summary.table.all.csv.gz"))
+# only this works
+Fe.Kim2019.fits.summary.unnest<-Fe.Kim2019.fits.summary %>% 
+  #head(10) %>% 
+  mutate(predicted.values=map(fit.lmer.ATH1,predict)) %>% unnest(predicted.values) 
+# adding samplename column
+samplename<-design.Kim2019 %>% unite(samplename,genotype,trt,rep,sep=".") %>% dplyr::select(samplename) %>% as_vector()
+#samplename<-Fe.Kim2019.fits$data[[1]] %>% unite(samplename,genotype,Fe,rep,sep=".") %>% dplyr::select(samplename) %>% as_vector()
+# calculate predicted expression values (used also for expression graph)
+Fe.Kim2019.fits.element.exp.value<-Fe.Kim2019.fits.summary.unnest %>% ungroup() %>% left_join(affyData2unique, by="element") %>% group_by(element) %>% mutate(samplename=samplename)  %>% 
+  separate(samplename,c("gt","trt","rep"),sep="\\.") %>% rename(value=predicted.values)
+
+Fe.Kim2019.fits.element.exp.value.mean <- Fe.Kim2019.fits.element.exp.value %>% 
+  group_by(gt,element,trt) %>% 
+  summarise(mean.element=mean(value)) %>% 
+  spread(trt,mean.element,-1) %>%
+  left_join(affyData2unique, by="element")
+# calculate all element log fold change (FC)
+Fe.Kim2019.fits.element.exp.value %>%
+  mutate(Fe_Kim2019.fits=log(`Fe-`/`Fe+`)) %>%
+  # add FDR_trtFe-
+  left_join(Fe.Kim2019.fits.summary.table.all %>% dplyr::select(element,`FDR_trtFe-`), by="element") -> Fe.Kim2019.fits.summary.element.FC
+# check
+ Fe.Kim2019.fits.summary.element.FC %>% group_by(gt,element) %>% summarize(num.element=n()) %>% arrange(num.element) %>% View()
+ # calculate log fold changes per each locus
+ Fe.Kim2019.fits.summary.AGI.FC <- Fe.Kim2019.fits.summary.element.FC %>% group_by(gt,AGI) %>% summarise(mean.FC.AGI=mean(Fe_Kim2019.fits)) %>% left_join(affyData2unique, by="AGI") %>%
+  # add FDR_trtFe-
+  left_join(Fe.Kim2019.fits.summary.table.all %>% dplyr::select(element,`FDR_trtFe-`), by="element") 
+ # check AGI number
+ Fe.Kim2019.fits.summary.AGI.FC %>% group_by(gt,AGI) %>% summarize(num.AGI=n()) %>% arrange(num.AGI) %>% View() # there is "no_match"
+ # only gt=="WT"
+ Fe.Kim2019.fits.summary.AGI.FC.WT<-Fe.Kim2019.fits.summary.AGI.FC %>% filter(gt=="WT")
+# write
+write_csv(Fe.Kim2019.fits.summary.AGI.FC.WT,path=file.path("custom_categories","Fe.Kim2019.fits.summary.AGI.FC.WT.csv.gz"))
+
+```
+
+
+# comparison between Kim's paper and my analysis
+# DEG.Fe.deficient.Kim.2019
+### reading Fe related genes from supplement table
+```{r}
+# Kim SA, LaCroix IS, Gerber SA, Guerinot ML (2019) The iron deficiency response in Arabidopsis thaliana requires the phosphorylated transcription factor URI. PNAS. doi: 10.1073/pnas.1916892116. TableS1 (microarray)
+Kim2019_TS1_iron <- read_excel(file.path("custom_categories","Fe_def_KIM_2019_pnas.1916892116.sd01.xlsx"), sheet = "iron deficiency reponsive genes") %>%
+  select(GeneID=`Gene ID`, GeneSymbol=`Gene Symbol`, FC= `Fold Changes (-Fe/+Fe)`) %>%
+  mutate(Kim2019=log2(FC))
+```
+
+* 121 genes overlaps (Kim 2019 table S1 225 genes)
+* Check expression pattern?
+```{r}
+Fe.Kim2019.fits.summary.AGI.FC.WT<-read_csv(file.path("custom_categories","Fe.Kim2019.fits.summary.AGI.FC.WT.csv.gz"))
+
+Fe.Kim2019.fits.summary.AGI.FC.WT %>% filter(`FDR_trtFe-`<0.05) %>% dplyr::select(AGI,mean.FC.AGI) %>% rename(Kim2019.Kazulmer=mean.FC.AGI) %>% inner_join(Kim2019_TS1_iron %>% dplyr::select("GeneID","Kim2019"),by=c("AGI"="GeneID")) %>% View() # 121 gene overlapped
+
+```
+
+# Rank Product analysis of Kim 2019 microarray data (omake)
+```{r eval=FALSE}
+library(RankProd)
+# GSM4072897	002184_SK1: WT -Fe Root Biological Rep1
+# GSM4072898	002185_SK2: WT -Fe Root Biological Rep2
+# GSM4072899	002186_SK3: uri -Fe Root Biological Rep1
+# GSM4072900	002187_SK4: uri -Fe Root Biological Rep2
+# GSM4072901	002276_SK5: WT +Fe Root Biological Rep1
+# GSM4072902	002277_SK6: WT +Fe Root Biological Rep2
+# GSM4072903	002278_SK7: uri +Fe Root Biological Rep1
+# GSM4072904	002279_SK8: uri +Fe Root Biological Rep2
+
+exp.values.Fe.Kim2019.combined %>% filter(genotype=="WT") %>% dplyr::select(element, cell_file,value) %>% spread(cell_file,value,-1)  -> Kim2019.data.WT
+Kim2019.data.WT <- as.data.frame(Kim2019.data.WT[,-1])
+rownames(Kim2019.data.WT) <- as_vector(Kim2019.data.WT$element)
+RP.out <- RP(Kim2019.data.WT,c(0,0,1,1), num.perm=100, logged=TRUE,
+             na.rm=FALSE,plot=FALSE,  rand=123)
+RP.out
+```
+
+# expression pattern (under construction)
+```{r eval=FALSE}
+# expression pattern of upregulated genes upon Fe deficienty
+gene.of.interest.FDR.up <- Fe.Kim2019.fits.summary.AGI.FC.WT %>% ungroup() %>% rename(FDR=`FDR_trtFe-`) %>% filter(FDR<0.05,mean.FC.AGI>0) %>% dplyr::select(AGI,FDR) %>% arrange(FDR) 
+print("logFC>0")
+expression.pattern.AT.graph.ATH1(target.genes.FDR=gene.of.interest.FDR.up[1:5,],
+                              data=Fe.Kim2019.fits.element.exp.value,
+                              sample.description=design.Kim2019,
+                              title="Fe- up") # good
+# Fe- down
+gene.of.interest.FDR.down <- Fe.Kim2019.fits.summary.AGI.FC.WT %>% ungroup() %>% rename(FDR=`FDR_trtFe-`) %>% filter(FDR<0.05,mean.FC.AGI<0) %>% dplyr::select(AGI,FDR) %>% arrange(FDR) 
+print("logFC>0")
+expression.pattern.AT.graph.ATH1(target.genes.FDR=gene.of.interest.FDR.down[1:5,],
+                              data=Fe.Kim2019.fits.element.exp.value,
+                              sample.description=design.Kim2019,
+                              title="Fe- down") # good
+```
+
+
+##########################
+# Kailasam (2019). RNAseq  E-MTAB-8157
+
+* wroking Br_microbiome_exp1_3_customcategory/Fe_Kailasam_2019/fastq/
+
+mapping
+```{r eval=FALSE}
+# working in fastq file directory
+# making directory for mapped 
+system("mkdir ../kallisto_sam_out2")
+# go to fastq file directory
+# reading fastq files (in fastq file directory)
+#fastqfiles<-list.files(pattern="fastq.gz")
+# fastq files with single end 
+# fastqfiles.SE<- fastqfiles %>% as_tibble() %>% separate(value,into=c("SRA","type","compress"),sep="\\.") %>% separate(SRA,into=c("SRA","pair"),sep="_") %>% group_by(SRA) %>%summarize(num=n()) %>% filter(num==1) %>% select(SRA) %>% as_vector()
+fastqfiles<-list.files(pattern="fastq.gz")
+#fastqfiles.title<-gsub("(ERR+)(\\_1|_2)(\\.fastq\\.qz)",//2,fastqfiles) # does not work
+#fastqfiles.title<-gsub("(ERR+)(_)(1|2)(.fastq.qz)","//1",fastqfiles)
+#gsub("(ERR+)(\\_)(1|2)(\\.fastq\\.qz)","//1",fastqfiles)
+#gsub("(ERR\\d+)(\\_)(1|2)","\\1","ERR3445475_1") # works
+#gsub("(ERR\\d+)(\\_)(1|2)(+)","\\1","ERR3445475_1.fastq.gz")
+#gsub("(ERR\\d+)(\\_)(1|2)(.fastq.gz)","\\1","ERR3445475_1.fastq.gz") # works
+fastqfiles.title<-gsub("(ERR\\d+)(\\_)(1|2)(.fastq.gz)","\\1",fastqfiles) # works
+system(paste("kallisto quant -i ../../references/TAIR10_cdna_20110103_representative_gene_model_updated_kallisto_index  -o ../kallisto_sam_out2/ ",fastqfiles)) # this is not what I want
+# manually write script
+system("kallisto quant -i ../../references/TAIR10_cdna_20110103_representative_gene_model_updated_kallisto_index  -o ../kallisto_sam_out2/ERR3445475/ ERR3445475_1.fastq.gz ERR3445475_2.fastq.gz")
+system("kallisto quant -i ../../references/TAIR10_cdna_20110103_representative_gene_model_updated_kallisto_index  -o ../kallisto_sam_out2/ERR3445476/ ERR3445476_1.fastq.gz ERR3445476_2.fastq.gz")
+system("kallisto quant -i ../../references/TAIR10_cdna_20110103_representative_gene_model_updated_kallisto_index  -o ../kallisto_sam_out2/ERR3445477/ ERR3445477_1.fastq.gz ERR3445477_2.fastq.gz")
+system("kallisto quant -i ../../references/TAIR10_cdna_20110103_representative_gene_model_updated_kallisto_index  -o ../kallisto_sam_out2/ERR3445478/ ERR3445478_1.fastq.gz ERR3445478_2.fastq.gz")
+
+```
+
+# copy kallisto_sam_out2 directory in Whitney under input directory
+## get reads and create data frame
+```{r}
+files <- dir(file.path("intermediate","Fe_Kailasam_2019","kallisto_Kailasam2019_out"), include.dirs = TRUE) # rename kallisto out folder
+files %>% head()
+```
+
+```{r}
+counts.list <- map(files, ~ read_tsv(
+  file=file.path("intermediate","Fe_Kailasam_2019","kallisto_Kailasam2019_out",.,"abundance.tsv"),
+  col_types = "cdddd"))
+names(counts.list) <- files
+```
+
+```{r}
+counts.Kailasam2019 <- sapply(counts.list, dplyr::select, est_counts) %>% 
+  bind_cols(counts.list[[1]][,"target_id"],.)
+counts.Kailasam2019[is.na(counts.Kailasam2019)] <- 0
+colnames(counts.Kailasam2019) <- sub(".est_counts","",colnames(counts.Kailasam2019),fixed = TRUE)
+counts.Kailasam2019
+```
+
+```{r eval=FALSE}
+# write_csv(counts.Kailasam2019,file.path("intermediate","Fe_Kailasam_2019","Kailasam2019_raw_counts.csv.gz"))
+```
+
+```{r}
+counts2 <- counts.Kailasam2019 %>% 
+  as.data.frame() %>% 
+  column_to_rownames(var = "target_id") %>%
+  as.matrix() %>%
+  round(0)
+```
+# dge (under construction)
+```{r}
+dge <- DGEList(counts=counts2, 
+               samples=colnames(counts2), 
+               group=factor(rep(c("plusFe","minusFe"),each=2),levels=c("plusFe","minusFe"))
+                                )
+```
+
+# normalize
+
+```{r}
+dge <- calcNormFactors(dge)
+```
+# save
+```{r}
+save(dge, file=file.path("intermediate","Fe_Kailasam_2019","Kailasam2019.Rdata"))
+```
+# DEG
+```{r}
+group<-factor(rep(c("plusFe","minusFe"),each=2),levels=c("plusFe","minusFe"))
+design <- model.matrix(~group)
+y <- estimateDisp(dge,design)
+fit <- glmFit(y,design)
+lrt <- glmLRT(fit,coef=2)
+Fe_deficiency.Kailasam2019.DEGs.all<-topTags(lrt,n = Inf,p.value = 1)$table
+
+```
+# Adding annotation 
+```{r}
+#At.gene.name <-read_tsv("https://www.arabidopsis.org/download_files/Subscriber_Data_Releases/TAIR_Data_20180630/gene_aliases_20180702.txt.gz") # Does work from home when I use Pulse Secure.
+# At.gene.name <- 
+#read_tsv("https://www.arabidopsis.org/download_files/Public_Data_Releases/TAIR_Data_20181231/Araport11_functional_descriptions_20181231.txt.gz") # does not exist anymore
+# updated one (Jan 21, 2020)
+#At.gene.name<-read_tsv("https://www.arabidopsis.org/download_files/Subscriber_Data_Releases/TAIR_Data_20191231/gene_aliases_20191231.txt.gz") # download file and remove all "" with TextWrangler etc
+At.gene.name<-read_tsv(file.path("..","Annotation","input","gene_aliases_20191231.txt")) 
+# combine redundant symbol
+At.gene.name <- At.gene.name %>% group_by(name) %>% summarise(symbol2=paste(symbol,collapse=";"),full_name=paste(full_name,collapse=";"))
+At.gene.name %>% dplyr::slice(100:110)
+At.gene.name %>% filter(name=="AT4G25350") # SHB1
+# add annotiona with full name objects (all)
+Fe_deficiency.Kailasam2019.DEGs.all.anno <- Fe_deficiency.Kailasam2019.DEGs.all %>% rownames_to_column(var="genes") %>% separate(genes,into=c("AGI","variant"),sep="\\.", remove=FALSE) %>% left_join(At.gene.name,by=c(AGI="name")) %>%  dplyr::select(AGI, logFC,logCPM,LR,PValue,FDR,symbol2, full_name)
+Fe_deficiency.Kailasam2019.DEGs.all.anno %>% dplyr::slice(1:100) # %>% View()
+# write csv (all)
+write.csv(Fe_deficiency.Kailasam2019.DEGs.all.anno,file=file.path("custom_categories","Fe_deficiency.Kailasam2019.DEGs.all.anno.csv.gz"))
+```
+
+# Expression pattern
+```{r}
+load(file.path("intermediate","Fe_Kailasam_2019","Kailasam2019.Rdata"))
+Fe_deficiency.Kailasam2019.DEGs.all.anno <- read_csv(file.path("custom_categories","Fe_deficiency.Kailasam2019.DEGs.all.anno.csv.gz"))
+
+Fe_deficiency.Kailasam2019.cpm<-cpm(dge) %>% as_tibble() %>% bind_cols(data.frame(transcript_ID=rownames(dge$counts)),.) %>% separate(transcript_ID,into=c("AGI","variant"),remove=FALSE)
+sample.description.Fe_deficiency.Kailasam2019<-dge$samples %>% as_tibble() %>% dplyr::rename(sample=samples)
+# expression pattern of upregulated genes upon Fe deficienty
+   gene.of.interest.FDR.up <- Fe_deficiency.Kailasam2019.DEGs.all.anno %>% filter(FDR< 0.0001,logFC>0) %>% dplyr::select(AGI,logFC,FDR) %>% arrange(FDR)
+   print("logFC>0")
+p.UP<-expression.pattern.AT.graph.cpm(target.genes.FDR=gene.of.interest.FDR.up[1:5,], data=Fe_deficiency.Kailasam2019.cpm,sample.description=sample.description.Fe_deficiency.Kailasam2019,title="minusFe up")
+ggsave(p.UP, file=file.path("custom_categories","Fe_deficiency_Kailasam2019.up.png"))
+# down-regulated genes upon Fe deficienty
+   print("logFC<0")
+gene.of.interest.FDR.down <- Fe_deficiency.Kailasam2019.DEGs.all.anno %>% filter(FDR< 0.0001,logFC<0) %>%
+     dplyr::select(AGI,logFC,FDR) %>% arrange(FDR)
+p.DOWN<-expression.pattern.AT.graph.cpm(target.genes.FDR=gene.of.interest.FDR.down[1:5,], data=Fe_deficiency.Kailasam2019.cpm,sample.description=sample.description.Fe_deficiency.Kailasam2019,title="minusFe down")
+ggsave(p.DOWN, file=file.path("custom_categories","Fe_deficiency_Kailasam2019.down.png"))
+
+```
+
+get the iron data from Kim (2019) table S1
+```{r}
+Kim2019_TS1_iron <- read_excel("Fe_def_KIM_2019_pnas.1916892116.sd01.xlsx", sheet = "iron deficiency reponsive genes") %>%
+  select(GeneID=`Gene ID`, GeneSymbol=`Gene Symbol`, FC= `Fold Changes (-Fe/+Fe)`) %>%
+  mutate(Kim2019=log2(FC))
+Kim2019_TS1_iron
+```
+
+# comparison between Kim2019 and Kailasam2019
+```{r}
+# Kailasam 2019
+Fe_deficiency.Kailasam2019.DEGs.all.anno <- read_csv(file.path("custom_categories","minusFe_Kailasam2019.DEGs.all.anno.csv.gz"))
+
+# Kim2019 my lmer analysis (Fe.Kim2019.fits.summary.FC)
+Fe.Kim2019.fits.summary.FC<-read_csv(file.path("custom_categories","minusFe_Kim2019.fits.summary.AGI.FC.WT.csv.gz"))
+comparison.Fe<-Fe.Kim2019.fits.summary.FC %>% dplyr::select(AGI,gt,mean.FC.AGI) %>% mutate(Kim2019.Kazulmer=mean.FC.AGI) %>% filter(gt=="WT") %>% dplyr::select(AGI,Kim2019.Kazulmer) %>% inner_join(Kim2019_TS1_iron %>% mutate(logKim2019=log(Kim2019)) %>% dplyr::select(GeneID,logKim2019),by=c("AGI"="GeneID")) %>% full_join(Fe_deficiency.Kailasam2019.DEGs.all.anno %>% rename(Kailasam2019=logFC) %>% dplyr::select(AGI,Kailasam2019),by=c("AGI"="AGI")) 
+library(GGally)
+comparison.Fe %>% ggpairs(columns=2:4,lower = list(continuous = wrap("points", alpha = 0.3)))
+
+#
+Fe.Kim2019.fits.summary.FC %>% dplyr::select(AGI,gt,mean.FC.AGI) %>% mutate(Kim2019.Kazulmer=mean.FC.AGI) %>% filter(gt=="WT") %>% dplyr::select(AGI,Kim2019.Kazulmer) %>% ggplot(aes(Kim2019.Kazulmer)) + geom_histogram()
+```
+
+
+# Session info
+```{r}
+sessionInfo()
+```
+
