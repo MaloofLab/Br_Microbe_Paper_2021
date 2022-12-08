@@ -275,6 +275,30 @@ ggsave(plot.digest,filename="plot.full.signedhybrid.soiltrtFDR0.1.v3.digest.png"
 ggsave(plot.digest,filename="plot.full.signedhybrid.soiltrtFDR0.1.v3.digest.pdf",path=file.path("RNA","output"),width=6.5,height=5)
 ```
 ########## end of fdr < 0.1 #########
+
+# GO ORA of growth or soil related modules (Dec 7, 2022)
+```{r}
+WGCNA.voom5.signedhybrid.all.moduleColors.GOseq.unique <-  read_csv(file.path("RNA","output","WGCNA.voom5.signedhybrid.all.moduleColors.GOseq.unique.csv"))
+# select growth or soil related modules (fdr < 0.05)
+module.soil.leafgrowth %>% filter(fdr < 0.05) %>% separate(module,c("tissue","module2")) %>% unite(name,tissue,module2,sep=".voom5.module.signedhybrid_") %>% dplyr::select(-term) %>% inner_join(WGCNA.voom5.signedhybrid.all.moduleColors.GOseq.unique %>% dplyr::select(-term),.,by="name") %>% write_csv(file.path("RNA","output","WGCNA.voom5.signedhybrid.all.moduleColors.GOseq.unique.growth.soil.associated.csv")) # Table_S3
+```
+
+# Table S5: List of growth-correlated and live-soil responsive genes
+```{r}
+
+```
+
+
+
+
+
+############## pending below #######
+
+
+
+
+
+
 # format: fdr < 0.05 (for soil treatment)
 ```{r}
 # fdr cut off 0.05
@@ -480,6 +504,10 @@ ggsave(plot.digest,filename="plot.full.signedhybrid.soiltrtFDR0.05.v4.digest.png
 # save file (pdf)
 ggsave(plot.digest,filename="plot.full.signedhybrid.soiltrtFDR0.05.v4.digest.pdf",path=file.path("RNA","output"),width=6.5,height=5)
 ```
+
+
+
+
 
 ########################################## pending below #################
 

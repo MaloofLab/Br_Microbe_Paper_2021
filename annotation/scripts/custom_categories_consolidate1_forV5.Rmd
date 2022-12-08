@@ -33,6 +33,7 @@ History
 To Do
 * Cleaning up scripts more
 * having the same x-axis and y-axis for WGCNA heatmap
+* start from "custom_categories.csv.gz"??? (Dec 6, 2022)
 
 #### making root + shoot category with up and down and
 # prep
@@ -90,7 +91,8 @@ colnames(custom.data)
 custom.FC.names <- str_subset(colnames(custom.data), "FC")
 custom.FC.names
 # write csv file for filtered.custom.data to share with team members
-write_csv(custom.data,file.path("annotation","output","custom_categories.csv.gz"))
+write_csv(custom.data,file.path("annotation","output","custom_categories.csv.gz")) #
+
 # filter custom.data by FC and FDR cutoff
 custom.data <- read_csv(file.path("annotation","output","custom_categories.csv.gz"))
 FC_cutoff <- 0.58 # log2

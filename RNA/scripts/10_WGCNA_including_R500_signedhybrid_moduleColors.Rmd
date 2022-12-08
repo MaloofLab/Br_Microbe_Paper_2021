@@ -39,15 +39,14 @@ allowWGCNAThreads(nThreads = NULL) # for Whitney
 enableWGCNAThreads(4) # for Whitney
 # for my computer
 disableWGCNAThreads()
-
 ```
 
 
 load normalized log2 expression data (Brassica genome v3.0 annotation) 
 ```{r}
 # plus R500 in residual
-root.voom5 <- readr::read_tsv(file.path("RNA","output","voom_expression.e1and3.resid.exp_gt.root.plusR500.txt.gz"))
-leaf.voom5 <- readr::read_tsv(file.path("RNA","output","voom_expression.e1and3.resid.exp_gt.leaf.plusR500.txt.gz"))
+root.voom5 <- readr::read_tsv(file.path("..","output","voom_expression.e1and3.resid.exp_gt.root.plusR500.txt.gz"))
+leaf.voom5 <- readr::read_tsv(file.path("..","output","voom_expression.e1and3.resid.exp_gt.leaf.plusR500.txt.gz"))
 ```
 
 ### check if voom is log2 transformed
@@ -58,8 +57,8 @@ root.voom5[1:1000,-1] %>% gather() %>% ggplot(aes(x=value))+geom_histogram() # y
 make sample description data frame
 
 ```{r}
-sample.description.e1 <- read_csv(file.path("plant","output","Br.mbio.e1.sample.description.csv"))
-sample.description.e3 <- read_csv(file.path("plant","output","Br.mbio.e3.sample.description.csv"))
+sample.description.e1 <- read_csv(file.path("..","..","plant","output","Br.mbio.e1.sample.description.csv"))
+sample.description.e3 <- read_csv(file.path("..","..","plant","output","Br.mbio.e3.sample.description.csv"))
 
 sample.description.e1 %>% summarize(n_distinct(group))
 sample.description.e1 %>% group_by(trt) %>% summarize(n())
@@ -426,7 +425,8 @@ GOseq.temp %>% enframe() %>% unnest(value) %>% write_csv(file.path("RNA","output
 
 ```
 
-# compare old and new GO ORA
+# compare old and new GO ORA (Aug 2022)
+## Update to "WGCNA.voom5.signedhybrid.all.moduleColors.GOseq.unique.csv" (although there are no changes).
 ```{r}
 old <- GOseq.temp.old %>% enframe() %>% unnest(value) 
 new <- GOseq.temp %>% enframe() %>% unnest(value) 

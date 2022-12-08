@@ -7,17 +7,6 @@ editor_options:
   chunk_output_type: console
 ---
 
-Purpose:
-* Analyze ATH1 microarray raw data () by lmer and broom.mixed packages for tidy way. 
-*** needs t oupdate this section for IAA ***
-
-|our purpose|Study|plant|samples|transcriptome platform|available data|available raw data|
-|----|----|--|------|--|--------|-|
-|NO3 starvation with a nitrate reductase mutant|[Wang et al. 2004](http://www.plantphysiol.org/content/136/1/2512)|Arabidopsis thaliana|WT (control) and nitrate reductase (NR)-null mutant were raised on full nutrient media for 10days at which point plants were treated with 5 mm KNO3 for 2 h. For the control, plants were treated with 5 mm KCl for 2 h. Roots and shoots were then harvested.|Microarray (ATH1 chip)|WT and Mutant Ratios listed in supplemental tables;  text indicates that they identified a total of 595 genes (across both roots and shoots together) that they are calling significant based on Affy Software and a 2-fold min cut off.  This list of 595 is in Supplemental table 5 and ratios (for fold change?) of these genes could be traced back using supplemental tables 1 & 2 for WT and 3 & 4 for mutant.|[NASCARRAYS-480](http://bar.utoronto.ca/NASCArrays/index.php?ExpID=480)|
-
-To Do
-* Expression pattern graph
-* Knit to finalize analysis.
 
 # installation
 ```{r eval=FALSE, include=FALSE}

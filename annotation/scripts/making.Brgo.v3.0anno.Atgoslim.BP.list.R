@@ -36,11 +36,11 @@
   Brgo.v3.0anno.Atgoslim.BP.list<-Brgo.v3.0anno.Atgoslim.BP.list[!sapply(Brgo.v3.0anno.Atgoslim.BP.list,is.null)]
   table(sapply(Brgo.v3.0anno.Atgoslim.BP.list,is.null))
   # bug fix (051420)
-  Brgo.v3.0anno.Atgoslim.BP.list[[1]] %>% duplicated() %>% table() # False 3, TRUE 2
+  Brgo.v3.0anno.Atgoslim.BP.list[[1]] %>% duplicated() %>% table() # False 3
   Brgo.v3.0anno.Atgoslim.BP.list[[1]] %>% unique() %>% duplicated() %>% table() # False 3
   # so
   Brgo.v3.0anno.Atgoslim.BP.list.unique <- Brgo.v3.0anno.Atgoslim.BP.list %>% map(.,unique)
-  Brgo.v3.0anno.Atgoslim.BP.list.unique[[1]] %>% duplicated() %>% table() # False 3
+  Brgo.v3.0anno.Atgoslim.BP.list.unique[[]] %>% duplicated() %>% table() # False 3
   
   save(Brgo.v3.0anno.Atgoslim.BP.list.unique,file=file.path("..","output","Brgo.v3.0anno.Atgoslim.BP.list.unique.Rdata"))
 

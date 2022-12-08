@@ -35,7 +35,8 @@ residuals(lm1)
 ```{r}
 # exp1 
 # load exp1 v3.0 annotation dge files and sample info
-load(file.path("..","..","20170617-samples","output","edgeR_dge_objects.e1.v3.0anno.RData"))
+#load(file.path("..","..","20170617-samples","output","edgeR_dge_objects.e1.v3.0anno.RData")) # old vcersion
+load(file.path("..","output","edgeR_dge_objects.e1.v3.0anno.RData")) # revised (Sep 26, 2022)
 e1.dge.leaf <- dge.leaf
 e1.dge.root <- dge.root
 rm(dge.leaf, dge.root,sample.description.leaf,sample.description.root)
