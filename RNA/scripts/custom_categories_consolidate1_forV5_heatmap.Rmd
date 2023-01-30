@@ -354,3 +354,85 @@ ggsave(path=file.path("RNA","output"),filename=paste("WGCNA.customcatv5.consol1.
 # tidyverse way using map()
 data3 %>% distinct(NAME) %>% as_vector() %>% map(function(x) InX.comparison.plot5.2(target.module=x))
 ```
+
+# only Total (under construction, Jan 30, 2022)
+```{r}
+onlyTotal.soilFC <- InX.all.soilFC %>% filter(InX=="Total")
+onlyTolal.data3 <- data3 %>% filter(Inx=="Total")
+# heatmap plot function
+InX.onlyTotal.plot5.3 <- function(data=onlyTolal.data3,soilFC=onlyTotal.soilFC,target.module="root.voom5.module.signedhybrid.darkred",level.x = full.level.x, level.y="Total") {
+  data <- data %>% mutate(NAME2=str_remove_all(NAME,"voom5.module.signedhybrid.")) #%>% separate(NAME2,into=c("tissue","module"))
+  # unite
+    data <- data %>% unite(col=tissue.module.category.InX, c(NAME2,tissue3,category3.up_down,InX),sep=".",remove=FALSE) # this tissue3 is for category, not for module.
+  # modify soilFC
+    soilFC <- soilFC %>% separate(category,into=c("category3","tissue3","FC","up_down")) %>% unite(category3.up_down,c(category3,up_down),sep="_") %>% unite(col=tissue.module.category.InX, c(tissue,module,tissue3,category3.up_down,InX),sep=".",remove=FALSE) #%>% View(). what is this tissue? tissue for modules.
+    # combine data and soilFC
+    data.combine <- data %>% inner_join(soilFC %>% dplyr::select(tissue.module.category.InX,soilFC),by="tissue.module.category.InX") #
+    data.combine
+    # modify over_represented_padjust according to soilFC
+    data.combine <- data.combine %>% mutate(minuslog10.soilFC.over_represented_padjust=ifelse(soilFC>=0,-log10(over_represented_padjust),log10(over_represented_padjust))) #%>% View()
+# target module (do not select target module )
+##### under construction ######## 013022
+    
+    
+    
+    
+    
+# instead enter FDR = 1 in non target.module
+#data.target <- data.combine %>% filter(NAME==target.module) #%>% dplyr::select(over_represented_padjust,NAME)
+data.target <- data.combine
+data.target %>% View()
+# add missing categories + tissue3, which is 0 in minuslog10.soilFC.over_represented_padjust and FDR, 0 in numDEInCat (taht is overlap gene numbers)
+temp <- level.x %>% mutate(minuslog10.soilFC.over_represented_padjust=0,over_represented_padjust=0,numDEInCat=0) 
+temp.1 <- temp %>% mutate(InX=level.y[1])
+level.all.InX <- temp.1
+# using anti_join, unite category3.up_down,tissue3, and InX
+data.target.mod <- data.target %>% unite(cat.tissue3.InX,category3.up_down,tissue3,InX,remove=FALSE)
+# 
+level.all.InX.mod <- level.all.InX %>% unite(cat.tissue3.InX,category3.up_down,tissue3,InX,remove=FALSE)
+#
+anti.temp <- level.all.InX.mod  %>% anti_join(data.target.mod,by="cat.tissue3.InX") %>% dplyr::select(colnames(level.all.InX.mod))
+# combine (also NAME2 for no target module version)
+all.temp <- data.target.mod %>% dplyr::select(colnames(level.all.InX.mod),NAME2) %>% bind_rows(anti.temp)
+# change InX levels (no need)
+#all.temp <- all.temp %>% mutate(InX=factor(InX,levels=level.y))
+# check
+all.temp %>% View()
+str(all.temp)
+# remove 0 in numDEInCat
+all.temp <- all.temp %>% mutate(numDEInCat=ifelse(numDEInCat==0,"",numDEInCat)) #%>% View()
+# plot 
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.Total <- ggplot(all.temp, aes(x=category3.up_down,y=InX)) + geom_tile(aes(fill=minuslog10.soilFC.over_represented_padjust),colour="white") + scale_fill_gradient2(limit=c(-10,10), low="green",high=muted("magenta")) + facet_grid(NAME2~tissue3,scales="free_x",space="free")
+# 
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.Total <- WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.Total + theme(axis.text.x=element_text(size=8,angle=90,hjust=1,vjust=0.3),
+                                      axis.text.y=element_text(size=8),
+                                      axis.title=element_text(size=9),
+                                      axis.ticks = element_blank(),
+                                      strip.text.y = element_text(size=16,angle=0),
+                                      strip.text.x = element_text(size=8,angle=90),
+                                      panel.background = element_rect(fill = "white",colour="black"),
+                                      plot.title=element_text(size=8),
+                                      axis.line=element_blank()) + 
+      labs(x="",y="",fill="-log10\n FDR") # 
+# adding overlap numbers
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.Total <- WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.Total + geom_text(aes(label=numDEInCat),size=2, angle=90)
+# 
+WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.Total
+#ggsave(path=file.path("RNA","output"),filename=paste("WGCNA.customcatv5.consol1.ORA.onlyTotal.soilFC.",target.module,".pdf",sep=""),height=4,width=6.5) 
+#ggsave(path=file.path("RNA","output"),filename=paste("onlyTotal",target.module,".png",sep=""),height=4,width=6.5) 
+
+return(WGCNA.voom5.signedhybrid.target.customcat.GOseq.plot.Total)
+}
+
+InX.onlyTotal.plot5.3(data=data3,soilFC=onlyTotal.soilFC,target.module="root.voom5.module.signedhybrid.darkred",level.x = full.level.x, level.y="Total")
+#
+# test 
+p.test <- InX.onlyTotal.plot5.3(data=data3,soilFC=onlyTotal.soilFC,target.module="root.voom5.module.signedhybrid.darkred",level.x = full.level.x, level.y="Total")
+
+ggsave(path=file.path("RNA","output"),filename=paste("WGCNA.customcatv5.consol1.ORA.onlyTotal.soilFC.pdf",sep=""),height=18,width=11) # legend needs to be improved. How?
+
+# tidyverse way using map()
+data3 %>% distinct(NAME) %>% as_vector() %>% map(function(x) InX.onlyTotal.plot5.3(target.module=x))
+
+```
+
