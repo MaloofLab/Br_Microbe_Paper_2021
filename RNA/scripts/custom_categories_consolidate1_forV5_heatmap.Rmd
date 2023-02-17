@@ -497,7 +497,10 @@ root.rootcategory.plot <- InX.onlyTotal.plot5.3(data=onlyTolal.data3.rootcategor
 root.nonrootcategory.plot <- InX.onlyTotal.plot5.3(data=onlyTolal.data3.nonrootcategory,soilFC=onlyTotal.soilFC,target.module=root.modules,level.x = nonroot.level.x, level.y="Total") # does not work well
 # combine plots
 plot.all <- plot_grid(leaf.rootcategory.plot,leaf.nonrootcategory.plot,root.rootcategory.plot,root.nonrootcategory.plot, labels=c("A","B","C","D"),label_size=12,ncol=2)
+# pdf
 ggsave(plot.all,path=file.path("RNA","output"),filename="WGCNA.customcatv5.consol1.ORA.Total.soilFC.allmodules.pdf",height=22,width=16)
+# png
+ggsave(plot.all,path=file.path("RNA","output"),filename="WGCNA.customcatv5.consol1.ORA.Total.soilFC.allmodules.png",height=22,width=16)
 ```
 
 
