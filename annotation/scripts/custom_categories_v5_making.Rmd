@@ -153,7 +153,7 @@ all.data
 summary(all.data)
 table(is.na(all.data$name)) # all FALSE
 # When Nishida_2017 data have been added run next line. v5 (080621)
-write_csv(all.data, file=file.path("annotation","output","root.all.comparison.v5.csv.gz")) # use this for making "Supplemental_Table4_custom_categories.xlsx"
+write_csv(all.data, file=file.path("annotation","output","root.all.comparison.v5.csv.gz")) # use this for making "Supplemental_Table4_custom_categories.xlsx" -> Table_S1_custom_categories_w_source (as of March 28, 2023)
 ```
 
 # shoot
@@ -202,5 +202,5 @@ all.data
 summary(all.data)
 table(is.na(all.data$genes)) # TRUE 19741 ???? why? (042720) -> fix full_join to left_join (042720)
 #
-write_csv(all.data, file=file.path("annotation","output","shoot.all.comparison.v5.csv.gz")) # use this for making "Supplemental_Table4_custom_categories.xlsx"
+write_csv(all.data, file=file.path("annotation","output","shoot.all.comparison.v5.csv.gz")) # use this for making "Supplemental_Table4_custom_categories.xlsx" -> Table_S1_custom_categories_w_source (as of March 28, 2023)
 ```
