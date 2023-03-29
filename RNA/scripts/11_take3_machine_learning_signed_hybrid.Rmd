@@ -274,7 +274,7 @@ coef.tb <- coef.tb %>% arrange(desc(Prop_Var_Explained)) %>%
 
 coef.tb %>% write_csv("../output/ElasticNet0.5_multiCV_Pct_var.signed.hybrid.csv")
 
-coef.tb %>% write_csv("../../_Paper_Tables/ElasticNetWGCNA_Modules.signed.hybrid.csv") #Table S6
+coef.tb %>% write_csv("../../_Paper_Tables/Table_S6_ElasticNetWGCNA_Modules.signed.hybrid.csv") #Table S6
 
 relimpmultiCV
 
