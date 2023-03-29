@@ -204,7 +204,7 @@ combined
 ```{r}
 leaf.length <- read_csv("../output/ElasticNet0.5_multiCV_Pct_var.signed.hybrid.csv") %>%
   mutate(module=str_c(Module_Organ,".",Module_Name)) %>%
-  select(module, leaf_length_pct_var=Pct_Var_Explained, leaf_length_effect=Effect)
+  select(module, leaf_length_beta=Beta, leaf_length_pct_var=Pct_Var_Explained, leaf_length_direction=Direction)
 head(leaf.length)
 ```
 
@@ -243,5 +243,7 @@ combined
 
 ```{r}
 write_csv(combined, "../output/voom5.signedhybrid.GO_leaf_length_microbe.csv")
+
+write_csv(combined, "../../_Paper_Tables/Table_S7_voom5.signedhybrid.GO_leaf_length_microbe.csv") # Table S7
 ```
 
