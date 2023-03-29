@@ -215,7 +215,7 @@ fit <- multiCV %>% filter(round(alpha,1)==.3, run==1) %>% pull(fit) %>% magrittr
 multiCV_coef.tb <- coef(fit, s=bestlam_multiCV) %>% 
   as.matrix() %>% as.data.frame() %>% 
   rownames_to_column(var="ME") %>%
-  dplyr::rename(beta_multiCV=`1`)
+  dplyr::rename(beta_multiCV=`s1`)
   
 multiCV_coef.tb %>% filter(beta_multiCV!=0) %>% arrange(beta_multiCV)
 
@@ -267,15 +267,14 @@ coef.tb <- relimpmultiCV@lmg %>% as.matrix() %>% as.data.frame() %>%
 coef.tb <- coef.tb %>% arrange(desc(Prop_Var_Explained)) %>% 
   filter(!is.na(Prop_Var_Explained)) %>%
   mutate(Pct_Var_Explained=round(100*Prop_Var_Explained,1),
-         Effect=ifelse(beta_multiCV>0, "Increase", "Decrease"),
+         Direction=ifelse(beta_multiCV>0, "Increase", "Decrease"),
          Module_Organ=str_extract(ME,"root|leaf"),
          Module_Name=str_replace(ME,"^ME(.*)_(leaf|root)$", "\\1")) %>%
-  
-  select(Module_Name, Module_Organ, Pct_Var_Explained, Effect) 
+    select(Module_Name, Module_Organ, Beta=beta_multiCV, Pct_Var_Explained, Direction) 
 
 coef.tb %>% write_csv("../output/ElasticNet0.5_multiCV_Pct_var.signed.hybrid.csv")
 
-coef.tb %>% write_csv("../../_Paper_Tables/ElasticNetWGCNA_Modules.signed.hybrid.csv")
+coef.tb %>% write_csv("../../_Paper_Tables/ElasticNetWGCNA_Modules.signed.hybrid.csv") #Table S6
 
 relimpmultiCV
 
