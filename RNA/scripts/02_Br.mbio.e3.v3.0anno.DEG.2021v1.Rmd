@@ -261,7 +261,7 @@ ggsave(filename="RNA/output/e3.root.mds.logFC.1and5.png",width=6,height=8)
 ```
 
 
-# DEGs prep
+# DEGs prep (needs to use )
 ```{r}
 # clean working directory
 rm(list=ls())

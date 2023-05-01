@@ -36,6 +36,7 @@ History
 ** InX.comparison.plot5.2() funciton for InX comparisons
 ** InX.onlyTotal.plot5.3() function only for Total (Jan 31, 2023)
 ** bug fix having "NA" in category (working with InX.onlyTotal.plot5.3()) (Feb 2023)
+** only Total -> WGCNA.customcatv5.consol1.ORA.Total.soilFC.allmodules.png (Feb 17, 2023)
 
 To Do
 * Cleaning up scripts more
@@ -488,13 +489,13 @@ root.level.x <- full.level.x %>% filter(str_detect("root",tissue3))
 nonroot.level.x <- full.level.x %>% filter(!str_detect("root",tissue3))
 
 # plot
-leaf.rootcategory.plot <- InX.onlyTotal.plot5.3(data=onlyTolal.data3.rootcategory,soilFC=onlyTotal.soilFC,target.module=leaf.modules,level.x = root.level.x, level.y="Total") # does not work well
+leaf.rootcategory.plot <- InX.onlyTotal.plot5.3(data=onlyTolal.data3.rootcategory,soilFC=onlyTotal.soilFC,target.module=leaf.modules,level.x = root.level.x, level.y="Total") + theme(axis.text.x=element_text(size=12))
 # plot
-leaf.nonrootcategory.plot <- InX.onlyTotal.plot5.3(data=onlyTolal.data3.nonrootcategory,soilFC=onlyTotal.soilFC,target.module=leaf.modules,level.x = nonroot.level.x, level.y="Total") # does not work well
+leaf.nonrootcategory.plot <- InX.onlyTotal.plot5.3(data=onlyTolal.data3.nonrootcategory,soilFC=onlyTotal.soilFC,target.module=leaf.modules,level.x = nonroot.level.x, level.y="Total") + theme(axis.text.x=element_text(size=12))# does not work well
 # plot
-root.rootcategory.plot <- InX.onlyTotal.plot5.3(data=onlyTolal.data3.rootcategory,soilFC=onlyTotal.soilFC,target.module=root.modules,level.x = root.level.x, level.y="Total") # does not work well
+root.rootcategory.plot <- InX.onlyTotal.plot5.3(data=onlyTolal.data3.rootcategory,soilFC=onlyTotal.soilFC,target.module=root.modules,level.x = root.level.x, level.y="Total") + theme(axis.text.x=element_text(size=12))# does not work well
 # plot
-root.nonrootcategory.plot <- InX.onlyTotal.plot5.3(data=onlyTolal.data3.nonrootcategory,soilFC=onlyTotal.soilFC,target.module=root.modules,level.x = nonroot.level.x, level.y="Total") # does not work well
+root.nonrootcategory.plot <- InX.onlyTotal.plot5.3(data=onlyTolal.data3.nonrootcategory,soilFC=onlyTotal.soilFC,target.module=root.modules,level.x = nonroot.level.x, level.y="Total") + theme(axis.text.x=element_text(size=12))
 # combine plots
 plot.all <- plot_grid(leaf.rootcategory.plot,leaf.nonrootcategory.plot,root.rootcategory.plot,root.nonrootcategory.plot, labels=c("A","B","C","D"),label_size=12,ncol=2)
 # pdf
