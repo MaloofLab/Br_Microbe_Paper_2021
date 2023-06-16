@@ -26,6 +26,7 @@ background:
 * see blog posts for [signed vs unsigned1](https://peterlangfelder.com/2018/11/25/signed-or-unsigned-which-network-type-is-preferable/]), [signed vs unsigned2](https://peterlangfelder.com/2018/11/25/__trashed/) (referred from Julin)
 * replace dynamicColors into moduleColors to match modules in MEs (that affect ORA and others?, 071921)
 * Change output format from flex_dashboard to html (Nov 15, 2021)
+* Julin found the format of "WGCNA.signedhybrid.moduleColors.voom5.csv" was disrupted (March 29, 2023). OMG, needs to fix it.
 
 ```{r setup}
 rm(list=ls())
@@ -83,7 +84,7 @@ leaf.voom5.sample %>% group_by(genotype) %>% summarise(num=n())
 
 ```
 
-# creating Phenotype Data format for GSEA. 
+# creating Phenotype Data format for GSEA. (not necesary anymore? March 29, 2023)
 # CLS: Categorical (e.g tumor vs normal) class file format (*.cls) (http://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats#CLS:_Categorical_.28e.g_tumor_vs_normal.29_class_file_format_.28.2A.cls.29)
 ## root.voom5
 ```{r}
@@ -271,7 +272,8 @@ voom.WGCNA.signedhybrid(voom.data=leaf.voom5,datname="voom_expression.e1and3.res
 # gene annotation
 ```{r}
 # annotation file for v3.0annotation
-Br.v3.0.At.BLAST <- read_csv(file.path("annotation","output","Brapa_v3.0_annotated.csv")) 
+#Br.v3.0.At.BLAST <- read_csv(file.path("annotation","output","Brapa_v3.0_annotated.csv")) 
+Br.v3.0.At.BLAST <- read_csv(file.path("annotation","output","Brapa_V3.0_annotated.noAt_Currator_summary.csv")) # April 3, 2023
 # This annotation is redundant with name (Br grene). Eg 
 Br.v3.0.At.BLAST %>% filter(name=="BraA01g040570.3C")
 # reduce the redundancy (112418)
@@ -289,27 +291,49 @@ tibble(moduleColors) %>% count(moduleColors) %>% dim() #25, which matches to MEs
 tibble(dynamicColors) %>% count(dynamicColors) %>% dim() #49, do not use it.
 
 root.voom5.mod3 <- root.voom5 %>% mutate(root.voom5.module.signedhybrid=moduleColors) %>% dplyr::select(genes, root.voom5.module.signedhybrid)
-# size of 49 modules (root) 
+# size of 25 modules (root) 
 root.voom5.mod3 %>% dplyr::count(root.voom5.module.signedhybrid)
 # 
 load(file.path("RNA","output","voom_expression.e1and3.resid.exp_gt.leaf.plusR500.signedhybrid.txt.gz.WGCNA.softthresh10.signedhybrid.RData"))
 length(dynamicColors);dim(leaf.voom5)
 leaf.voom5.mod3 <- leaf.voom5 %>% mutate(leaf.voom5.module.signedhybrid=moduleColors) %>% dplyr::select(genes, leaf.voom5.module.signedhybrid)
-# size of 68 modules (leaf) 
+# size of 31 modules (leaf) 
 leaf.voom5.mod3 %>% dplyr::count(leaf.voom5.module.signedhybrid)
 
 ```
 
 
-# add modules (WGCNA.signedhybrid.modules.voom5.csv.gz) -> (WGCNA.signedhybrid.moduleColors.voom5.csv.gz) (071921)
+# add modules (WGCNA.signedhybrid.modules.voom5.csv.gz) -> (WGCNA.signedhybrid.moduleColors.voom5.csv.gz) (071921). Problem found in the CSV file (March 30, 2023). Use Brapa_v3.0_annotated.csv without "At_Curator_summary" -> "Brapa_V3.0_annotated.noAt_Currator_summary.csv"
 ```{r}
 ?matchLabels()
 Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid <- Br.v3.0anno.At.BLAST.highscore %>%
   left_join(root.voom5.mod3,by=c("name"="genes")) %>%
   left_join(leaf.voom5.mod3,by=c("name"="genes"))
 Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid %>% View()
+# save the object for a while
+#save(Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid,file=file.path("RNA","output","WGCNA.signedhybrid.moduleColors.voom5.Rdata"))
+## 
+write_csv(Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid,file=file.path("RNA","output","WGCNA.signedhybrid.moduleColors.voom5.new.csv.gz")) # 05012023
 
-write_csv(Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid,file=file.path("RNA","output","WGCNA.signedhybrid.moduleColors.voom5.csv.gz")) # Substitute WGCNA.signedhybrid.modules.voom5.csv.gz
+# Julin found the prolem (March 31, 2023)
+load(file=file.path("RNA","output","WGCNA.signedhybrid.moduleColors.voom5.Rdata"))
+# Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid[9460,]$At_Curator_summary
+# Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid[9461,]$At_Curator_summary # problem 
+# Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid[9462,]$At_Curator_summary
+# # so likely Br.v3.0anno.At.BLAST.highscore has problem
+# Br.v3.0anno.At.BLAST.highscore[9460,]$At_Curator_summary
+# Br.v3.0anno.At.BLAST.highscore[9461,]$At_Curator_summary # problem
+# Br.v3.0anno.At.BLAST.highscore[9461,]$name
+
+# 
+#Br.v3.0.At.BLAST <- read_csv(file.path("annotation","output","Brapa_v3.0_annotated.csv")) 
+#Br.v3.0.At.BLAST[Br.v3.0.At.BLAST$name==Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid[9461,]$name,]$At_Curator_summary # problem
+#Br.v3.0.At.BLAST[Br.v3.0.At.BLAST$name==Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid[9460,]$name,]$At_Curator_summary
+# 
+Br.v3.0.At.BLAST <- read_csv(file.path("annotation","output","Brapa_V3.0_annotated.noAt_Currator_summary.csv")) # April 3, 2023. NoAT_currator_summary column that caused problems.
+Br.v3.0.At.BLAST[Br.v3.0.At.BLAST$name==Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid[9461,]$name,] # no problem
+
+
 ```
 
 # GOseq ORA
@@ -407,9 +431,10 @@ head(Bra.v3.0_cdna)
 ```
 
 # GOseq of all WGCNA modules (leaf.voom5.signedbhydrid, root.voom5.signedhybrid version) with GO terms -> WGCNA.signedhybrid.moduleColors.voom5.csv.gz (071921)
+## why "WGCNA.signedhybrid.moduleColors.voom5.csv.gz" still has At_Currator_summary? should be removed (May 1, 2023)
 ```{r}
 #Br.v3.0anno.At.BLAST.highscore.modules2 <- read_csv(file.path("..","output","WGCNA.modules2.voom5.csv.gz")) # needs to update
-Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid <- read_csv(file.path("RNA","output","WGCNA.signedhybrid.moduleColors.voom5.csv.gz"))
+Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid <- read_csv(file.path("RNA","output","WGCNA.signedhybrid.moduleColors.voom5.new.csv.gz")) # 050123 new without At_Currator_summary.
 # old version of GO term (not unique)
 GOseq.temp.old <- Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid %>% ungroup() %>% dplyr::select(name,root.voom5.module.signedhybrid,leaf.voom5.module.signedhybrid) %>%
 pivot_longer(cols=-1,names_to = "voom") %>% drop_na(value) %>% unite(voom.module,c("voom","value")) %>% split(.$voom.module) %>% map(~GOseq.Brgo.v3.0.Atgoslim.BP.list.unique.ORA2(genelist=.$name,custom.category.list=Brgo.v3.0anno.Atgoslim.BP.list)) # ,custom.category.list=GSEA_cust_rootshoot_updown2.list
@@ -421,7 +446,7 @@ GOseq.temp <- Br.v3.0anno.At.BLAST.highscore.moduleColors.signedhybrid %>% ungro
 pivot_longer(cols=-1,names_to = "voom") %>% drop_na(value) %>% unite(voom.module,c("voom","value")) %>% split(.$voom.module) %>% map(~GOseq.Brgo.v3.0.Atgoslim.BP.list.unique.ORA2(genelist=.$name)) # ,custom.category.list=GSEA_cust_rootshoot_updown2.list
 # error in unnest(value) below (Aug 17, 2022) because of "no enriched GO" as characters. I changed it to tibble.
 
-GOseq.temp %>% enframe() %>% unnest(value) %>% write_csv(file.path("RNA","output","WGCNA.voom5.signedhybrid.all.moduleColors.GOseq.unique.csv"))
+GOseq.temp %>% enframe() %>% unnest(value) %>% write_csv(file.path("RNA","output","WGCNA.voom5.signedhybrid.all.moduleColors.GOseq.unique.new.csv"))
 
 ```
 

@@ -24,6 +24,8 @@ library(readr);library(readxl)
 library(stringr)
 # loading expression pattern graph
 source("Expression_pattern_graph.R")
+# source("Expression_pattern_graph.Rmd") # does not work (March 30, 2023) check https://stackoverflow.com/questions/10966109/how-to-source-r-markdown-file-like-sourcemyfile-r for how to source() .Rmd file.
+
 ```
 
 # mapping read files by Kalisto
@@ -145,7 +147,10 @@ write.csv(Mn_deficiency.DEGs.all.anno,file=file.path("custom_categories","Mn_def
 # Expression pattern to confirm direction of logFC
 ```{r}
 # read DEGs all
-Mn_deficiency.DEGs.all.anno<-read.csv(file=file.path("custom_categories","Mn_deficiency.Rodriguez-Celma_2016.DEGs.all.anno.csv.gz"))
+#Mn_deficiency.DEGs.all.anno<-read.csv(file=file.path("custom_categories","Mn_deficiency.Rodriguez-Celma_2016.DEGs.all.anno.csv.gz"))
+# 
+Mn_deficiency.DEGs.all.anno<-read.csv(file=file.path("..","input","custom_categories","minusMn_Rodriguez-Celma_2016.DEGs.all.anno.csv.gz"))
+
 # loading dge
 load(file.path("intermediate","Mn_Rodriguez-Celma_2016","Rodriguez-Celma_2016.Rdata")) # this is wrong
 # cpm

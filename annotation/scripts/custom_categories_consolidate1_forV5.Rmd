@@ -1,0 +1,321 @@
+---
+title: "custom_categories_consolidate1_forV5"
+author: "Kazu"
+date: "5/9/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+Summary
+
+History
+* copied from "06_f_cor_table.Rmd"
+* add GSEA_cust_rootshoot_updown3.FDR0.001.list (051221)
+*  Expand DEGs with FC threshold for all custom categoreis
+* root data including minusN_Peng_2007 and plusIAA_Nembauser_2006
+* adding Nishida_2017 to root categories (070720)
+* making top20, top50, and top100 for (a) among root/leaf categories, (b) among minusX_up, (c) among minusX_down
+* More stringent FDR for custom category ORA of root.ivory module (050921)
+* "In only" approach for custom ORA (051821)
+* Fair "In only" approach for custom ORA using consolidated categoreis (052821)
+* Using consolidated categories in InX selection process and ORA and heatmap with the consolidated categories 
+* Another version (consolidate2) is using the consolidated categoreis to generate InX, but use the original categories for ORA.
+* plot heatmap of InX comparison for root.ivory module
+* and more modules.
+* Making v4 custom categories and use it for this script
+* Modify for updated plusN_Wang2003 using v5 (080621-081021)
+* Save as "custom_categories_consolidate1_forV5"
+* heatmap coloaring by soil FC sign (positive vs negative) (Sep 2021)
+* Cleaning up scripts (Jan 25, 2021)
+* split scripts into two (Jan 27, 2021)
+
+To Do
+* Cleaning up scripts more
+* having the same x-axis and y-axis for WGCNA heatmap
+* start from "custom_categories.csv.gz"??? (Dec 6, 2022)
+
+#### making root + shoot category with up and down and
+# prep
+```{r}
+rm(list=ls())
+knitr::opts_chunk$set(echo = TRUE,error=TRUE)
+library(tidyverse);library(GGally);library(readxl)
+library(readr)
+library(stringr)
+# https://bioconductor.org/packages/devel/workflows/vignettes/maEndToEnd/inst/doc/MA-Workflow.html
+# functions for expression pattern
+#source("../../../tools/Expression_pattern_graph.R",chdir=TRUE)
+library(scales) # for muted function
+library(ggdendro) # for dendrogram
+library(cowplot)
+library(ggnewscale)
+```
+
+# read custom gene categories created in "06_d_cor_permutation.Rmd" -> needs to add this to this scripts -> use updated version (v4; 06**21) made by "custom_categories_v4_making.Rmd" -> use v5 made by custom_categories_v5_making.Rmd
+```{r}
+root.all5 <- read_csv(file.path("annotation","output","root.all.comparison.v5.csv.gz")) 
+shoot.all5 <- read_csv(file.path("annotation","output","shoot.all.comparison.v5.csv.gz"))
+
+```
+
+fix names (root)
+```{r}
+root.all.fix.names <- root.all5
+colnames(root.all.fix.names) <- ifelse(str_detect(colnames(root.all.fix.names), "(shoot|root|seedlings|whole)$"),
+       str_c(colnames(root.all.fix.names), "_FC"),
+       colnames(root.all.fix.names))
+colnames(root.all.fix.names) <- str_remove_all(colnames(root.all.fix.names), fixed("\n") )
+root.all.fix.names
+```
+
+fix names (shoot)
+```{r}
+shoot.all.fix.names <- shoot.all5
+colnames(shoot.all.fix.names) <- ifelse(str_detect(colnames(shoot.all.fix.names), "(shoot|root)$"),
+       str_c(colnames(shoot.all.fix.names), "_FC"),
+       colnames(shoot.all.fix.names))
+colnames(shoot.all.fix.names) <- str_remove_all(colnames(shoot.all.fix.names), fixed("\n") )
+shoot.all.fix.names
+```
+
+# category (root and shoot combined): bugfixed (052620)
+# FDR_cutoff <- 0.001 (053021)
+# bug fixed by removng duplicated gene. 
+```{r}
+shoot.all.fix.names <- shoot.all.fix.names %>% dplyr::select(-AGI, -At_symbol, -At_short_description)  
+colnames(shoot.all.fix.names)
+# combine two columns (At_symbol from root and shoot) (work later)
+custom.data <- root.all.fix.names %>% full_join(shoot.all.fix.names,by="genes")
+colnames(custom.data)
+custom.FC.names <- str_subset(colnames(custom.data), "FC")
+custom.FC.names
+# write csv file for filtered.custom.data to share with team members
+write_csv(custom.data,file.path("annotation","output","custom_categories.csv.gz")) #
+
+# filter custom.data by FC and FDR cutoff
+custom.data <- read_csv(file.path("annotation","output","custom_categories.csv.gz"))
+FC_cutoff <- 0.58 # log2
+#FDR_cutoff <- 0.01
+FDR_cutoff <- 0.001
+filtered.custom.data <- custom.data
+### under construction
+# needs to remove column that has only 1 in FDR, which was treated as TRUE/FALSE when reading csv.
+
+for(FC in custom.FC.names) {
+  FDR <- str_c(str_remove_all(FC, "_FC"), "_FDR")
+  print(FDR)
+
+  FC_up <- str_c(FC,"_up") %>% as.name()
+  FC_up <- enquo(FC_up)
+  FC_down <- str_c(FC,"_down") %>% as.name()
+  FC_down <- enquo(FC_down)
+  
+  FDR_up <- str_c(FDR,"_up") %>% as.name()
+  FDR_up <- enquo(FDR_up)
+  FDR_down <- str_c(FDR,"_down") %>% as.name()
+  FDR_down <- enquo(FDR_down)
+
+  FC <- as.name(FC)
+  FC <- enquo(FC)
+  print(FC)
+  FDR<- as.name(FDR)
+  FDR <- enquo(FDR)
+
+  filtered.custom.data <- filtered.custom.data %>%
+    mutate(!!FC_up := ifelse( !! FC > FC_cutoff ,  !!FC, NA))  %>%
+    mutate(!!FC_down := ifelse( !! FC < (-1)*FC_cutoff ,  !!FC, NA))
+
+  if(!str_detect(rlang::as_name(FC), "cold|heat|Peng|Nemhauser")) {  # no FDR for cold/heat/Peng/Nemhauser
+    print(FC)
+    print("not cold")
+    filtered.custom.data <- filtered.custom.data %>%
+    mutate(!!FDR_up := ifelse( !! FC >FC_cutoff, !!FDR, NA)) %>% # cut FDR
+    mutate(!!FDR_down := ifelse( !! FC < (-1)*FC_cutoff, !!FDR, NA)) %>%  
+    mutate(!!FDR_up := ifelse( !! FDR_up < FDR_cutoff, !!FDR_up, NA)) %>%
+    mutate(!!FDR_down := ifelse( !! FDR_down < FDR_cutoff, !!FDR_down, NA)) %>%
+      mutate(!!FC_up := ifelse( !! FDR_up < FDR_cutoff ,  !!FC, NA )) %>%
+     mutate(!!FC_down := ifelse( !! FDR_down < FDR_cutoff ,  !!FC, NA)) 
+  } #if
+  
+} #for
+
+summary(!is.na(filtered.custom.data)) 
+names(filtered.custom.data)
+# remove 
+filtered.custom.data %>% dplyr::select(minusZn_Nishida_2017_root_FDR_down) # all NA
+
+# manually make csv file and save it as txt for gmx file
+#write_csv(filtered.custom.data,file=file.path("annotation","output","filtered.custom.data.rootshoot.csv.gz")) # 052620. Note this is an intermediate data. "filtered.custom.data.Total.rootshoot.v3.gmx" created below was used for further analysis (050921)
+# There is type problems in reading the csv
+
+```
+
+# formatting custom categories for GOseq (Sep 29, 2020) (run once)
+# updated (062221)
+```{r eval=FALSE}
+#filtered.custom.data <- read_csv(file.path("annotation","output","filtered.custom.data.rootshoot.csv.gz"),guess_max = 3000)
+# howmany genes in the list?
+summary(!is.na(filtered.custom.data))
+# how many categories?
+TF <- names(filtered.custom.data) %>% str_detect(c("plus","minus"))
+categories.up.down <- names(filtered.custom.data)[TF] %>% gsub("_FC","",.) %>% gsub("_FDR","",.) %>% unique() # 58 categories
+categories.up.down.combined <- categories.up.down %>% gsub("_up","",.) %>% gsub("_down","",.) %>% unique() # 30 categories (responsive genes= "up" or "down")
+```
+
+# convert into list object ("value" is fold change): one time (that is why echo=FALSE)
+```{r echo=FALSE}
+ cust_rootshoot_updown2 <- filtered.custom.data %>%
+  dplyr::select(genes, ends_with("up"), ends_with("down"), -starts_with("exp")) %>%
+  pivot_longer(-genes) 
+cust_rootshoot_updown5.consolidated.FDR0.001.list <- cust_rootshoot_updown2 %>% drop_na(value) %>% filter(str_detect(name,"FC")) %>% dplyr::select(-value) %>%split(.$genes) %>%   map(~dplyr::select(.,name)) %>% map(~as_vector(.))
+save(cust_rootshoot_updown5.consolidated.FDR0.001.list,file=file.path("annotation","output","cust_rootshoot_updown5.consolidated.FDR0.001.list.Rdata"))
+```
+
+# load consolidated custom categories (start here? necessary?)
+```{r}
+load(file.path("annotation","output","cust_rootshoot_updown5.consolidated.FDR0.001.list.Rdata"))
+```
+
+# Find unique genes among all custom categories and remove them by calculating majority roles (root and shoot categories)
+```{r}
+filtered.custom.data # Needs 
+# library(tidyverse) 
+# tentatively stop reading the csv file and create custom.data from the beggining.
+#x <- file.path("annotation","output","filtered.custom.data.rootshoot.csv.gz")
+#filtered.custom.data <- read_csv(x,guess_max = 17000)
+# 
+#problems(x)
+#spec_csv(x)
+# convert into 0/1 data.frame
+filtered.custom.data.TF <- filtered.custom.data %>% dplyr::select(matches("FC_up|FC_down")) %>% is.na() 
+summary(!filtered.custom.data.TF)  
+# invert TRUE/FALSE
+filtered.custom.data.TF2 <- !filtered.custom.data.TF 
+# conver into 1 or 0
+filtered.custom.data.TF3 <- filtered.custom.data.TF2*1
+summary(filtered.custom.data.TF3==1)
+# 
+filtered.custom.data.TF4 <- bind_cols(filtered.custom.data[,"genes"],as_tibble(filtered.custom.data.TF3))
+```
+
+# consolidate categories
+```{r}
+filtered.custom.data.TF5 <- filtered.custom.data.TF4 %>% pivot_longer(cols=-genes,names_to="category")  %>% mutate(category=str_replace_all(category,"Kailasam2019","Kailasam_2019")) %>% mutate(category=str_replace_all(category,"minusPi_1d","minusPi")) %>% mutate(category=str_replace_all(category,"minusPi_3d","minusPi")) %>% mutate(category=str_replace_all(category,"coldKilian","cold_Kilian")) %>% mutate(category=str_replace_all(category,"Rodriguez-Celma","RodriguezCelma")) %>% mutate(category=str_replace_all(category,"Kim2019","Kim_2019")) %>% mutate(category=str_replace_all(category,"Wang2003","Wang_2003")) %>% mutate(category=str_replace_all(category,"Aarabi2016","Aarabi_2016")) %>%  mutate(category=str_replace_all(category,"Ligaba-OSena","LigabaOSena")) %>% separate(category,c("category2","au","yr","tissue","FC","up_down"),remove=FALSE) #%>% View()
+
+filtered.custom.data.TF5 %>% dplyr::count(genes,category2,au,yr,tissue,up_down) %>% View()
+# consolidate categories (value is "0" (absent) or "1" present in each category)
+filtered.custom.data.consolidated <- filtered.custom.data.TF5 %>% filter(value==1) %>% dplyr::count(genes,category2,tissue,FC,up_down) %>% unite(category.cons,category2,tissue,FC,up_down) #%>% View()
+#
+filtered.custom.data.consolidated %>% View()
+# how many genes in each category?
+filtered.custom.data.consolidated %>% dplyr::select(-n) %>% dplyr::count(category.cons) %>% View()
+# save filtered.custom.data.consolidated (Jan 25, 2021)
+save(filtered.custom.data.consolidated,file=file.path("annotation","output","filtered.custom.data.consolidated.Rdata"))
+#
+load(file.path("annotation","output","filtered.custom.data.consolidated.Rdata"))
+
+# make list
+filtered.custom.data.consolidated.list <- filtered.custom.data.consolidated  %>% dplyr::select(-n) %>% split(.$genes) %>%   map(~dplyr::select(.,category.cons)) %>% map(~as_vector(.))
+save(filtered.custom.data.consolidated.list,file=file.path("annotation","output","cust_rootshoot_updown5.consolidated.FDR0.001.list.Rdata")) 
+```
+
+# convert filtered.custom.data.consolidated into filtered.custom.data.numeric format (does not work)
+# the final goal is to make list object for GOseq ORA with InX.con.cat (=consolidated category) like In01.forORA.list2 
+```{r}
+filtered.custom.data.consolidated.numeric <- filtered.custom.data.consolidated %>% pivot_wider(names_from=category.cons, values_from = n) %>% 
+  mutate(across(-genes, ~ ifelse(is.na(.), 0, 1))) #%>%View() # why
+```
+
+```{r}
+filtered.custom.data.consolidated %>% dplyr::select(-n) %>% dplyr::count(genes) %>% View()
+```
+
+# below is Julin's scripts for making 
+
+Alternate plotting
+```{r}
+apply(filtered.custom.data.TF3, 1, sum) %>% hist()
+```
+
+How many left after we remove...
+
+redo the conversion so that we keep gene names
+```{r}
+#filtered.custom.data.numeric <- filtered.custom.data %>%
+#  dplyr::select(genes, matches("FC_up|FC_down")) %>%
+#  mutate_at(vars(-genes), ~ as.numeric(!is.na(.)))
+```
+
+for each gene total the number of sets that it is in
+```{r}
+filtered.custom.data.numeric  # original. no more exist
+filtered.custom.data.consolidated.numeric
+filtered.custom.data.consolidated.numeric <- filtered.custom.data.consolidated.numeric %>%   mutate(totalSetN=rowSums(filtered.custom.data.consolidated.numeric[,-1])) %>%
+  dplyr::select(genes, totalSetN, everything())
+head(filtered.custom.data.consolidated.numeric)
+```
+
+Now we want to know if we filter by X totalSetN, how many genes are left in each gene set.
+
+```{r}
+filtered.custom.data.consolidated.numericL <-
+  filtered.custom.data.consolidated.numeric %>%
+  pivot_longer(-c("genes", "totalSetN"), names_to="set", values_to = "presentInSet")
+head(filtered.custom.data.consolidated.numericL)
+```
+
+# new filtered.custom.data.consolidated.numericL with "XorMore" (061321)
+```{r}
+filtered.custom.data.consolidated.numericL <- filtered.custom.data.consolidated.numericL %>%
+  mutate(In01 = presentInSet*(totalSetN <= 1), #would be nice to automate this...
+         In02orLess = presentInSet*(totalSetN <= 2),
+         In03orLess = presentInSet*(totalSetN <= 3),
+         In05orLess = presentInSet*(totalSetN <= 5),
+         In10orLess = presentInSet*(totalSetN <= 10),
+         In20orLess = presentInSet*(totalSetN <= 20),
+         In05orMore = presentInSet*(totalSetN >= 5),
+         In10orMore = presentInSet*(totalSetN >= 10),
+         In20orMore = presentInSet*(totalSetN >= 20),
+         Total = presentInSet)
+
+filtered.custom.data.consolidated.numericL
+save(filtered.custom.data.consolidated.numericL,file=file.path("RNA","output","filtered.custom.v5.data.consolidated.numericL.Rdata"))
+```
+
+# Something is wrong with making "filtered.custom.data.consolidated.numericLL" below (chunk 17)? (061821, Kazu): Start here? (Dec 21, 2021)
+```{r}
+load(file.path("RNA","output","filtered.custom.v5.data.consolidated.numericL.Rdata"))
+
+filtered.custom.data.consolidated.numericLL <- filtered.custom.data.consolidated.numericL %>%
+  pivot_longer(c(starts_with("In"),starts_with("Total", ignore.case = FALSE)), names_to = "group", values_to = "group_summary")
+head(filtered.custom.data.consolidated.numericLL,20)
+```
+
+now summarize it
+```{r}
+filtered.custom.data.consolidated.summary <- filtered.custom.data.consolidated.numericLL %>%
+  group_by(set, group) %>%
+  summarize(genesInSet=sum(group_summary))
+filtered.custom.data.consolidated.summary
+```
+
+plot it
+```{r}
+filtered.custom.data.consolidated.summary %>%
+  ggplot(aes(x=set, y=genesInSet, color=group)) +
+  geom_point()  +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+plot it percentage (needs to facet_grid with Xorless and Xormore)
+```{r}
+InSet.percent.plot <- filtered.custom.data.consolidated.summary %>%
+  group_by(set) %>%
+  mutate(percent_of_set=100*genesInSet/max(genesInSet)) %>%
+    ggplot(aes(x=set, y=percent_of_set, color=group)) +
+  geom_point()  +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+ggsave(InSet.percent.plot,path=file.path("annotation","output"),filename="InSet.percent.plot.consolidation.png",width=8,height=6)
+```
+

@@ -154,5 +154,16 @@ head(Brapa.annotated)
 
 ```{r}
 write.csv(Brapa.annotated,"../output/v3.0annotation/Brapa_V3.0_annotated.csv")
+
 ```
+
+Remove "At_Curator_summary" for format error (Apr 3, 2023, Kazu)
+```{r}
+# annotation file for v3.0annotation
+Br.v3.0.At.BLAST <- read_csv(file=file.path("..","..","annotation","output","Brapa_V3.0_annotated.csv")) 
+Br.v3.0.At.BLAST <- Br.v3.0.At.BLAST %>% dplyr::select(-"At_Curator_summary") %>% write_csv(file=file.path("..","..","annotation","output","Brapa_V3.0_annotated.noAt_Currator_summary.csv"))
+
+
+```
+
 
