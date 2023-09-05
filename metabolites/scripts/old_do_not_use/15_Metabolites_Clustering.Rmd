@@ -1,0 +1,498 @@
+---
+title: "Metabolites...Clustering"
+author: "Julin Maloof"
+date: "03/29/2023"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Try some clustering
+
+
+```{r}
+library(tidyverse)
+library(tidymodels)
+library(cluster)
+library(ggfortify)
+```
+
+get leaflength data
+```{r}
+leaflength <- read_csv("../../plant/output/leaf_lengths_metabolite.csv") %>%
+  mutate(pot=str_pad(pot, width=3, pad="0"),
+         sampleID=str_c("wyo", genotype, pot, sep="_")) %>%
+  select(sampleID, genotype, trt, leaf_avg, leaf_avg_std)
+leaflength %>% arrange(sampleID)
+```
+
+get and wrangle metabolite data
+```{r}
+met_raw <-read_csv("../input/metabolites_set1.csv")
+met <- met_raw %>% 
+  mutate(pot=str_pad(pot, width = 3, pad = "0")) %>%
+  mutate(sampleID=str_c("wyo", genotype, pot, sep="_")) %>%
+  mutate(trt=ifelse(is.na(autoclave), "BLANK", autoclave)) %>%
+  select(sampleID, genotype, tissue, trt, sample_mass = `sample_mass mg`, !submission_number:concatenate)  %>%
+  
+  #bring in leaf length
+  left_join({leaflength %>% select(sampleID, leaf_avg_std)}) %>%
+  select(sampleID, genotype, tissue, trt, leaf_avg_std, everything()) %>%
+  
+  #make long
+  pivot_longer(!sampleID:sample_mass, names_to = "metabolite", values_to = "met_amt") %>%
+  
+  #filter away unnamed
+  filter(str_detect(metabolite, pattern="^[0-9]+$", negate=TRUE)) %>%
+  
+  #adjust by sample mass
+  mutate(met_per_mg=met_amt/sample_mass) %>%
+  
+  pivot_wider(id_cols = c(sampleID, genotype, trt, leaf_avg_std), 
+              names_from = c(tissue, metabolite), 
+              values_from = starts_with("met_"),
+              names_sep = "_")
+
+met 
+```
+
+split this into two data frames, one normalized by tissue amount and one not.
+```{r}
+met_per_mg <- met %>% select(sampleID, genotype, trt, starts_with("met_per_mg")) %>%
+  as.data.frame() %>% column_to_rownames("sampleID")
+met_amt <- met %>% select(sampleID,  genotype, trt, starts_with("met_amt")) %>%
+  as.data.frame() %>% column_to_rownames("sampleID")
+```
+
+## met_per_mg
+```{r}
+
+met_per_mg.scale <- met_per_mg %>% mutate(across(.cols=-c(genotype, trt), .fns=scale))
+
+met_per_mg.scale.t <- met_per_mg.scale %>% select(-genotype, -trt) %>% t() %>% as.data.frame()
+```
+
+metadata for later plotting
+
+```{r}
+sample_meta <- leaflength %>% 
+  select(sample=sampleID, genotype, trt, leaf_avg, leaf_avg_std) %>%
+  mutate(sample_merge=make.unique(str_c(genotype, "_", trt)))
+sample_meta
+```
+
+## PCA
+
+```{r}
+met_per_mg.pca <- met_per_mg.scale.t %>%  prcomp(scale.=TRUE)
+
+met_per_mg_PCs <- met_per_mg.pca %>% magrittr::extract2("x") %>% as.data.frame()
+
+met_per_mg_PCs %>% ggplot(aes(x=PC1,y=PC2)) +
+  geom_point()
+
+met_per_mg_PCs %>% ggplot(aes(x=PC2,y=PC3)) +
+  geom_point()
+
+met_per_mg_PCs %>% ggplot(aes(x=PC3,y=PC4)) +
+  geom_point()
+
+```
+```{r}
+met_per_mg.mds <- met_per_mg.scale.t %>% dist() %>% cmdscale(x.ret=TRUE) 
+autoplot(met_per_mg.mds)
+```
+
+```{r}
+met_per_mg.tsne <- met_per_mg.scale.t %>% tsne::tsne()
+
+met_per_mg.tsne %>% plot()
+```
+```{r}
+kclust <- tibble(k=3:8) %>%
+  mutate(kclust=map(k, ~kmeans(met_per_mg.scale.t, .x)),
+         tidied = map(kclust, tidy),
+         glanced = map(kclust, glance),
+         augmented = map(kclust, augment, as_tibble(met_per_mg.mds$points) )
+  )
+
+kclust
+```
+
+```{r}
+clusters <- 
+  kclust %>%
+  unnest(cols = c(tidied))
+
+assignments <- 
+  kclust %>% 
+  unnest(cols = c(augmented))
+
+clusterings <- 
+  kclust %>%
+  unnest(cols = c(glanced))
+```
+
+```{r}
+RColorBrewer::display.brewer.all(type="qual")
+```
+
+
+```{r}
+p1 <- 
+  ggplot(assignments, aes(x = V1, y = V2)) +
+  geom_point(aes(color = .cluster)) + 
+  facet_wrap(~ k) +
+  scale_color_brewer(palette="Set1", direction = -1) +
+  ggtitle("kmeans")
+p1
+```
+
+```{r}
+ggplot(clusterings, aes(k, tot.withinss)) +
+  geom_line() +
+  geom_point()
+```
+
+### Pam Euclidean
+```{r}
+pcluste <- tibble(k=3:8) %>%
+  mutate(pcluste=map(k, ~pam(met_per_mg.scale.t, .x, diss=FALSE)),
+         tidied = map(pcluste, tidy),
+         glanced = map(pcluste, glance),
+         augmented = map(pcluste, augment, as_tibble(met_per_mg.mds$points) )
+  )
+
+pcluste
+```
+
+```{r}
+clusters <- 
+  pcluste %>%
+  unnest(cols = c(tidied))
+
+assignments <- 
+  pcluste %>% 
+  unnest(cols = c(augmented))
+
+clusterings <- 
+  pcluste %>%
+  unnest(cols = c(glanced))
+```
+
+
+```{r}
+p2 <- 
+  ggplot(assignments, aes(x = V1, y = V2)) +
+  geom_point(aes(color = .cluster)) + 
+  facet_wrap(~ k) +
+  scale_color_brewer(palette="Set1", direction = -1) +
+  ggtitle("Pam Euclidean")
+p2
+```
+
+```{r}
+ggplot(clusterings, aes(k, avg.silhouette.width)) +
+  geom_line() +
+  geom_point()
+```
+
+
+## Pam Manhattan
+```{r}
+pclustm <- tibble(k=3:8) %>%
+  mutate(pclustm=map(k, ~pam(met_per_mg.scale.t, .x, diss=FALSE, metric="manhattan")),
+         tidied = map(pclustm, tidy),
+         glanced = map(pclustm, glance),
+         augmented = map(pclustm, augment, as_tibble(met_per_mg.mds$points) )
+  )
+
+pclustm
+```
+
+```{r}
+clusters <- 
+  pclustm %>%
+  unnest(cols = c(tidied))
+
+assignments <- 
+  pclustm %>% 
+  unnest(cols = c(augmented))
+
+clusterings <- 
+  pclustm %>%
+  unnest(cols = c(glanced))
+```
+
+
+
+```{r}
+p3 <- 
+  ggplot(assignments, aes(x = V1, y = V2)) +
+  geom_point(aes(color = .cluster)) + 
+  facet_wrap(~ k) +
+  scale_color_brewer(palette="Set1", direction = -1) +
+  ggtitle("Pam Manhattan")
+p3
+```
+
+```{r}
+ggplot(clusterings, aes(k, avg.silhouette.width)) +
+  geom_line() +
+  geom_point()
+```
+
+### Compare
+
+```{r}
+p1
+p2
+p3
+
+```
+
+
+```{r}
+cg <- clusGap(met_per_mg.scale.t, kmeans, K.max=9)
+plot(cg)
+cg
+
+cg <- clusGap(met_per_mg.scale.t, pam, K.max=9, diss=FALSE)
+plot(cg)
+cg
+
+cg <- clusGap(met_per_mg.scale.t, pam, K.max=9, diss=FALSE, metric="manhattan")
+plot(cg)
+cg
+```
+## pam, euclidean
+
+```{r}
+plot_clusters <- function(x, meta=sample_meta) {
+  x %>% pivot_longer(-c(.rownames,.cluster), names_to="sample") %>%
+    left_join(sample_meta) %>% 
+        ggplot(aes(x=sample_merge, y=value)) +
+    geom_line(alpha=0.1, aes(group=.rownames)) +
+    facet_wrap(~.cluster) +
+    geom_vline(color="red", lwd=.5, xintercept = c(seq(6.5,30.5, by=6))) + 
+    theme(axis.text.x = element_text(size=7, vjust=0.5, hjust=1, angle=90))
+}
+
+assignments.pe <- pcluste %>% 
+  mutate(met_per_mg = map(pcluste, augment, met_per_mg.scale.t),
+         cluster_plot = map(met_per_mg, plot_clusters))
+
+walk(assignments.pe$cluster_plot, print)
+```
+
+## met_amt
+
+```{r}
+
+met_amt.scale <- met_amt %>% mutate(across(.cols=-c(genotype, trt), .fns=scale))
+
+met_amt.scale.t <- met_amt.scale %>% select(-genotype, -trt) %>% t() %>% as.data.frame()
+```
+
+## PCA
+
+```{r}
+met_amt.pca <- met_amt.scale.t %>%  prcomp(scale.=TRUE)
+
+met_amt_PCs <- met_amt.pca %>% magrittr::extract2("x") %>% as.data.frame()
+
+met_amt_PCs %>% ggplot(aes(x=PC1,y=PC2)) +
+  geom_point()
+
+met_amt_PCs %>% ggplot(aes(x=PC2,y=PC3)) +
+  geom_point()
+
+met_amt_PCs %>% ggplot(aes(x=PC3,y=PC4)) +
+  geom_point()
+
+```
+```{r}
+met_amt.mds <- met_amt.scale.t %>% dist() %>% cmdscale(x.ret=TRUE) 
+autoplot(met_amt.mds)
+```
+
+```{r}
+met_amt.tsne <- met_amt.scale.t %>% tsne::tsne()
+
+met_amt.tsne %>% plot()
+```
+
+```{r}
+kclust <- tibble(k=3:8) %>%
+  mutate(kclust=map(k, ~kmeans(met_amt.scale.t, .x)),
+         tidied = map(kclust, tidy),
+         glanced = map(kclust, glance),
+         augmented = map(kclust, augment, as_tibble(met_amt.mds$points) )
+  )
+
+kclust
+```
+
+```{r}
+clusters <- 
+  kclust %>%
+  unnest(cols = c(tidied))
+
+assignments <- 
+  kclust %>% 
+  unnest(cols = c(augmented))
+
+clusterings <- 
+  kclust %>%
+  unnest(cols = c(glanced))
+```
+
+
+```{r}
+p1 <- 
+  ggplot(assignments, aes(x = V1, y = V2)) +
+  geom_point(aes(color = .cluster)) + 
+  facet_wrap(~ k) +
+  scale_color_brewer(palette="Set1", direction = -1) +
+  ggtitle("kmeans")
+p1
+```
+
+```{r}
+ggplot(clusterings, aes(k, tot.withinss)) +
+  geom_line() +
+  geom_point()
+```
+
+### Pam Euclidean
+```{r}
+pcluste <- tibble(k=3:8) %>%
+  mutate(pcluste=map(k, ~pam(met_amt.scale.t, .x, diss=FALSE)),
+         tidied = map(pcluste, tidy),
+         glanced = map(pcluste, glance),
+         augmented = map(pcluste, augment, as_tibble(met_amt.mds$points) )
+  )
+
+pcluste
+```
+
+```{r}
+clusters <- 
+  pcluste %>%
+  unnest(cols = c(tidied))
+
+assignments <- 
+  pcluste %>% 
+  unnest(cols = c(augmented))
+
+clusterings <- 
+  pcluste %>%
+  unnest(cols = c(glanced))
+```
+
+
+```{r}
+p2 <- 
+  ggplot(assignments, aes(x = V1, y = V2)) +
+  geom_point(aes(color = .cluster)) + 
+  facet_wrap(~ k) +
+  scale_color_brewer(palette="Set1", direction = -1) +
+  ggtitle("Pam Euclidean")
+p2
+```
+
+```{r}
+ggplot(clusterings, aes(k, avg.silhouette.width)) +
+  geom_line() +
+  geom_point()
+```
+
+
+## Pam Manhattan
+```{r}
+pclustm <- tibble(k=3:8) %>%
+  mutate(pclustm=map(k, ~pam(met_amt.scale.t, .x, diss=FALSE, metric="manhattan")),
+         tidied = map(pclustm, tidy),
+         glanced = map(pclustm, glance),
+         augmented = map(pclustm, augment, as_tibble(met_amt.mds$points) )
+  )
+
+pclustm
+```
+
+```{r}
+clusters <- 
+  pclustm %>%
+  unnest(cols = c(tidied))
+
+assignments <- 
+  pclustm %>% 
+  unnest(cols = c(augmented))
+
+clusterings <- 
+  pclustm %>%
+  unnest(cols = c(glanced))
+```
+
+
+
+```{r}
+p3 <- 
+  ggplot(assignments, aes(x = V1, y = V2)) +
+  geom_point(aes(color = .cluster)) + 
+  facet_wrap(~ k) +
+  scale_color_brewer(palette="Set1", direction = -1) +
+  ggtitle("Pam Manhattan")
+p3
+```
+
+```{r}
+ggplot(clusterings, aes(k, avg.silhouette.width)) +
+  geom_line() +
+  geom_point()
+```
+
+### Compare
+
+```{r}
+p1
+p2
+p3
+
+```
+
+
+```{r}
+cg <- clusGap(met_amt.scale.t, kmeans, K.max=9)
+plot(cg)
+cg
+
+cg <- clusGap(met_amt.scale.t, pam, K.max=9, diss=FALSE)
+plot(cg)
+cg
+
+cg <- clusGap(met_amt.scale.t, pam, K.max=9, diss=FALSE, metric="manhattan")
+plot(cg)
+cg
+```
+## pam, euclidean
+
+```{r}
+plot_clusters <- function(x, meta=sample_meta) {
+  x %>% pivot_longer(-c(.rownames,.cluster), names_to="sample") %>%
+    left_join(sample_meta) %>% 
+        ggplot(aes(x=sample_merge, y=value)) +
+    geom_line(alpha=0.1, aes(group=.rownames)) +
+    facet_wrap(~.cluster) +
+    geom_vline(color="red", lwd=.5, xintercept = c(seq(6.5,30.5, by=6))) + 
+    theme(axis.text.x = element_text(size=7, vjust=0.5, hjust=1, angle=90))
+}
+
+assignments.pe <- pcluste %>% 
+  mutate(met_amt = map(pcluste, augment, met_amt.scale.t),
+         cluster_plot = map(met_amt, plot_clusters))
+
+walk(assignments.pe$cluster_plot, print)
+```

@@ -1,0 +1,49 @@
+---
+title: "CombineMetabolites"
+author: "Julin Maloof"
+date: "2/4/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Quick script to get all unique metabolites.  Here I compare to an existing to update
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+files <- dir("../output", pattern="associated_metabolites", full.names = TRUE)
+```
+
+```{r}
+mets <- map(files, read_csv ) %>% bind_rows()
+```
+
+```{r}
+mets
+```
+
+```{r, eval=}
+mets <- mets %>% filter(!duplicated(metabolite)) %>% select(metabolite) %>% arrange(metabolite)
+mets
+```
+
+get previous list
+```{r}
+oldmets <- read_csv("../output/all_unique_associated_metabolites.csv")
+```
+
+```{r}
+newmets <- mets %>% filter(!metabolite %in% oldmets$metabolite)
+newmets
+```
+
+
+```{r}
+newmets %>% write_csv("../output/new_unique_associated_metabolites_02_09_21.csv")
+```
+

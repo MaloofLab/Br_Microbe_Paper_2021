@@ -1,0 +1,37 @@
+---
+title: "CombineMetabolites"
+author: "Julin Maloof"
+date: "2/4/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Quick script to get all unique metabolites
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+files <- dir("../output", pattern="associated_metabolites", full.names = TRUE)
+```
+
+```{r}
+mets <- map(files, read_csv ) %>% bind_rows()
+```
+
+```{r}
+mets
+```
+
+```{r}
+mets <- mets %>% filter(!duplicated(metabolite)) %>% select(metabolite) %>% arrange(metabolite)
+mets
+```
+```{r}
+mets %>% write_csv("../output/all_unique_associated_metabolites.csv")
+```
+
