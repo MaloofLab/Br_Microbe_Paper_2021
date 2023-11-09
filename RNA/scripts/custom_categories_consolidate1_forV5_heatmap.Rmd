@@ -505,9 +505,6 @@ ggsave(plot.all,path=file.path("RNA","output"),filename="WGCNA.customcatv5.conso
 ```
 
 
-
-
-
 ```{r}
 sessionInfo()
 ```
