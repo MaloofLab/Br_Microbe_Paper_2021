@@ -1,0 +1,12 @@
+NAME	DESCRIPTION
+pot	pot number; note I tossed pots from other soil inoculation treatments….
+pot	pot number; note I tossed pots from other soil inoculation treatments….
+block	spatial block 
+bench	spatial bench (note block should be nested within bench if both are in a model…)
+row	if you wanted to skip spatial block and have x.y cordinates of pots on bench
+col	if you wanted to skip spatial block and have x.y cordinates of pots on bench
+genotype	we only used FPsc for this exp
+density	pot density:  UN vs CR--1 rep vs 3
+5E_soil_trt	soil trts of BLANK, DEAD, LIVE
+raw_avg_lf_11.03.17	replicate day to germination had no effect on leaf ln, so this is just an average of the replicate average of leaf 1 & 2
+raw_avg_lf_11.07.17	replicate day to germination had no effect on leaf ln, so this is just an average of the replicate average of leaf 1 & 2

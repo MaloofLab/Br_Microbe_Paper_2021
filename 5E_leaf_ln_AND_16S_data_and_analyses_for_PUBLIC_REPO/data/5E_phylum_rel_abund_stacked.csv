@@ -1,0 +1,361 @@
+sample,genotype,trt,blk,sample_2,Phylum,Abundance,sample_3,sample_4
+FPsc.5E.dead.wk2.blk10.Db6.pot399,FPsc,Disrupted,blk10,s_01,Proteobacteria,0.566672469,F_b10,blk10.FPsc
+FPsc.5E.dead.wk2.blk10.Db6.pot399,FPsc,Disrupted,blk10,s_01,Firmicutes,0.14461659,F_b10,blk10.FPsc
+FPsc.5E.dead.wk2.blk10.Db6.pot399,FPsc,Disrupted,blk10,s_01,Bacteroidetes,0.206523631,F_b10,blk10.FPsc
+FPsc.5E.dead.wk2.blk10.Db6.pot399,FPsc,Disrupted,blk10,s_01,Actinobacteria,0.069479502,F_b10,blk10.FPsc
+FPsc.5E.dead.wk2.blk10.Db6.pot399,FPsc,Disrupted,blk10,s_01,Planctomycetes,0,F_b10,blk10.FPsc
+FPsc.5E.dead.wk2.blk10.Db6.pot399,FPsc,Disrupted,blk10,s_01,Verrucomicrobia,0.010531813,F_b10,blk10.FPsc
+FPsc.5E.dead.wk2.blk10.Db6.pot399,FPsc,Disrupted,blk10,s_01,Chloroflexi,0,F_b10,blk10.FPsc
+FPsc.5E.dead.wk2.blk10.Db6.pot399,FPsc,Disrupted,blk10,s_01,Acidobacteria,4.35E-05,F_b10,blk10.FPsc
+FPsc.5E.dead.wk2.blk10.Db6.pot399,FPsc,Disrupted,blk10,s_01,Cyanobacteria,0.000348159,F_b10,blk10.FPsc
+FPsc.5E.dead.wk2.blk10.Db6.pot399,FPsc,Disrupted,blk10,s_01,< 1% abundance,0.001784315,F_b10,blk10.FPsc
+FPsc.5E.dead.wk2.blk12.Db9.pot517,FPsc,Disrupted,blk12,s_02,Proteobacteria,0.487226913,F_b12,blk12.FPsc
+FPsc.5E.dead.wk2.blk12.Db9.pot517,FPsc,Disrupted,blk12,s_02,Firmicutes,0.239228828,F_b12,blk12.FPsc
+FPsc.5E.dead.wk2.blk12.Db9.pot517,FPsc,Disrupted,blk12,s_02,Bacteroidetes,0.21074506,F_b12,blk12.FPsc
+FPsc.5E.dead.wk2.blk12.Db9.pot517,FPsc,Disrupted,blk12,s_02,Actinobacteria,0.053921142,F_b12,blk12.FPsc
+FPsc.5E.dead.wk2.blk12.Db9.pot517,FPsc,Disrupted,blk12,s_02,Planctomycetes,0,F_b12,blk12.FPsc
+FPsc.5E.dead.wk2.blk12.Db9.pot517,FPsc,Disrupted,blk12,s_02,Verrucomicrobia,0.006419184,F_b12,blk12.FPsc
+FPsc.5E.dead.wk2.blk12.Db9.pot517,FPsc,Disrupted,blk12,s_02,Chloroflexi,6.53E-05,F_b12,blk12.FPsc
+FPsc.5E.dead.wk2.blk12.Db9.pot517,FPsc,Disrupted,blk12,s_02,Acidobacteria,0,F_b12,blk12.FPsc
+FPsc.5E.dead.wk2.blk12.Db9.pot517,FPsc,Disrupted,blk12,s_02,Cyanobacteria,0.001958395,F_b12,blk12.FPsc
+FPsc.5E.dead.wk2.blk12.Db9.pot517,FPsc,Disrupted,blk12,s_02,< 1% abundance,0.000435199,F_b12,blk12.FPsc
+FPsc.5E.dead.wk2.blk2.Db2.pot64,FPsc,Disrupted,blk02,s_03,Proteobacteria,0.468448081,F_b02,blk02.FPsc
+FPsc.5E.dead.wk2.blk2.Db2.pot64,FPsc,Disrupted,blk02,s_03,Firmicutes,0.285925668,F_b02,blk02.FPsc
+FPsc.5E.dead.wk2.blk2.Db2.pot64,FPsc,Disrupted,blk02,s_03,Bacteroidetes,0.140155801,F_b02,blk02.FPsc
+FPsc.5E.dead.wk2.blk2.Db2.pot64,FPsc,Disrupted,blk02,s_03,Actinobacteria,0.085538341,F_b02,blk02.FPsc
+FPsc.5E.dead.wk2.blk2.Db2.pot64,FPsc,Disrupted,blk02,s_03,Planctomycetes,0,F_b02,blk02.FPsc
+FPsc.5E.dead.wk2.blk2.Db2.pot64,FPsc,Disrupted,blk02,s_03,Verrucomicrobia,0.008247019,F_b02,blk02.FPsc
+FPsc.5E.dead.wk2.blk2.Db2.pot64,FPsc,Disrupted,blk02,s_03,Chloroflexi,0,F_b02,blk02.FPsc
+FPsc.5E.dead.wk2.blk2.Db2.pot64,FPsc,Disrupted,blk02,s_03,Acidobacteria,0,F_b02,blk02.FPsc
+FPsc.5E.dead.wk2.blk2.Db2.pot64,FPsc,Disrupted,blk02,s_03,Cyanobacteria,0.010161894,F_b02,blk02.FPsc
+FPsc.5E.dead.wk2.blk2.Db2.pot64,FPsc,Disrupted,blk02,s_03,< 1% abundance,0.001523196,F_b02,blk02.FPsc
+FPsc.5E.dead.wk2.blk4.Db2.pot141,FPsc,Disrupted,blk04,s_04,Proteobacteria,0.369135695,F_b04,blk04.FPsc
+FPsc.5E.dead.wk2.blk4.Db2.pot141,FPsc,Disrupted,blk04,s_04,Firmicutes,0.376729916,F_b04,blk04.FPsc
+FPsc.5E.dead.wk2.blk4.Db2.pot141,FPsc,Disrupted,blk04,s_04,Bacteroidetes,0.176429628,F_b04,blk04.FPsc
+FPsc.5E.dead.wk2.blk4.Db2.pot141,FPsc,Disrupted,blk04,s_04,Actinobacteria,0.067542867,F_b04,blk04.FPsc
+FPsc.5E.dead.wk2.blk4.Db2.pot141,FPsc,Disrupted,blk04,s_04,Planctomycetes,0,F_b04,blk04.FPsc
+FPsc.5E.dead.wk2.blk4.Db2.pot141,FPsc,Disrupted,blk04,s_04,Verrucomicrobia,0.002001915,F_b04,blk04.FPsc
+FPsc.5E.dead.wk2.blk4.Db2.pot141,FPsc,Disrupted,blk04,s_04,Chloroflexi,0,F_b04,blk04.FPsc
+FPsc.5E.dead.wk2.blk4.Db2.pot141,FPsc,Disrupted,blk04,s_04,Acidobacteria,0,F_b04,blk04.FPsc
+FPsc.5E.dead.wk2.blk4.Db2.pot141,FPsc,Disrupted,blk04,s_04,Cyanobacteria,0.007246061,F_b04,blk04.FPsc
+FPsc.5E.dead.wk2.blk4.Db2.pot141,FPsc,Disrupted,blk04,s_04,< 1% abundance,0.000913918,F_b04,blk04.FPsc
+FPsc.5E.dead.wk2.blk5.Db3.pot181,FPsc,Disrupted,blk05,s_05,Proteobacteria,0.461811298,F_b05,blk05.FPsc
+FPsc.5E.dead.wk2.blk5.Db3.pot181,FPsc,Disrupted,blk05,s_05,Firmicutes,0.212899295,F_b05,blk05.FPsc
+FPsc.5E.dead.wk2.blk5.Db3.pot181,FPsc,Disrupted,blk05,s_05,Bacteroidetes,0.229066934,F_b05,blk05.FPsc
+FPsc.5E.dead.wk2.blk5.Db3.pot181,FPsc,Disrupted,blk05,s_05,Actinobacteria,0.083797545,F_b05,blk05.FPsc
+FPsc.5E.dead.wk2.blk5.Db3.pot181,FPsc,Disrupted,blk05,s_05,Planctomycetes,0,F_b05,blk05.FPsc
+FPsc.5E.dead.wk2.blk5.Db3.pot181,FPsc,Disrupted,blk05,s_05,Verrucomicrobia,0.006963182,F_b05,blk05.FPsc
+FPsc.5E.dead.wk2.blk5.Db3.pot181,FPsc,Disrupted,blk05,s_05,Chloroflexi,0,F_b05,blk05.FPsc
+FPsc.5E.dead.wk2.blk5.Db3.pot181,FPsc,Disrupted,blk05,s_05,Acidobacteria,0,F_b05,blk05.FPsc
+FPsc.5E.dead.wk2.blk5.Db3.pot181,FPsc,Disrupted,blk05,s_05,Cyanobacteria,0.004852468,F_b05,blk05.FPsc
+FPsc.5E.dead.wk2.blk5.Db3.pot181,FPsc,Disrupted,blk05,s_05,< 1% abundance,0.000609278,F_b05,blk05.FPsc
+FPsc.5E.dead.wk2.blk7.Db4.pot272,FPsc,Disrupted,blk07,s_06,Proteobacteria,0.497345287,F_b07,blk07.FPsc
+FPsc.5E.dead.wk2.blk7.Db4.pot272,FPsc,Disrupted,blk07,s_06,Firmicutes,0.300200191,F_b07,blk07.FPsc
+FPsc.5E.dead.wk2.blk7.Db4.pot272,FPsc,Disrupted,blk07,s_06,Bacteroidetes,0.13273566,F_b07,blk07.FPsc
+FPsc.5E.dead.wk2.blk7.Db4.pot272,FPsc,Disrupted,blk07,s_06,Actinobacteria,0.056467055,F_b07,blk07.FPsc
+FPsc.5E.dead.wk2.blk7.Db4.pot272,FPsc,Disrupted,blk07,s_06,Planctomycetes,0,F_b07,blk07.FPsc
+FPsc.5E.dead.wk2.blk7.Db4.pot272,FPsc,Disrupted,blk07,s_06,Verrucomicrobia,0.007006702,F_b07,blk07.FPsc
+FPsc.5E.dead.wk2.blk7.Db4.pot272,FPsc,Disrupted,blk07,s_06,Chloroflexi,0,F_b07,blk07.FPsc
+FPsc.5E.dead.wk2.blk7.Db4.pot272,FPsc,Disrupted,blk07,s_06,Acidobacteria,0,F_b07,blk07.FPsc
+FPsc.5E.dead.wk2.blk7.Db4.pot272,FPsc,Disrupted,blk07,s_06,Cyanobacteria,0.00380799,F_b07,blk07.FPsc
+FPsc.5E.dead.wk2.blk7.Db4.pot272,FPsc,Disrupted,blk07,s_06,< 1% abundance,0.002437114,F_b07,blk07.FPsc
+FPsc.5E.live.wk2.blk10.Db7.pot428,FPsc,Live,blk10,s_07,Proteobacteria,0.538515101,F_b10,blk10.FPsc
+FPsc.5E.live.wk2.blk10.Db7.pot428,FPsc,Live,blk10,s_07,Firmicutes,0.032835756,F_b10,blk10.FPsc
+FPsc.5E.live.wk2.blk10.Db7.pot428,FPsc,Live,blk10,s_07,Bacteroidetes,0.218513361,F_b10,blk10.FPsc
+FPsc.5E.live.wk2.blk10.Db7.pot428,FPsc,Live,blk10,s_07,Actinobacteria,0.134193576,F_b10,blk10.FPsc
+FPsc.5E.live.wk2.blk10.Db7.pot428,FPsc,Live,blk10,s_07,Planctomycetes,0.021629385,F_b10,blk10.FPsc
+FPsc.5E.live.wk2.blk10.Db7.pot428,FPsc,Live,blk10,s_07,Verrucomicrobia,0.024675777,F_b10,blk10.FPsc
+FPsc.5E.live.wk2.blk10.Db7.pot428,FPsc,Live,blk10,s_07,Chloroflexi,0.010248934,F_b10,blk10.FPsc
+FPsc.5E.live.wk2.blk10.Db7.pot428,FPsc,Live,blk10,s_07,Acidobacteria,0.008551658,F_b10,blk10.FPsc
+FPsc.5E.live.wk2.blk10.Db7.pot428,FPsc,Live,blk10,s_07,Cyanobacteria,0.001501436,F_b10,blk10.FPsc
+FPsc.5E.live.wk2.blk10.Db7.pot428,FPsc,Live,blk10,s_07,< 1% abundance,0.009335016,F_b10,blk10.FPsc
+FPsc.5E.live.wk2.blk12.Db9.pot523,FPsc,Live,blk12,s_08,Proteobacteria,0.525720254,F_b12,blk12.FPsc
+FPsc.5E.live.wk2.blk12.Db9.pot523,FPsc,Live,blk12,s_08,Firmicutes,0.040321177,F_b12,blk12.FPsc
+FPsc.5E.live.wk2.blk12.Db9.pot523,FPsc,Live,blk12,s_08,Bacteroidetes,0.244059535,F_b12,blk12.FPsc
+FPsc.5E.live.wk2.blk12.Db9.pot523,FPsc,Live,blk12,s_08,Actinobacteria,0.109778919,F_b12,blk12.FPsc
+FPsc.5E.live.wk2.blk12.Db9.pot523,FPsc,Live,blk12,s_08,Planctomycetes,0.021999304,F_b12,blk12.FPsc
+FPsc.5E.live.wk2.blk12.Db9.pot523,FPsc,Live,blk12,s_08,Verrucomicrobia,0.022173383,F_b12,blk12.FPsc
+FPsc.5E.live.wk2.blk12.Db9.pot523,FPsc,Live,blk12,s_08,Chloroflexi,0.012511968,F_b12,blk12.FPsc
+FPsc.5E.live.wk2.blk12.Db9.pot523,FPsc,Live,blk12,s_08,Acidobacteria,0.008943337,F_b12,blk12.FPsc
+FPsc.5E.live.wk2.blk12.Db9.pot523,FPsc,Live,blk12,s_08,Cyanobacteria,0.002502394,F_b12,blk12.FPsc
+FPsc.5E.live.wk2.blk12.Db9.pot523,FPsc,Live,blk12,s_08,< 1% abundance,0.011989729,F_b12,blk12.FPsc
+FPsc.5E.live.wk2.blk2.Db1.pot52,FPsc,Live,blk02,s_09,Proteobacteria,0.545913482,F_b02,blk02.FPsc
+FPsc.5E.live.wk2.blk2.Db1.pot52,FPsc,Live,blk02,s_09,Firmicutes,0.031769519,F_b02,blk02.FPsc
+FPsc.5E.live.wk2.blk2.Db1.pot52,FPsc,Live,blk02,s_09,Bacteroidetes,0.174732353,F_b02,blk02.FPsc
+FPsc.5E.live.wk2.blk2.Db1.pot52,FPsc,Live,blk02,s_09,Actinobacteria,0.165919575,F_b02,blk02.FPsc
+FPsc.5E.live.wk2.blk2.Db1.pot52,FPsc,Live,blk02,s_09,Planctomycetes,0.024784577,F_b02,blk02.FPsc
+FPsc.5E.live.wk2.blk2.Db1.pot52,FPsc,Live,blk02,s_09,Verrucomicrobia,0.013687005,F_b02,blk02.FPsc
+FPsc.5E.live.wk2.blk2.Db1.pot52,FPsc,Live,blk02,s_09,Chloroflexi,0.017799634,F_b02,blk02.FPsc
+FPsc.5E.live.wk2.blk2.Db1.pot52,FPsc,Live,blk02,s_09,Acidobacteria,0.010510053,F_b02,blk02.FPsc
+FPsc.5E.live.wk2.blk2.Db1.pot52,FPsc,Live,blk02,s_09,Cyanobacteria,0.002284794,F_b02,blk02.FPsc
+FPsc.5E.live.wk2.blk2.Db1.pot52,FPsc,Live,blk02,s_09,< 1% abundance,0.012599008,F_b02,blk02.FPsc
+FPsc.5E.live.wk2.blk4.Db3.pot174,FPsc,Live,blk04,s_10,Proteobacteria,0.524088258,F_b04,blk04.FPsc
+FPsc.5E.live.wk2.blk4.Db3.pot174,FPsc,Live,blk04,s_10,Firmicutes,0.036991905,F_b04,blk04.FPsc
+FPsc.5E.live.wk2.blk4.Db3.pot174,FPsc,Live,blk04,s_10,Bacteroidetes,0.229284533,F_b04,blk04.FPsc
+FPsc.5E.live.wk2.blk4.Db3.pot174,FPsc,Live,blk04,s_10,Actinobacteria,0.131408304,F_b04,blk04.FPsc
+FPsc.5E.live.wk2.blk4.Db3.pot174,FPsc,Live,blk04,s_10,Planctomycetes,0.025306815,F_b04,blk04.FPsc
+FPsc.5E.live.wk2.blk4.Db3.pot174,FPsc,Live,blk04,s_10,Verrucomicrobia,0.018604752,F_b04,blk04.FPsc
+FPsc.5E.live.wk2.blk4.Db3.pot174,FPsc,Live,blk04,s_10,Chloroflexi,0.012381408,F_b04,blk04.FPsc
+FPsc.5E.live.wk2.blk4.Db3.pot174,FPsc,Live,blk04,s_10,Acidobacteria,0.008812777,F_b04,blk04.FPsc
+FPsc.5E.live.wk2.blk4.Db3.pot174,FPsc,Live,blk04,s_10,Cyanobacteria,0.002001915,F_b04,blk04.FPsc
+FPsc.5E.live.wk2.blk4.Db3.pot174,FPsc,Live,blk04,s_10,< 1% abundance,0.011119332,F_b04,blk04.FPsc
+FPsc.5E.live.wk2.blk5.Db4.pot218,FPsc,Live,blk05,s_11,Proteobacteria,0.500435199,F_b05,blk05.FPsc
+FPsc.5E.live.wk2.blk5.Db4.pot218,FPsc,Live,blk05,s_11,Firmicutes,0.03529463,F_b05,blk05.FPsc
+FPsc.5E.live.wk2.blk5.Db4.pot218,FPsc,Live,blk05,s_11,Bacteroidetes,0.277047611,F_b05,blk05.FPsc
+FPsc.5E.live.wk2.blk5.Db4.pot218,FPsc,Live,blk05,s_11,Actinobacteria,0.100617982,F_b05,blk05.FPsc
+FPsc.5E.live.wk2.blk5.Db4.pot218,FPsc,Live,blk05,s_11,Planctomycetes,0.017538515,F_b05,blk05.FPsc
+FPsc.5E.live.wk2.blk5.Db4.pot218,FPsc,Live,blk05,s_11,Verrucomicrobia,0.02717817,F_b05,blk05.FPsc
+FPsc.5E.live.wk2.blk5.Db4.pot218,FPsc,Live,blk05,s_11,Chloroflexi,0.0157542,F_b05,blk05.FPsc
+FPsc.5E.live.wk2.blk5.Db4.pot218,FPsc,Live,blk05,s_11,Acidobacteria,0.01172861,F_b05,blk05.FPsc
+FPsc.5E.live.wk2.blk5.Db4.pot218,FPsc,Live,blk05,s_11,Cyanobacteria,0.001914875,F_b05,blk05.FPsc
+FPsc.5E.live.wk2.blk5.Db4.pot218,FPsc,Live,blk05,s_11,< 1% abundance,0.012490208,F_b05,blk05.FPsc
+FPsc.5E.live.wk2.blk7.Db6.pot292,FPsc,Live,blk07,s_12,Proteobacteria,0.579467317,F_b07,blk07.FPsc
+FPsc.5E.live.wk2.blk7.Db6.pot292,FPsc,Live,blk07,s_12,Firmicutes,0.039690138,F_b07,blk07.FPsc
+FPsc.5E.live.wk2.blk7.Db6.pot292,FPsc,Live,blk07,s_12,Bacteroidetes,0.176233789,F_b07,blk07.FPsc
+FPsc.5E.live.wk2.blk7.Db6.pot292,FPsc,Live,blk07,s_12,Actinobacteria,0.118287057,F_b07,blk07.FPsc
+FPsc.5E.live.wk2.blk7.Db6.pot292,FPsc,Live,blk07,s_12,Planctomycetes,0.03109496,F_b07,blk07.FPsc
+FPsc.5E.live.wk2.blk7.Db6.pot292,FPsc,Live,blk07,s_12,Verrucomicrobia,0.017016276,F_b07,blk07.FPsc
+FPsc.5E.live.wk2.blk7.Db6.pot292,FPsc,Live,blk07,s_12,Chloroflexi,0.014209244,F_b07,blk07.FPsc
+FPsc.5E.live.wk2.blk7.Db6.pot292,FPsc,Live,blk07,s_12,Acidobacteria,0.010531813,F_b07,blk07.FPsc
+FPsc.5E.live.wk2.blk7.Db6.pot292,FPsc,Live,blk07,s_12,Cyanobacteria,0.001087997,F_b07,blk07.FPsc
+FPsc.5E.live.wk2.blk7.Db6.pot292,FPsc,Live,blk07,s_12,< 1% abundance,0.012381408,F_b07,blk07.FPsc
+FPsc.BLANK.NA.wk2.blk10.Db8.pot435,FPsc,No Inoculation,blk10,s_13,Proteobacteria,0.452715641,F_b10,blk10.FPsc
+FPsc.BLANK.NA.wk2.blk10.Db8.pot435,FPsc,No Inoculation,blk10,s_13,Firmicutes,0.231895726,F_b10,blk10.FPsc
+FPsc.BLANK.NA.wk2.blk10.Db8.pot435,FPsc,No Inoculation,blk10,s_13,Bacteroidetes,0.162699103,F_b10,blk10.FPsc
+FPsc.BLANK.NA.wk2.blk10.Db8.pot435,FPsc,No Inoculation,blk10,s_13,Actinobacteria,0.142353556,F_b10,blk10.FPsc
+FPsc.BLANK.NA.wk2.blk10.Db8.pot435,FPsc,No Inoculation,blk10,s_13,Planctomycetes,0,F_b10,blk10.FPsc
+FPsc.BLANK.NA.wk2.blk10.Db8.pot435,FPsc,No Inoculation,blk10,s_13,Verrucomicrobia,0.009182696,F_b10,blk10.FPsc
+FPsc.BLANK.NA.wk2.blk10.Db8.pot435,FPsc,No Inoculation,blk10,s_13,Chloroflexi,4.35E-05,F_b10,blk10.FPsc
+FPsc.BLANK.NA.wk2.blk10.Db8.pot435,FPsc,No Inoculation,blk10,s_13,Acidobacteria,0,F_b10,blk10.FPsc
+FPsc.BLANK.NA.wk2.blk10.Db8.pot435,FPsc,No Inoculation,blk10,s_13,Cyanobacteria,0.000761598,F_b10,blk10.FPsc
+FPsc.BLANK.NA.wk2.blk10.Db8.pot435,FPsc,No Inoculation,blk10,s_13,< 1% abundance,0.000348159,F_b10,blk10.FPsc
+FPsc.BLANK.NA.wk2.blk12.Db9.pot508,FPsc,No Inoculation,blk12,s_14,Proteobacteria,0.533488554,F_b12,blk12.FPsc
+FPsc.BLANK.NA.wk2.blk12.Db9.pot508,FPsc,No Inoculation,blk12,s_14,Firmicutes,0.196448777,F_b12,blk12.FPsc
+FPsc.BLANK.NA.wk2.blk12.Db9.pot508,FPsc,No Inoculation,blk12,s_14,Bacteroidetes,0.186178083,F_b12,blk12.FPsc
+FPsc.BLANK.NA.wk2.blk12.Db9.pot508,FPsc,No Inoculation,blk12,s_14,Actinobacteria,0.075528767,F_b12,blk12.FPsc
+FPsc.BLANK.NA.wk2.blk12.Db9.pot508,FPsc,No Inoculation,blk12,s_14,Planctomycetes,0,F_b12,blk12.FPsc
+FPsc.BLANK.NA.wk2.blk12.Db9.pot508,FPsc,No Inoculation,blk12,s_14,Verrucomicrobia,0.004591348,F_b12,blk12.FPsc
+FPsc.BLANK.NA.wk2.blk12.Db9.pot508,FPsc,No Inoculation,blk12,s_14,Chloroflexi,0,F_b12,blk12.FPsc
+FPsc.BLANK.NA.wk2.blk12.Db9.pot508,FPsc,No Inoculation,blk12,s_14,Acidobacteria,6.53E-05,F_b12,blk12.FPsc
+FPsc.BLANK.NA.wk2.blk12.Db9.pot508,FPsc,No Inoculation,blk12,s_14,Cyanobacteria,0.003503351,F_b12,blk12.FPsc
+FPsc.BLANK.NA.wk2.blk12.Db9.pot508,FPsc,No Inoculation,blk12,s_14,< 1% abundance,0.000195839,F_b12,blk12.FPsc
+FPsc.BLANK.NA.wk2.blk2.Db2.pot65,FPsc,No Inoculation,blk02,s_15,Proteobacteria,0.500413439,F_b02,blk02.FPsc
+FPsc.BLANK.NA.wk2.blk2.Db2.pot65,FPsc,No Inoculation,blk02,s_15,Firmicutes,0.149490817,F_b02,blk02.FPsc
+FPsc.BLANK.NA.wk2.blk2.Db2.pot65,FPsc,No Inoculation,blk02,s_15,Bacteroidetes,0.280376882,F_b02,blk02.FPsc
+FPsc.BLANK.NA.wk2.blk2.Db2.pot65,FPsc,No Inoculation,blk02,s_15,Actinobacteria,0.064844634,F_b02,blk02.FPsc
+FPsc.BLANK.NA.wk2.blk2.Db2.pot65,FPsc,No Inoculation,blk02,s_15,Planctomycetes,0,F_b02,blk02.FPsc
+FPsc.BLANK.NA.wk2.blk2.Db2.pot65,FPsc,No Inoculation,blk02,s_15,Verrucomicrobia,0.00400383,F_b02,blk02.FPsc
+FPsc.BLANK.NA.wk2.blk2.Db2.pot65,FPsc,No Inoculation,blk02,s_15,Chloroflexi,0,F_b02,blk02.FPsc
+FPsc.BLANK.NA.wk2.blk2.Db2.pot65,FPsc,No Inoculation,blk02,s_15,Acidobacteria,0,F_b02,blk02.FPsc
+FPsc.BLANK.NA.wk2.blk2.Db2.pot65,FPsc,No Inoculation,blk02,s_15,Cyanobacteria,0.000652798,F_b02,blk02.FPsc
+FPsc.BLANK.NA.wk2.blk2.Db2.pot65,FPsc,No Inoculation,blk02,s_15,< 1% abundance,0.000217599,F_b02,blk02.FPsc
+FPsc.BLANK.NA.wk2.blk4.Db3.pot170,FPsc,No Inoculation,blk04,s_16,Proteobacteria,0.513817565,F_b04,blk04.FPsc
+FPsc.BLANK.NA.wk2.blk4.Db3.pot170,FPsc,No Inoculation,blk04,s_16,Firmicutes,0.136217251,F_b04,blk04.FPsc
+FPsc.BLANK.NA.wk2.blk4.Db3.pot170,FPsc,No Inoculation,blk04,s_16,Bacteroidetes,0.304225781,F_b04,blk04.FPsc
+FPsc.BLANK.NA.wk2.blk4.Db3.pot170,FPsc,No Inoculation,blk04,s_16,Actinobacteria,0.043889808,F_b04,blk04.FPsc
+FPsc.BLANK.NA.wk2.blk4.Db3.pot170,FPsc,No Inoculation,blk04,s_16,Planctomycetes,0,F_b04,blk04.FPsc
+FPsc.BLANK.NA.wk2.blk4.Db3.pot170,FPsc,No Inoculation,blk04,s_16,Verrucomicrobia,0.000631038,F_b04,blk04.FPsc
+FPsc.BLANK.NA.wk2.blk4.Db3.pot170,FPsc,No Inoculation,blk04,s_16,Chloroflexi,0,F_b04,blk04.FPsc
+FPsc.BLANK.NA.wk2.blk4.Db3.pot170,FPsc,No Inoculation,blk04,s_16,Acidobacteria,0,F_b04,blk04.FPsc
+FPsc.BLANK.NA.wk2.blk4.Db3.pot170,FPsc,No Inoculation,blk04,s_16,Cyanobacteria,0.001000957,F_b04,blk04.FPsc
+FPsc.BLANK.NA.wk2.blk4.Db3.pot170,FPsc,No Inoculation,blk04,s_16,< 1% abundance,0.000217599,F_b04,blk04.FPsc
+FPsc.BLANK.NA.wk2.blk5.Db3.pot178,FPsc,No Inoculation,blk05,s_17,Proteobacteria,0.594916877,F_b05,blk05.FPsc
+FPsc.BLANK.NA.wk2.blk5.Db3.pot178,FPsc,No Inoculation,blk05,s_17,Firmicutes,0.110910436,F_b05,blk05.FPsc
+FPsc.BLANK.NA.wk2.blk5.Db3.pot178,FPsc,No Inoculation,blk05,s_17,Bacteroidetes,0.235856036,F_b05,blk05.FPsc
+FPsc.BLANK.NA.wk2.blk5.Db3.pot178,FPsc,No Inoculation,blk05,s_17,Actinobacteria,0.055574898,F_b05,blk05.FPsc
+FPsc.BLANK.NA.wk2.blk5.Db3.pot178,FPsc,No Inoculation,blk05,s_17,Planctomycetes,0,F_b05,blk05.FPsc
+FPsc.BLANK.NA.wk2.blk5.Db3.pot178,FPsc,No Inoculation,blk05,s_17,Verrucomicrobia,0.001653756,F_b05,blk05.FPsc
+FPsc.BLANK.NA.wk2.blk5.Db3.pot178,FPsc,No Inoculation,blk05,s_17,Chloroflexi,0,F_b05,blk05.FPsc
+FPsc.BLANK.NA.wk2.blk5.Db3.pot178,FPsc,No Inoculation,blk05,s_17,Acidobacteria,0,F_b05,blk05.FPsc
+FPsc.BLANK.NA.wk2.blk5.Db3.pot178,FPsc,No Inoculation,blk05,s_17,Cyanobacteria,0.001022717,F_b05,blk05.FPsc
+FPsc.BLANK.NA.wk2.blk5.Db3.pot178,FPsc,No Inoculation,blk05,s_17,< 1% abundance,6.53E-05,F_b05,blk05.FPsc
+FPsc.BLANK.NA.wk2.blk7.Db6.pot296,FPsc,No Inoculation,blk07,s_18,Proteobacteria,0.524240578,F_b07,blk07.FPsc
+FPsc.BLANK.NA.wk2.blk7.Db6.pot296,FPsc,No Inoculation,blk07,s_18,Firmicutes,0.207872748,F_b07,blk07.FPsc
+FPsc.BLANK.NA.wk2.blk7.Db6.pot296,FPsc,No Inoculation,blk07,s_18,Bacteroidetes,0.237770911,F_b07,blk07.FPsc
+FPsc.BLANK.NA.wk2.blk7.Db6.pot296,FPsc,No Inoculation,blk07,s_18,Actinobacteria,0.027134651,F_b07,blk07.FPsc
+FPsc.BLANK.NA.wk2.blk7.Db6.pot296,FPsc,No Inoculation,blk07,s_18,Planctomycetes,0,F_b07,blk07.FPsc
+FPsc.BLANK.NA.wk2.blk7.Db6.pot296,FPsc,No Inoculation,blk07,s_18,Verrucomicrobia,0.002850553,F_b07,blk07.FPsc
+FPsc.BLANK.NA.wk2.blk7.Db6.pot296,FPsc,No Inoculation,blk07,s_18,Chloroflexi,0,F_b07,blk07.FPsc
+FPsc.BLANK.NA.wk2.blk7.Db6.pot296,FPsc,No Inoculation,blk07,s_18,Acidobacteria,0,F_b07,blk07.FPsc
+FPsc.BLANK.NA.wk2.blk7.Db6.pot296,FPsc,No Inoculation,blk07,s_18,Cyanobacteria,0.00013056,F_b07,blk07.FPsc
+FPsc.BLANK.NA.wk2.blk7.Db6.pot296,FPsc,No Inoculation,blk07,s_18,< 1% abundance,0,F_b07,blk07.FPsc
+R500.5E.dead.wk2.blk10.Db8.pot432,R500,Disrupted,blk10,s_19,Proteobacteria,0.521172426,r_b10,blk10.R500
+R500.5E.dead.wk2.blk10.Db8.pot432,R500,Disrupted,blk10,s_19,Firmicutes,0.162437984,r_b10,blk10.R500
+R500.5E.dead.wk2.blk10.Db8.pot432,R500,Disrupted,blk10,s_19,Bacteroidetes,0.190965271,r_b10,blk10.R500
+R500.5E.dead.wk2.blk10.Db8.pot432,R500,Disrupted,blk10,s_19,Actinobacteria,0.120049613,r_b10,blk10.R500
+R500.5E.dead.wk2.blk10.Db8.pot432,R500,Disrupted,blk10,s_19,Planctomycetes,0,r_b10,blk10.R500
+R500.5E.dead.wk2.blk10.Db8.pot432,R500,Disrupted,blk10,s_19,Verrucomicrobia,0.002067195,r_b10,blk10.R500
+R500.5E.dead.wk2.blk10.Db8.pot432,R500,Disrupted,blk10,s_19,Chloroflexi,0,r_b10,blk10.R500
+R500.5E.dead.wk2.blk10.Db8.pot432,R500,Disrupted,blk10,s_19,Acidobacteria,4.35E-05,r_b10,blk10.R500
+R500.5E.dead.wk2.blk10.Db8.pot432,R500,Disrupted,blk10,s_19,Cyanobacteria,0.002937592,r_b10,blk10.R500
+R500.5E.dead.wk2.blk10.Db8.pot432,R500,Disrupted,blk10,s_19,< 1% abundance,0.000326399,r_b10,blk10.R500
+R500.5E.dead.wk2.blk12.Db8.pot504,R500,Disrupted,blk12,s_20,Proteobacteria,0.511032292,r_b12,blk12.R500
+R500.5E.dead.wk2.blk12.Db8.pot504,R500,Disrupted,blk12,s_20,Firmicutes,0.146226826,r_b12,blk12.R500
+R500.5E.dead.wk2.blk12.Db8.pot504,R500,Disrupted,blk12,s_20,Bacteroidetes,0.162329184,r_b12,blk12.R500
+R500.5E.dead.wk2.blk12.Db8.pot504,R500,Disrupted,blk12,s_20,Actinobacteria,0.172860997,r_b12,blk12.R500
+R500.5E.dead.wk2.blk12.Db8.pot504,R500,Disrupted,blk12,s_20,Planctomycetes,0,r_b12,blk12.R500
+R500.5E.dead.wk2.blk12.Db8.pot504,R500,Disrupted,blk12,s_20,Verrucomicrobia,0.004221429,r_b12,blk12.R500
+R500.5E.dead.wk2.blk12.Db8.pot504,R500,Disrupted,blk12,s_20,Chloroflexi,0,r_b12,blk12.R500
+R500.5E.dead.wk2.blk12.Db8.pot504,R500,Disrupted,blk12,s_20,Acidobacteria,0,r_b12,blk12.R500
+R500.5E.dead.wk2.blk12.Db8.pot504,R500,Disrupted,blk12,s_20,Cyanobacteria,0.002763513,r_b12,blk12.R500
+R500.5E.dead.wk2.blk12.Db8.pot504,R500,Disrupted,blk12,s_20,< 1% abundance,0.000565759,r_b12,blk12.R500
+R500.5E.dead.wk2.blk2.Db1.pot59,R500,Disrupted,blk02,s_21,Proteobacteria,0.443141266,r_b02,blk02.R500
+R500.5E.dead.wk2.blk2.Db1.pot59,R500,Disrupted,blk02,s_21,Firmicutes,0.343415441,r_b02,blk02.R500
+R500.5E.dead.wk2.blk2.Db1.pot59,R500,Disrupted,blk02,s_21,Bacteroidetes,0.106406128,r_b02,blk02.R500
+R500.5E.dead.wk2.blk2.Db1.pot59,R500,Disrupted,blk02,s_21,Actinobacteria,0.10542693,r_b02,blk02.R500
+R500.5E.dead.wk2.blk2.Db1.pot59,R500,Disrupted,blk02,s_21,Planctomycetes,0,r_b02,blk02.R500
+R500.5E.dead.wk2.blk2.Db1.pot59,R500,Disrupted,blk02,s_21,Verrucomicrobia,0.000239359,r_b02,blk02.R500
+R500.5E.dead.wk2.blk2.Db1.pot59,R500,Disrupted,blk02,s_21,Chloroflexi,0,r_b02,blk02.R500
+R500.5E.dead.wk2.blk2.Db1.pot59,R500,Disrupted,blk02,s_21,Acidobacteria,0,r_b02,blk02.R500
+R500.5E.dead.wk2.blk2.Db1.pot59,R500,Disrupted,blk02,s_21,Cyanobacteria,0.001087997,r_b02,blk02.R500
+R500.5E.dead.wk2.blk2.Db1.pot59,R500,Disrupted,blk02,s_21,< 1% abundance,0.000282879,r_b02,blk02.R500
+R500.5E.dead.wk2.blk4.Db2.pot154,R500,Disrupted,blk04,s_22,Proteobacteria,0.376338237,r_b04,blk04.R500
+R500.5E.dead.wk2.blk4.Db2.pot154,R500,Disrupted,blk04,s_22,Firmicutes,0.360279398,r_b04,blk04.R500
+R500.5E.dead.wk2.blk4.Db2.pot154,R500,Disrupted,blk04,s_22,Bacteroidetes,0.135281574,r_b04,blk04.R500
+R500.5E.dead.wk2.blk4.Db2.pot154,R500,Disrupted,blk04,s_22,Actinobacteria,0.119353294,r_b04,blk04.R500
+R500.5E.dead.wk2.blk4.Db2.pot154,R500,Disrupted,blk04,s_22,Planctomycetes,0,r_b04,blk04.R500
+R500.5E.dead.wk2.blk4.Db2.pot154,R500,Disrupted,blk04,s_22,Verrucomicrobia,0.003329271,r_b04,blk04.R500
+R500.5E.dead.wk2.blk4.Db2.pot154,R500,Disrupted,blk04,s_22,Chloroflexi,0,r_b04,blk04.R500
+R500.5E.dead.wk2.blk4.Db2.pot154,R500,Disrupted,blk04,s_22,Acidobacteria,0,r_b04,blk04.R500
+R500.5E.dead.wk2.blk4.Db2.pot154,R500,Disrupted,blk04,s_22,Cyanobacteria,0.00382975,r_b04,blk04.R500
+R500.5E.dead.wk2.blk4.Db2.pot154,R500,Disrupted,blk04,s_22,< 1% abundance,0.001588476,r_b04,blk04.R500
+R500.5E.dead.wk2.blk5.Db3.pot179,R500,Disrupted,blk05,s_23,Proteobacteria,0.40229785,r_b05,blk05.R500
+R500.5E.dead.wk2.blk5.Db3.pot179,R500,Disrupted,blk05,s_23,Firmicutes,0.305052659,r_b05,blk05.R500
+R500.5E.dead.wk2.blk5.Db3.pot179,R500,Disrupted,blk05,s_23,Bacteroidetes,0.157150318,r_b05,blk05.R500
+R500.5E.dead.wk2.blk5.Db3.pot179,R500,Disrupted,blk05,s_23,Actinobacteria,0.133431978,r_b05,blk05.R500
+R500.5E.dead.wk2.blk5.Db3.pot179,R500,Disrupted,blk05,s_23,Planctomycetes,0,r_b05,blk05.R500
+R500.5E.dead.wk2.blk5.Db3.pot179,R500,Disrupted,blk05,s_23,Verrucomicrobia,0.000761598,r_b05,blk05.R500
+R500.5E.dead.wk2.blk5.Db3.pot179,R500,Disrupted,blk05,s_23,Chloroflexi,0,r_b05,blk05.R500
+R500.5E.dead.wk2.blk5.Db3.pot179,R500,Disrupted,blk05,s_23,Acidobacteria,0,r_b05,blk05.R500
+R500.5E.dead.wk2.blk5.Db3.pot179,R500,Disrupted,blk05,s_23,Cyanobacteria,0.001240317,r_b05,blk05.R500
+R500.5E.dead.wk2.blk5.Db3.pot179,R500,Disrupted,blk05,s_23,< 1% abundance,6.53E-05,r_b05,blk05.R500
+R500.5E.dead.wk2.blk7.Db4.pot269,R500,Disrupted,blk07,s_24,Proteobacteria,0.318326225,r_b07,blk07.R500
+R500.5E.dead.wk2.blk7.Db4.pot269,R500,Disrupted,blk07,s_24,Firmicutes,0.406040561,r_b07,blk07.R500
+R500.5E.dead.wk2.blk7.Db4.pot269,R500,Disrupted,blk07,s_24,Bacteroidetes,0.162829663,r_b07,blk07.R500
+R500.5E.dead.wk2.blk7.Db4.pot269,R500,Disrupted,blk07,s_24,Actinobacteria,0.100770302,r_b07,blk07.R500
+R500.5E.dead.wk2.blk7.Db4.pot269,R500,Disrupted,blk07,s_24,Planctomycetes,0,r_b07,blk07.R500
+R500.5E.dead.wk2.blk7.Db4.pot269,R500,Disrupted,blk07,s_24,Verrucomicrobia,0.005983985,r_b07,blk07.R500
+R500.5E.dead.wk2.blk7.Db4.pot269,R500,Disrupted,blk07,s_24,Chloroflexi,0,r_b07,blk07.R500
+R500.5E.dead.wk2.blk7.Db4.pot269,R500,Disrupted,blk07,s_24,Acidobacteria,0,r_b07,blk07.R500
+R500.5E.dead.wk2.blk7.Db4.pot269,R500,Disrupted,blk07,s_24,Cyanobacteria,0.004439029,r_b07,blk07.R500
+R500.5E.dead.wk2.blk7.Db4.pot269,R500,Disrupted,blk07,s_24,< 1% abundance,0.001610236,r_b07,blk07.R500
+R500.5E.live.wk2.blk10.Db7.pot406,R500,Live,blk10,s_25,Proteobacteria,0.532226478,r_b10,blk10.R500
+R500.5E.live.wk2.blk10.Db7.pot406,R500,Live,blk10,s_25,Firmicutes,0.028374967,r_b10,blk10.R500
+R500.5E.live.wk2.blk10.Db7.pot406,R500,Live,blk10,s_25,Bacteroidetes,0.225868222,r_b10,blk10.R500
+R500.5E.live.wk2.blk10.Db7.pot406,R500,Live,blk10,s_25,Actinobacteria,0.15638872,r_b10,blk10.R500
+R500.5E.live.wk2.blk10.Db7.pot406,R500,Live,blk10,s_25,Planctomycetes,0.015144921,r_b10,blk10.R500
+R500.5E.live.wk2.blk10.Db7.pot406,R500,Live,blk10,s_25,Verrucomicrobia,0.01183741,r_b10,blk10.R500
+R500.5E.live.wk2.blk10.Db7.pot406,R500,Live,blk10,s_25,Chloroflexi,0.01155453,r_b10,blk10.R500
+R500.5E.live.wk2.blk10.Db7.pot406,R500,Live,blk10,s_25,Acidobacteria,0.008660458,r_b10,blk10.R500
+R500.5E.live.wk2.blk10.Db7.pot406,R500,Live,blk10,s_25,Cyanobacteria,0.001827835,r_b10,blk10.R500
+R500.5E.live.wk2.blk10.Db7.pot406,R500,Live,blk10,s_25,< 1% abundance,0.008116459,r_b10,blk10.R500
+R500.5E.live.wk2.blk12.Db8.pot485,R500,Live,blk12,s_26,Proteobacteria,0.576355645,r_b12,blk12.R500
+R500.5E.live.wk2.blk12.Db8.pot485,R500,Live,blk12,s_26,Firmicutes,0.038036383,r_b12,blk12.R500
+R500.5E.live.wk2.blk12.Db8.pot485,R500,Live,blk12,s_26,Bacteroidetes,0.177800505,r_b12,blk12.R500
+R500.5E.live.wk2.blk12.Db8.pot485,R500,Live,blk12,s_26,Actinobacteria,0.149621377,r_b12,blk12.R500
+R500.5E.live.wk2.blk12.Db8.pot485,R500,Live,blk12,s_26,Planctomycetes,0.016211158,r_b12,blk12.R500
+R500.5E.live.wk2.blk12.Db8.pot485,R500,Live,blk12,s_26,Verrucomicrobia,0.014883802,r_b12,blk12.R500
+R500.5E.live.wk2.blk12.Db8.pot485,R500,Live,blk12,s_26,Chloroflexi,0.008747498,r_b12,blk12.R500
+R500.5E.live.wk2.blk12.Db8.pot485,R500,Live,blk12,s_26,Acidobacteria,0.005788145,r_b12,blk12.R500
+R500.5E.live.wk2.blk12.Db8.pot485,R500,Live,blk12,s_26,Cyanobacteria,0.002393594,r_b12,blk12.R500
+R500.5E.live.wk2.blk12.Db8.pot485,R500,Live,blk12,s_26,< 1% abundance,0.010161894,r_b12,blk12.R500
+R500.5E.live.wk2.blk2.Db1.pot55,R500,Live,blk02,s_27,Proteobacteria,0.572003656,r_b02,blk02.R500
+R500.5E.live.wk2.blk2.Db1.pot55,R500,Live,blk02,s_27,Firmicutes,0.018691792,r_b02,blk02.R500
+R500.5E.live.wk2.blk2.Db1.pot55,R500,Live,blk02,s_27,Bacteroidetes,0.245517451,r_b02,blk02.R500
+R500.5E.live.wk2.blk2.Db1.pot55,R500,Live,blk02,s_27,Actinobacteria,0.123509444,r_b02,blk02.R500
+R500.5E.live.wk2.blk2.Db1.pot55,R500,Live,blk02,s_27,Planctomycetes,0.009639655,r_b02,blk02.R500
+R500.5E.live.wk2.blk2.Db1.pot55,R500,Live,blk02,s_27,Verrucomicrobia,0.010335974,r_b02,blk02.R500
+R500.5E.live.wk2.blk2.Db1.pot55,R500,Live,blk02,s_27,Chloroflexi,0.007398381,r_b02,blk02.R500
+R500.5E.live.wk2.blk2.Db1.pot55,R500,Live,blk02,s_27,Acidobacteria,0.005309426,r_b02,blk02.R500
+R500.5E.live.wk2.blk2.Db1.pot55,R500,Live,blk02,s_27,Cyanobacteria,0.001175037,r_b02,blk02.R500
+R500.5E.live.wk2.blk2.Db1.pot55,R500,Live,blk02,s_27,< 1% abundance,0.006419184,r_b02,blk02.R500
+R500.5E.live.wk2.blk4.Db3.pot162,R500,Live,blk04,s_28,Proteobacteria,0.623640003,r_b04,blk04.R500
+R500.5E.live.wk2.blk4.Db3.pot162,R500,Live,blk04,s_28,Firmicutes,0.010618853,r_b04,blk04.R500
+R500.5E.live.wk2.blk4.Db3.pot162,R500,Live,blk04,s_28,Bacteroidetes,0.252110715,r_b04,blk04.R500
+R500.5E.live.wk2.blk4.Db3.pot162,R500,Live,blk04,s_28,Actinobacteria,0.057489773,r_b04,blk04.R500
+R500.5E.live.wk2.blk4.Db3.pot162,R500,Live,blk04,s_28,Planctomycetes,0.013164766,r_b04,blk04.R500
+R500.5E.live.wk2.blk4.Db3.pot162,R500,Live,blk04,s_28,Verrucomicrobia,0.013425886,r_b04,blk04.R500
+R500.5E.live.wk2.blk4.Db3.pot162,R500,Live,blk04,s_28,Chloroflexi,0.006332144,r_b04,blk04.R500
+R500.5E.live.wk2.blk4.Db3.pot162,R500,Live,blk04,s_28,Acidobacteria,0.010292454,r_b04,blk04.R500
+R500.5E.live.wk2.blk4.Db3.pot162,R500,Live,blk04,s_28,Cyanobacteria,0.002241274,r_b04,blk04.R500
+R500.5E.live.wk2.blk4.Db3.pot162,R500,Live,blk04,s_28,< 1% abundance,0.010684133,r_b04,blk04.R500
+R500.5E.live.wk2.blk5.Db4.pot213,R500,Live,blk05,s_29,Proteobacteria,0.534358952,r_b05,blk05.R500
+R500.5E.live.wk2.blk5.Db4.pot213,R500,Live,blk05,s_29,Firmicutes,0.022543302,r_b05,blk05.R500
+R500.5E.live.wk2.blk5.Db4.pot213,R500,Live,blk05,s_29,Bacteroidetes,0.319827661,r_b05,blk05.R500
+R500.5E.live.wk2.blk5.Db4.pot213,R500,Live,blk05,s_29,Actinobacteria,0.07437549,r_b05,blk05.R500
+R500.5E.live.wk2.blk5.Db4.pot213,R500,Live,blk05,s_29,Planctomycetes,0.009443816,r_b05,blk05.R500
+R500.5E.live.wk2.blk5.Db4.pot213,R500,Live,blk05,s_29,Verrucomicrobia,0.016711637,r_b05,blk05.R500
+R500.5E.live.wk2.blk5.Db4.pot213,R500,Live,blk05,s_29,Chloroflexi,0.00789886,r_b05,blk05.R500
+R500.5E.live.wk2.blk5.Db4.pot213,R500,Live,blk05,s_29,Acidobacteria,0.006723823,r_b05,blk05.R500
+R500.5E.live.wk2.blk5.Db4.pot213,R500,Live,blk05,s_29,Cyanobacteria,0.000805118,r_b05,blk05.R500
+R500.5E.live.wk2.blk5.Db4.pot213,R500,Live,blk05,s_29,< 1% abundance,0.007311341,r_b05,blk05.R500
+R500.5E.live.wk2.blk7.Db4.pot266,R500,Live,blk07,s_30,Proteobacteria,0.55844721,r_b07,blk07.R500
+R500.5E.live.wk2.blk7.Db4.pot266,R500,Live,blk07,s_30,Firmicutes,0.02746105,r_b07,blk07.R500
+R500.5E.live.wk2.blk7.Db4.pot266,R500,Live,blk07,s_30,Bacteroidetes,0.268887632,r_b07,blk07.R500
+R500.5E.live.wk2.blk7.Db4.pot266,R500,Live,blk07,s_30,Actinobacteria,0.104600052,r_b07,blk07.R500
+R500.5E.live.wk2.blk7.Db4.pot266,R500,Live,blk07,s_30,Planctomycetes,0.008682218,r_b07,blk07.R500
+R500.5E.live.wk2.blk7.Db4.pot266,R500,Live,blk07,s_30,Verrucomicrobia,0.011489251,r_b07,blk07.R500
+R500.5E.live.wk2.blk7.Db4.pot266,R500,Live,blk07,s_30,Chloroflexi,0.006136304,r_b07,blk07.R500
+R500.5E.live.wk2.blk7.Db4.pot266,R500,Live,blk07,s_30,Acidobacteria,0.007115502,r_b07,blk07.R500
+R500.5E.live.wk2.blk7.Db4.pot266,R500,Live,blk07,s_30,Cyanobacteria,0.000805118,r_b07,blk07.R500
+R500.5E.live.wk2.blk7.Db4.pot266,R500,Live,blk07,s_30,< 1% abundance,0.006375664,r_b07,blk07.R500
+R500.BLANK.NA.wk2.blk10.Db7.pot424,R500,No Inoculation,blk10,s_31,Proteobacteria,0.549329794,r_b10,blk10.R500
+R500.BLANK.NA.wk2.blk10.Db7.pot424,R500,No Inoculation,blk10,s_31,Firmicutes,0.158129515,r_b10,blk10.R500
+R500.BLANK.NA.wk2.blk10.Db7.pot424,R500,No Inoculation,blk10,s_31,Bacteroidetes,0.224105666,r_b10,blk10.R500
+R500.BLANK.NA.wk2.blk10.Db7.pot424,R500,No Inoculation,blk10,s_31,Actinobacteria,0.065780312,r_b10,blk10.R500
+R500.BLANK.NA.wk2.blk10.Db7.pot424,R500,No Inoculation,blk10,s_31,Planctomycetes,0,r_b10,blk10.R500
+R500.BLANK.NA.wk2.blk10.Db7.pot424,R500,No Inoculation,blk10,s_31,Verrucomicrobia,0.001697276,r_b10,blk10.R500
+R500.BLANK.NA.wk2.blk10.Db7.pot424,R500,No Inoculation,blk10,s_31,Chloroflexi,0,r_b10,blk10.R500
+R500.BLANK.NA.wk2.blk10.Db7.pot424,R500,No Inoculation,blk10,s_31,Acidobacteria,0,r_b10,blk10.R500
+R500.BLANK.NA.wk2.blk10.Db7.pot424,R500,No Inoculation,blk10,s_31,Cyanobacteria,0.000870398,r_b10,blk10.R500
+R500.BLANK.NA.wk2.blk10.Db7.pot424,R500,No Inoculation,blk10,s_31,< 1% abundance,8.70E-05,r_b10,blk10.R500
+R500.BLANK.NA.wk2.blk12.Db9.pot513,R500,No Inoculation,blk12,s_32,Proteobacteria,0.47641222,r_b12,blk12.R500
+R500.BLANK.NA.wk2.blk12.Db9.pot513,R500,No Inoculation,blk12,s_32,Firmicutes,0.298045957,r_b12,blk12.R500
+R500.BLANK.NA.wk2.blk12.Db9.pot513,R500,No Inoculation,blk12,s_32,Bacteroidetes,0.151318653,r_b12,blk12.R500
+R500.BLANK.NA.wk2.blk12.Db9.pot513,R500,No Inoculation,blk12,s_32,Actinobacteria,0.072852293,r_b12,blk12.R500
+R500.BLANK.NA.wk2.blk12.Db9.pot513,R500,No Inoculation,blk12,s_32,Planctomycetes,0,r_b12,blk12.R500
+R500.BLANK.NA.wk2.blk12.Db9.pot513,R500,No Inoculation,blk12,s_32,Verrucomicrobia,0.000282879,r_b12,blk12.R500
+R500.BLANK.NA.wk2.blk12.Db9.pot513,R500,No Inoculation,blk12,s_32,Chloroflexi,0,r_b12,blk12.R500
+R500.BLANK.NA.wk2.blk12.Db9.pot513,R500,No Inoculation,blk12,s_32,Acidobacteria,4.35E-05,r_b12,blk12.R500
+R500.BLANK.NA.wk2.blk12.Db9.pot513,R500,No Inoculation,blk12,s_32,Cyanobacteria,0.000979197,r_b12,blk12.R500
+R500.BLANK.NA.wk2.blk12.Db9.pot513,R500,No Inoculation,blk12,s_32,< 1% abundance,6.53E-05,r_b12,blk12.R500
+R500.BLANK.NA.wk2.blk2.Db2.pot82,R500,No Inoculation,blk02,s_33,Proteobacteria,0.547393159,r_b02,blk02.R500
+R500.BLANK.NA.wk2.blk2.Db2.pot82,R500,No Inoculation,blk02,s_33,Firmicutes,0.069523022,r_b02,blk02.R500
+R500.BLANK.NA.wk2.blk2.Db2.pot82,R500,No Inoculation,blk02,s_33,Bacteroidetes,0.353207416,r_b02,blk02.R500
+R500.BLANK.NA.wk2.blk2.Db2.pot82,R500,No Inoculation,blk02,s_33,Actinobacteria,0.028505527,r_b02,blk02.R500
+R500.BLANK.NA.wk2.blk2.Db2.pot82,R500,No Inoculation,blk02,s_33,Planctomycetes,0,r_b02,blk02.R500
+R500.BLANK.NA.wk2.blk2.Db2.pot82,R500,No Inoculation,blk02,s_33,Verrucomicrobia,0.000979197,r_b02,blk02.R500
+R500.BLANK.NA.wk2.blk2.Db2.pot82,R500,No Inoculation,blk02,s_33,Chloroflexi,0,r_b02,blk02.R500
+R500.BLANK.NA.wk2.blk2.Db2.pot82,R500,No Inoculation,blk02,s_33,Acidobacteria,0,r_b02,blk02.R500
+R500.BLANK.NA.wk2.blk2.Db2.pot82,R500,No Inoculation,blk02,s_33,Cyanobacteria,0.000391679,r_b02,blk02.R500
+R500.BLANK.NA.wk2.blk2.Db2.pot82,R500,No Inoculation,blk02,s_33,< 1% abundance,0,r_b02,blk02.R500
+R500.BLANK.NA.wk2.blk4.Db2.pot153,R500,No Inoculation,blk04,s_34,Proteobacteria,0.550178432,r_b04,blk04.R500
+R500.BLANK.NA.wk2.blk4.Db2.pot153,R500,No Inoculation,blk04,s_34,Firmicutes,0.142331796,r_b04,blk04.R500
+R500.BLANK.NA.wk2.blk4.Db2.pot153,R500,No Inoculation,blk04,s_34,Bacteroidetes,0.260401253,r_b04,blk04.R500
+R500.BLANK.NA.wk2.blk4.Db2.pot153,R500,No Inoculation,blk04,s_34,Actinobacteria,0.044281487,r_b04,blk04.R500
+R500.BLANK.NA.wk2.blk4.Db2.pot153,R500,No Inoculation,blk04,s_34,Planctomycetes,0,r_b04,blk04.R500
+R500.BLANK.NA.wk2.blk4.Db2.pot153,R500,No Inoculation,blk04,s_34,Verrucomicrobia,0.001631996,r_b04,blk04.R500
+R500.BLANK.NA.wk2.blk4.Db2.pot153,R500,No Inoculation,blk04,s_34,Chloroflexi,0,r_b04,blk04.R500
+R500.BLANK.NA.wk2.blk4.Db2.pot153,R500,No Inoculation,blk04,s_34,Acidobacteria,0,r_b04,blk04.R500
+R500.BLANK.NA.wk2.blk4.Db2.pot153,R500,No Inoculation,blk04,s_34,Cyanobacteria,0.001175037,r_b04,blk04.R500
+R500.BLANK.NA.wk2.blk4.Db2.pot153,R500,No Inoculation,blk04,s_34,< 1% abundance,0,r_b04,blk04.R500
+R500.BLANK.NA.wk2.blk5.Db3.pot202,R500,No Inoculation,blk05,s_35,Proteobacteria,0.578879798,r_b05,blk05.R500
+R500.BLANK.NA.wk2.blk5.Db3.pot202,R500,No Inoculation,blk05,s_35,Firmicutes,0.174971712,r_b05,blk05.R500
+R500.BLANK.NA.wk2.blk5.Db3.pot202,R500,No Inoculation,blk05,s_35,Bacteroidetes,0.20325964,r_b05,blk05.R500
+R500.BLANK.NA.wk2.blk5.Db3.pot202,R500,No Inoculation,blk05,s_35,Actinobacteria,0.040647576,r_b05,blk05.R500
+R500.BLANK.NA.wk2.blk5.Db3.pot202,R500,No Inoculation,blk05,s_35,Planctomycetes,0,r_b05,blk05.R500
+R500.BLANK.NA.wk2.blk5.Db3.pot202,R500,No Inoculation,blk05,s_35,Verrucomicrobia,0.001479676,r_b05,blk05.R500
+R500.BLANK.NA.wk2.blk5.Db3.pot202,R500,No Inoculation,blk05,s_35,Chloroflexi,0,r_b05,blk05.R500
+R500.BLANK.NA.wk2.blk5.Db3.pot202,R500,No Inoculation,blk05,s_35,Acidobacteria,0,r_b05,blk05.R500
+R500.BLANK.NA.wk2.blk5.Db3.pot202,R500,No Inoculation,blk05,s_35,Cyanobacteria,0.000543999,r_b05,blk05.R500
+R500.BLANK.NA.wk2.blk5.Db3.pot202,R500,No Inoculation,blk05,s_35,< 1% abundance,0.000217599,r_b05,blk05.R500
+R500.BLANK.NA.wk2.blk7.Db4.pot278,R500,No Inoculation,blk07,s_36,Proteobacteria,0.704325877,r_b07,blk07.R500
+R500.BLANK.NA.wk2.blk7.Db4.pot278,R500,No Inoculation,blk07,s_36,Firmicutes,0.135803812,r_b07,blk07.R500
+R500.BLANK.NA.wk2.blk7.Db4.pot278,R500,No Inoculation,blk07,s_36,Bacteroidetes,0.13678301,r_b07,blk07.R500
+R500.BLANK.NA.wk2.blk7.Db4.pot278,R500,No Inoculation,blk07,s_36,Actinobacteria,0.020824267,r_b07,blk07.R500
+R500.BLANK.NA.wk2.blk7.Db4.pot278,R500,No Inoculation,blk07,s_36,Planctomycetes,0,r_b07,blk07.R500
+R500.BLANK.NA.wk2.blk7.Db4.pot278,R500,No Inoculation,blk07,s_36,Verrucomicrobia,0.000304639,r_b07,blk07.R500
+R500.BLANK.NA.wk2.blk7.Db4.pot278,R500,No Inoculation,blk07,s_36,Chloroflexi,0,r_b07,blk07.R500
+R500.BLANK.NA.wk2.blk7.Db4.pot278,R500,No Inoculation,blk07,s_36,Acidobacteria,0,r_b07,blk07.R500
+R500.BLANK.NA.wk2.blk7.Db4.pot278,R500,No Inoculation,blk07,s_36,Cyanobacteria,0.001719036,r_b07,blk07.R500
+R500.BLANK.NA.wk2.blk7.Db4.pot278,R500,No Inoculation,blk07,s_36,< 1% abundance,0.000239359,r_b07,blk07.R500

@@ -1,0 +1,37 @@
+sampleID	genotype	trt	geno_trt	soil_source	blk	dna_blk	pot	sample_id
+FPsc.5E.dead.wk2.blk10.Db6.pot399	FPsc	Disrupted	FPsc_disrupted	5E	blk10	Db6	pot399	pot399
+FPsc.5E.dead.wk2.blk12.Db9.pot517	FPsc	Disrupted	FPsc_disrupted	5E	blk12	Db9	pot517	pot517
+FPsc.5E.dead.wk2.blk2.Db2.pot64	FPsc	Disrupted	FPsc_disrupted	5E	blk2	Db2	pot64	pot64
+FPsc.5E.dead.wk2.blk4.Db2.pot141	FPsc	Disrupted	FPsc_disrupted	5E	blk4	Db2	pot141	pot141
+FPsc.5E.dead.wk2.blk5.Db3.pot181	FPsc	Disrupted	FPsc_disrupted	5E	blk5	Db3	pot181	pot181
+FPsc.5E.dead.wk2.blk7.Db4.pot272	FPsc	Disrupted	FPsc_disrupted	5E	blk7	Db4	pot272	pot272
+FPsc.5E.live.wk2.blk10.Db7.pot428	FPsc	Live	FPsc_live	5E	blk10	Db7	pot428	pot428
+FPsc.5E.live.wk2.blk12.Db9.pot523	FPsc	Live	FPsc_live	5E	blk12	Db9	pot523	pot523
+FPsc.5E.live.wk2.blk2.Db1.pot52	FPsc	Live	FPsc_live	5E	blk2	Db1	pot52	pot52
+FPsc.5E.live.wk2.blk4.Db3.pot174	FPsc	Live	FPsc_live	5E	blk4	Db3	pot174	pot174
+FPsc.5E.live.wk2.blk5.Db4.pot218	FPsc	Live	FPsc_live	5E	blk5	Db4	pot218	pot218
+FPsc.5E.live.wk2.blk7.Db6.pot292	FPsc	Live	FPsc_live	5E	blk7	Db6	pot292	pot292
+FPsc.BLANK.NA.wk2.blk10.Db8.pot435	FPsc	No inoculation	FPsc_no.inoculation	NA	blk10	Db8	pot435	pot435
+FPsc.BLANK.NA.wk2.blk12.Db9.pot508	FPsc	No inoculation	FPsc_no.inoculation	NA	blk12	Db9	pot508	pot508
+FPsc.BLANK.NA.wk2.blk2.Db2.pot65	FPsc	No inoculation	FPsc_no.inoculation	NA	blk2	Db2	pot65	pot65
+FPsc.BLANK.NA.wk2.blk4.Db3.pot170	FPsc	No inoculation	FPsc_no.inoculation	NA	blk4	Db3	pot170	pot170
+FPsc.BLANK.NA.wk2.blk5.Db3.pot178	FPsc	No inoculation	FPsc_no.inoculation	NA	blk5	Db3	pot178	pot178
+FPsc.BLANK.NA.wk2.blk7.Db6.pot296	FPsc	No inoculation	FPsc_no.inoculation	NA	blk7	Db6	pot296	pot296
+R500.5E.dead.wk2.blk10.Db8.pot432	R500	Disrupted	R500_disrupted	5E	blk10	Db8	pot432	pot432
+R500.5E.dead.wk2.blk12.Db8.pot504	R500	Disrupted	R500_disrupted	5E	blk12	Db8	pot504	pot504
+R500.5E.dead.wk2.blk2.Db1.pot59	R500	Disrupted	R500_disrupted	5E	blk2	Db1	pot59	pot59
+R500.5E.dead.wk2.blk4.Db2.pot154	R500	Disrupted	R500_disrupted	5E	blk4	Db2	pot154	pot154
+R500.5E.dead.wk2.blk5.Db3.pot179	R500	Disrupted	R500_disrupted	5E	blk5	Db3	pot179	pot179
+R500.5E.dead.wk2.blk7.Db4.pot269	R500	Disrupted	R500_disrupted	5E	blk7	Db4	pot269	pot269
+R500.5E.live.wk2.blk10.Db7.pot406	R500	Live	R500_live	5E	blk10	Db7	pot406	pot406
+R500.5E.live.wk2.blk12.Db8.pot485	R500	Live	R500_live	5E	blk12	Db8	pot485	pot485
+R500.5E.live.wk2.blk2.Db1.pot55	R500	Live	R500_live	5E	blk2	Db1	pot55	pot55
+R500.5E.live.wk2.blk4.Db3.pot162	R500	Live	R500_live	5E	blk4	Db3	pot162	pot162
+R500.5E.live.wk2.blk5.Db4.pot213	R500	Live	R500_live	5E	blk5	Db4	pot213	pot213
+R500.5E.live.wk2.blk7.Db4.pot266	R500	Live	R500_live	5E	blk7	Db4	pot266	pot266
+R500.BLANK.NA.wk2.blk10.Db7.pot424	R500	No inoculation	R500_no.inoculation	NA	blk10	Db7	pot424	pot424
+R500.BLANK.NA.wk2.blk12.Db9.pot513	R500	No inoculation	R500_no.inoculation	NA	blk12	Db9	pot513	pot513
+R500.BLANK.NA.wk2.blk2.Db2.pot82	R500	No inoculation	R500_no.inoculation	NA	blk2	Db2	pot82	pot82
+R500.BLANK.NA.wk2.blk4.Db2.pot153	R500	No inoculation	R500_no.inoculation	NA	blk4	Db2	pot153	pot153
+R500.BLANK.NA.wk2.blk5.Db3.pot202	R500	No inoculation	R500_no.inoculation	NA	blk5	Db3	pot202	pot202
+R500.BLANK.NA.wk2.blk7.Db4.pot278	R500	No inoculation	R500_no.inoculation	NA	blk7	Db4	pot278	pot278

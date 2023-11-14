@@ -1,0 +1,194 @@
+exp,pot,pot,block,bench,row,col,genotype,density,5E_soil_trts,descriptor,Leaf_Ln_cm,data_type,pot_density,time_point,raw_avg_lf_11.03.17,lf_1_03.24_no_germ,lf_2_03.24_no_germ
+PGP Exp.,4,NA,1,1,2,1,R500,NA,No inoculation,avg_lf_03.24_no_germ,3.439800168,phys,3,wk2,NA,3.858372697,3.022054278
+PGP Exp.,5,NA,1,1,1,1,R500,NA,Live,avg_lf_03.24_no_germ,3.249530717,phys,3,wk2,NA,3.866223438,2.643611691
+PGP Exp.,10,NA,1,1,1,2,FPsc,NA,No inoculation,avg_lf_03.24_no_germ,2.85160156,phys,3,wk2,NA,2.854447326,2.844608905
+PGP Exp.,13,NA,1,1,3,3,FPsc,NA,Disrupted,avg_lf_03.24_no_germ,2.95160156,phys,3,wk2,NA,3.287780659,2.611275572
+PGP Exp.,16,NA,1,1,5,4,FPsc,NA,Live,avg_lf_03.24_no_germ,2.056466835,phys,3,wk2,NA,2.558372697,1.555387612
+PGP Exp.,18,NA,1,1,3,4,FPsc,NA,Disrupted,avg_lf_03.24_no_germ,2.80160156,phys,3,wk4,NA,2.754447326,2.844608905
+PGP Exp.,23,NA,1,1,3,5,FPsc,NA,Live,avg_lf_03.24_no_germ,3.034934894,phys,2,wk4,NA,3.337780659,2.727942239
+PGP Exp.,24,NA,1,1,2,5,FPsc,NA,No inoculation,avg_lf_03.24_no_germ,2.518268227,phys,3,wk4,NA,2.587780659,2.444608905
+PGP Exp.,26,NA,1,1,6,1,R500,NA,Disrupted,avg_lf_03.24_no_germ,3.956466835,phys,3,wk4,NA,4.49170603,3.422054278
+PGP Exp.,35,NA,1,1,7,3,R500,NA,No inoculation,avg_lf_03.24_no_germ,3.25160156,phys,3,wk4,NA,3.487780659,3.011275572
+PGP Exp.,38,NA,1,1,6,4,R500,NA,Disrupted,avg_lf_03.24_no_germ,3.599530717,phys,3,wk2,NA,3.766223438,3.443611691
+PGP Exp.,44,NA,1,1,8,5,R500,NA,Live,avg_lf_03.24_no_germ,3.749530717,phys,3,wk4,NA,4.166223438,3.343611691
+PGP Exp.,48,NA,2,1,2,1,FPsc,NA,Disrupted,avg_lf_03.24_no_germ,2.306466835,RNAseq,3,wk4,NA,2.29170603,2.322054278
+PGP Exp.,50,NA,2,1,5,2,R500,NA,Disrupted,avg_lf_03.24_no_germ,3.549530717,RNAseq,3,wk4,NA,3.499556772,3.610278358
+PGP Exp.,52,NA,2,1,3,2,FPsc,NA,Live,avg_lf_03.24_no_germ,2.934934894,RNAseq,3,wk2,NA,2.787780659,3.077942239
+PGP Exp.,53,NA,2,1,2,2,FPsc,NA,No inoculation,avg_lf_03.24_no_germ,2.368268227,RNAseq,3,wk4,NA,2.421113993,2.311275572
+PGP Exp.,55,NA,2,1,5,3,R500,NA,Live,avg_lf_03.24_no_germ,3.749530717,RNAseq,3,wk2,NA,4.199556772,3.310278358
+PGP Exp.,59,NA,2,1,1,3,R500,NA,Disrupted,avg_lf_03.24_no_germ,3.366197384,RNAseq,3,wk2,NA,3.266223438,3.476945024
+PGP Exp.,63,NA,2,1,2,4,R500,NA,No inoculation,avg_lf_03.24_no_germ,2.927998776,RNAseq,3,wk4,NA,3.328964734,2.532832985
+PGP Exp.,64,NA,2,1,1,4,FPsc,NA,Disrupted,avg_lf_03.24_no_germ,2.534934894,RNAseq,3,wk2,NA,2.721113993,2.344608905
+PGP Exp.,65,NA,2,1,5,5,FPsc,NA,No inoculation,avg_lf_03.24_no_germ,2.85160156,RNAseq,3,wk2,NA,2.754447326,2.944608905
+PGP Exp.,72,NA,2,1,8,1,FPsc,NA,Live,avg_lf_03.24_no_germ,3.60160156,RNAseq,3,wk4,NA,3.621113993,3.577942239
+PGP Exp.,73,NA,2,1,9,1,R500,NA,Live,avg_lf_03.24_no_germ,3.099530717,RNAseq,3,wk4,NA,3.399556772,2.810278358
+PGP Exp.,82,NA,2,1,6,4,R500,NA,No inoculation,avg_lf_03.24_no_germ,4.061332109,RNAseq,3,wk2,NA,4.428964734,3.699499651
+PGP Exp.,93,NA,3,1,1,1,R500,NA,Live,avg_lf_03.24_no_germ,3.732864051,phys,3,wk4,NA,3.932890105,3.543611691
+PGP Exp.,97,NA,3,1,2,2,FPsc,NA,Disrupted,avg_lf_03.24_no_germ,1.916197384,phys,3,wk4,NA,1.999556772,1.843611691
+PGP Exp.,98,NA,3,1,1,2,FPsc,NA,Live,avg_lf_03.24_no_germ,2.261332109,phys,3,wk4,NA,2.528964734,1.999499651
+PGP Exp.,107,NA,3,1,2,4,R500,NA,No inoculation,avg_lf_03.24_no_germ,2.932864051,phys,3,wk2,NA,3.166223438,2.710278358
+PGP Exp.,109,NA,3,1,5,5,FPsc,NA,No inoculation,avg_lf_03.24_no_germ,2.918268227,phys,3,wk4,NA,3.121113993,2.711275572
+PGP Exp.,114,NA,3,1,6,1,R500,NA,Disrupted,avg_lf_03.24_no_germ,4.182864051,phys,3,wk4,NA,4.666223438,3.710278358
+PGP Exp.,115,NA,3,1,7,1,FPsc,NA,Live,avg_lf_03.24_no_germ,3.332864051,phys,3,wk2,NA,4.132890105,2.543611691
+PGP Exp.,117,NA,3,1,9,1,FPsc,NA,Disrupted,avg_lf_03.24_no_germ,2.399530717,phys,3,wk2,NA,2.699556772,2.110278358
+PGP Exp.,120,NA,3,1,8,2,R500,NA,Disrupted,avg_lf_03.24_no_germ,3.682864051,phys,3,wk2,NA,4.199556772,3.176945024
+PGP Exp.,123,NA,3,1,7,3,R500,NA,No inoculation,avg_lf_03.24_no_germ,3.834934894,phys,3,wk4,NA,4.254447326,3.411275572
+PGP Exp.,126,NA,3,1,6,4,FPsc,NA,No inoculation,avg_lf_03.24_no_germ,2.523133502,phys,3,wk2,NA,2.758372697,2.288720945
+PGP Exp.,130,NA,3,1,6,5,R500,NA,Live,avg_lf_03.24_no_germ,4.116197384,phys,3,wk2,NA,4.499556772,3.743611691
+PGP Exp.,137,NA,4,1,1,1,R500,NA,Disrupted,avg_lf_03.24_no_germ,3.016197384,RNAseq,3,wk4,NA,3.232890105,2.810278358
+PGP Exp.,141,NA,4,1,2,2,FPsc,NA,Disrupted,avg_lf_03.24_no_germ,1.882864051,RNAseq,3,wk2,NA,2.032890105,1.743611691
+PGP Exp.,152,NA,4,1,1,4,FPsc,NA,Live,avg_lf_03.24_no_germ,2.368268227,RNAseq,2,wk4,NA,2.821113993,1.911275572
+PGP Exp.,153,NA,4,1,5,5,R500,NA,No inoculation,avg_lf_03.24_no_germ,3.65160156,RNAseq,3,wk2,NA,4.087780659,3.211275572
+PGP Exp.,154,NA,4,1,4,5,R500,NA,Disrupted,avg_lf_03.24_no_germ,3.582864051,RNAseq,3,wk2,NA,3.766223438,3.410278358
+PGP Exp.,162,NA,4,1,6,2,R500,NA,Live,avg_lf_03.24_no_germ,3.80160156,RNAseq,3,wk2,NA,4.054447326,3.544608905
+PGP Exp.,166,NA,4,1,6,3,R500,NA,No inoculation,avg_lf_03.24_no_germ,3.132864051,RNAseq,3,wk4,NA,3.366223438,2.910278358
+PGP Exp.,168,NA,4,1,8,3,FPsc,NA,No inoculation,avg_lf_03.24_no_germ,3.468268227,RNAseq,3,wk4,NA,3.754447326,3.177942239
+PGP Exp.,169,NA,4,1,9,3,FPsc,NA,Disrupted,avg_lf_03.24_no_germ,3.406466835,RNAseq,3,wk4,NA,3.59170603,3.222054278
+PGP Exp.,170,NA,4,1,6,4,FPsc,NA,No inoculation,avg_lf_03.24_no_germ,2.868268227,RNAseq,3,wk2,NA,2.954447326,2.777942239
+PGP Exp.,172,NA,4,1,8,4,R500,NA,Live,avg_lf_03.24_no_germ,4.518268227,RNAseq,3,wk4,NA,4.921113993,4.111275572
+PGP Exp.,174,NA,4,1,6,5,FPsc,NA,Live,avg_lf_03.24_no_germ,3.194665443,RNAseq,3,wk2,NA,3.562298068,2.832832985
+PGP Exp.,178,NA,5,2,4,1,FPsc,NA,No inoculation,avg_lf_03.24_no_germ,2.85160156,RNAseq,3,wk2,NA,3.021113993,2.677942239
+PGP Exp.,179,NA,5,2,3,1,R500,NA,Disrupted,avg_lf_03.24_no_germ,3.718268227,RNAseq,3,wk2,NA,4.287780659,3.144608905
+PGP Exp.,181,NA,5,2,1,1,FPsc,NA,Disrupted,avg_lf_03.24_no_germ,2.361332109,RNAseq,3,wk2,NA,2.528964734,2.199499651
+PGP Exp.,185,NA,5,2,2,2,R500,NA,No inoculation,avg_lf_03.24_no_germ,3.468268227,RNAseq,3,wk4,NA,4.254447326,2.677942239
+PGP Exp.,193,NA,5,2,4,4,R500,NA,Disrupted,avg_lf_03.24_no_germ,4.20160156,RNAseq,3,wk4,NA,4.554447326,3.844608905
+PGP Exp.,196,NA,5,2,1,4,FPsc,NA,Disrupted,avg_lf_03.24_no_germ,2.532864051,RNAseq,3,wk4,NA,2.732890105,2.343611691
+PGP Exp.,201,NA,5,2,1,5,FPsc,NA,Live,avg_lf_03.24_no_germ,3.216197384,RNAseq,3,wk4,NA,3.066223438,3.376945024
+PGP Exp.,202,NA,5,2,6,1,R500,NA,No inoculation,avg_lf_03.24_no_germ,3.40160156,RNAseq,3,wk2,NA,4.154447326,2.644608905
+PGP Exp.,210,NA,5,2,6,3,R500,NA,Live,avg_lf_03.24_no_germ,4.468268227,RNAseq,3,wk4,NA,4.954447326,3.977942239
+PGP Exp.,211,NA,5,2,7,3,FPsc,NA,No inoculation,avg_lf_03.24_no_germ,2.723133502,RNAseq,3,wk4,NA,2.49170603,2.955387612
+PGP Exp.,213,NA,5,2,9,3,R500,NA,Live,avg_lf_03.24_no_germ,4.516197384,RNAseq,3,wk2,NA,5.266223438,3.776945024
+PGP Exp.,218,NA,5,2,6,5,FPsc,NA,Live,avg_lf_03.24_no_germ,3.684934894,RNAseq,3,wk2,NA,3.854447326,3.511275572
+PGP Exp.,228,NA,6,2,3,2,FPsc,NA,No inoculation,avg_lf_03.24_no_germ,2.956466835,Phys,3,wk4,NA,3.058372697,2.855387612
+PGP Exp.,231,NA,6,2,5,3,FPsc,NA,Disrupted,avg_lf_03.24_no_germ,2.832864051,Phys,3,wk2,NA,2.766223438,2.910278358
+PGP Exp.,238,NA,6,2,3,4,R500,NA,Disrupted,avg_lf_03.24_no_germ,4.527998776,Phys,3,wk2,NA,4.862298068,4.199499651
+PGP Exp.,241,NA,6,2,5,5,R500,NA,Live,avg_lf_03.24_no_germ,5.211332109,Phys,3,wk4,NA,5.762298068,4.666166318
+PGP Exp.,242,NA,6,2,4,5,FPsc,NA,Live,avg_lf_03.24_no_germ,3.516197384,Phys,3,wk2,NA,3.399556772,3.643611691
+PGP Exp.,248,NA,6,2,8,1,R500,NA,Disrupted,avg_lf_03.24_no_germ,4.618268227,Phys,3,wk4,NA,4.987780659,4.244608905
+PGP Exp.,250,NA,6,2,6,2,FPsc,NA,No inoculation,avg_lf_03.24_no_germ,3.15160156,Phys,3,wk2,NA,3.054447326,3.244608905
+PGP Exp.,251,NA,6,2,7,2,R500,NA,No inoculation,avg_lf_03.24_no_germ,3.618268227,Phys,3,wk4,NA,4.087780659,3.144608905
+PGP Exp.,254,NA,6,2,6,3,R500,NA,Live,avg_lf_03.24_no_germ,4.718268227,Phys,3,wk2,NA,5.054447326,4.377942239
+PGP Exp.,255,NA,6,2,7,3,FPsc,NA,Disrupted,avg_lf_03.24_no_germ,3.056466835,Phys,3,wk4,NA,2.958372697,3.155387612
+PGP Exp.,257,NA,6,2,9,3,R500,NA,No inoculation,avg_lf_03.24_no_germ,4.684934894,Phys,3,wk2,NA,5.054447326,4.311275572
+PGP Exp.,263,NA,6,2,7,5,FPsc,NA,Live,avg_lf_03.24_no_germ,3.60160156,Phys,3,wk4,NA,3.321113993,3.877942239
+PGP Exp.,266,NA,7,2,4,1,R500,NA,Live,avg_lf_03.24_no_germ,4.944665443,RNAseq,3,wk2,NA,5.528964734,4.366166318
+PGP Exp.,269,NA,7,2,1,1,R500,NA,Disrupted,avg_lf_03.24_no_germ,4.082864051,RNAseq,3,wk2,NA,4.232890105,3.943611691
+PGP Exp.,272,NA,7,2,3,2,FPsc,NA,Disrupted,avg_lf_03.24_no_germ,2.916197384,RNAseq,3,wk2,NA,3.032890105,2.810278358
+PGP Exp.,278,NA,7,2,2,3,R500,NA,No inoculation,avg_lf_03.24_no_germ,3.418268227,RNAseq,3,wk2,NA,3.921113993,2.911275572
+PGP Exp.,281,NA,7,2,4,4,R500,NA,Live,avg_lf_03.24_no_germ,4.439800168,RNAseq,3,wk4,NA,4.758372697,4.122054278
+PGP Exp.,284,NA,7,2,1,4,FPsc,NA,Live,avg_lf_03.24_no_germ,2.827998776,RNAseq,3,wk4,NA,2.895631401,2.766166318
+PGP Exp.,291,NA,7,2,7,1,FPsc,NA,No inoculation,avg_lf_03.24_no_germ,2.968268227,RNAseq,3,wk4,NA,3.021113993,2.911275572
+PGP Exp.,292,NA,7,2,8,1,FPsc,NA,Live,avg_lf_03.24_no_germ,3.139800168,RNAseq,3,wk2,NA,2.925039363,3.355387612
+PGP Exp.,296,NA,7,2,8,2,FPsc,NA,No inoculation,avg_lf_03.24_no_germ,2.577998776,RNAseq,3,wk2,NA,2.095631401,3.066166318
+PGP Exp.,297,NA,7,2,9,2,R500,NA,Disrupted,avg_lf_03.24_no_germ,4.373133502,RNAseq,3,wk4,NA,4.925039363,3.822054278
+PGP Exp.,299,NA,7,2,7,3,R500,NA,No inoculation,avg_lf_03.24_no_germ,3.984934894,RNAseq,3,wk4,NA,4.687780659,3.277942239
+PGP Exp.,302,NA,7,2,6,4,FPsc,NA,Disrupted,avg_lf_03.24_no_germ,3.046736286,RNAseq,3,wk4,NA,3.217188622,2.867163532
+PGP Exp.,311,NA,8,2,3,1,R500,NA,Disrupted,avg_lf_03.24_no_germ,3.432864051,Phys,3,wk2,NA,3.566223438,3.310278358
+PGP Exp.,320,NA,8,2,4,3,R500,NA,Live,avg_lf_03.24_no_germ,4.718268227,Phys,3,wk4,NA,5.121113993,4.311275572
+PGP Exp.,325,NA,8,2,4,4,R500,NA,Disrupted,avg_lf_03.24_no_germ,4.084934894,Phys,3,wk4,NA,4.454447326,3.711275572
+PGP Exp.,326,NA,8,2,3,4,FPsc,NA,Disrupted,avg_lf_03.24_no_germ,2.544665443,Phys,3,wk2,NA,2.595631401,2.499499651
+PGP Exp.,327,NA,8,2,2,4,FPsc,NA,Live,avg_lf_03.24_no_germ,3.261332109,Phys,3,wk2,NA,3.049556772,3.232832985
+PGP Exp.,330,NA,8,2,4,5,FPsc,NA,No inoculation,avg_lf_03.24_no_germ,2.361332109,Phys,3,wk2,NA,2.462298068,2.266166318
+PGP Exp.,331,NA,8,2,3,5,R500,NA,No inoculation,avg_lf_03.24_no_germ,3.344665443,Phys,3,wk2,NA,3.762298068,2.932832985
+PGP Exp.,339,NA,8,2,7,2,R500,NA,Live,avg_lf_03.24_no_germ,4.568268227,Phys,3,wk2,NA,4.821113993,4.311275572
+PGP Exp.,341,NA,8,2,9,2,FPsc,NA,No inoculation,avg_lf_03.24_no_germ,3.468268227,Phys,3,wk4,NA,3.321113993,3.611275572
+PGP Exp.,342,NA,8,2,6,3,FPsc,NA,Live,avg_lf_03.24_no_germ,3.134934894,Phys,3,wk4,NA,3.021113993,3.244608905
+PGP Exp.,345,NA,8,2,9,3,R500,NA,No inoculation,avg_lf_03.24_no_germ,4.15160156,Phys,3,wk4,NA,4.487780659,3.811275572
+PGP Exp.,352,NA,8,2,8,5,FPsc,NA,Disrupted,avg_lf_03.24_no_germ,3.768268227,Phys,3,wk4,NA,3.721113993,3.811275572
+PGP Exp.,356,NA,9,3,2,1,R500,NA,No inoculation,avg_lf_03.24_no_germ,4.149530717,phys,3,wk2,NA,4.699556772,3.610278358
+PGP Exp.,359,NA,9,3,4,2,R500,NA,Live,avg_lf_03.24_no_germ,4.794665443,phys,3,wk4,NA,5.428964734,4.166166318
+PGP Exp.,364,NA,9,3,4,3,FPsc,NA,Live,avg_lf_03.24_no_germ,3.95160156,phys,3,wk2,NA,4.021113993,3.877942239
+PGP Exp.,369,NA,9,3,4,4,R500,NA,Disrupted,avg_lf_03.24_no_germ,4.782864051,phys,3,wk2,NA,5.032890105,4.543611691
+PGP Exp.,370,NA,9,3,3,4,FPsc,NA,Live,avg_lf_03.24_no_germ,3.594665443,phys,3,wk4,NA,3.462298068,3.732832985
+PGP Exp.,373,NA,9,3,5,5,FPsc,NA,No inoculation,avg_lf_03.24_no_germ,3.618268227,phys,3,wk2,NA,4.154447326,3.077942239
+PGP Exp.,377,NA,9,3,1,5,R500,NA,Disrupted,avg_lf_03.24_no_germ,3.749530717,phys,3,wk4,NA,4.466223438,3.043611691
+PGP Exp.,380,NA,9,3,8,1,FPsc,NA,Disrupted,avg_lf_03.24_no_germ,2.324530717,phys,2,wk4,NA,2.549556772,2.110278358
+PGP Exp.,383,NA,9,3,7,2,FPsc,NA,Disrupted,avg_lf_03.24_no_germ,2.532864051,phys,3,wk2,NA,3.032890105,2.043611691
+PGP Exp.,385,NA,9,3,9,2,R500,NA,Live,avg_lf_03.24_no_germ,3.699530717,phys,3,wk2,NA,4.266223438,3.143611691
+PGP Exp.,386,NA,9,3,6,3,R500,NA,No inoculation,avg_lf_03.24_no_germ,3.966197384,phys,3,wk4,NA,4.432890105,3.510278358
+PGP Exp.,391,NA,9,3,7,4,FPsc,NA,No inoculation,avg_lf_03.24_no_germ,3.261332109,phys,3,wk4,NA,3.162298068,3.366166318
+PGP Exp.,399,NA,10,3,3,1,FPsc,NA,Disrupted,avg_lf_03.24_no_germ,2.977998776,RNAseq,3,wk2,NA,3.462298068,2.499499651
+PGP Exp.,403,NA,10,3,4,2,R500,NA,No inoculation,avg_lf_03.24_no_germ,3.616197384,RNAseq,3,wk4,NA,4.099556772,3.143611691
+PGP Exp.,406,NA,10,3,1,2,R500,NA,Live,avg_lf_03.24_no_germ,4.316197384,RNAseq,3,wk2,NA,4.899556772,3.743611691
+PGP Exp.,417,NA,10,3,5,5,R500,NA,Live,avg_lf_03.24_no_germ,4.577998776,RNAseq,3,wk4,NA,5.128964734,4.032832985
+PGP Exp.,419,NA,10,3,3,5,R500,NA,Disrupted,avg_lf_03.24_no_germ,4.544665443,RNAseq,3,wk4,NA,5.028964734,4.066166318
+PGP Exp.,420,NA,10,3,2,5,FPsc,NA,Live,avg_lf_03.24_no_germ,3.623133502,RNAseq,3,wk4,NA,3.758372697,3.488720945
+PGP Exp.,424,NA,10,3,8,1,R500,NA,No inoculation,avg_lf_03.24_no_germ,3.382864051,RNAseq,3,wk2,NA,3.732890105,3.043611691
+PGP Exp.,426,NA,10,3,6,2,FPsc,NA,Disrupted,avg_lf_03.24_no_germ,2.694665443,RNAseq,3,wk4,NA,2.562298068,2.832832985
+PGP Exp.,427,NA,10,3,7,2,FPsc,NA,No inoculation,avg_lf_03.24_no_germ,3.239800168,RNAseq,3,wk4,NA,3.49170603,2.988720945
+PGP Exp.,428,NA,10,3,8,2,FPsc,NA,Live,avg_lf_03.24_no_germ,3.039800168,RNAseq,3,wk2,NA,3.158372697,2.922054278
+PGP Exp.,432,NA,10,3,8,3,R500,NA,Disrupted,avg_lf_03.24_no_germ,3.449530717,RNAseq,3,wk2,NA,3.899556772,3.010278358
+PGP Exp.,435,NA,10,3,7,4,FPsc,NA,No inoculation,avg_lf_03.24_no_germ,2.689800168,RNAseq,3,wk2,NA,2.825039363,2.555387612
+PGP Exp.,444,NA,11,3,2,1,R500,NA,No inoculation,avg_lf_03.24_no_germ,4.782864051,phys,3,wk2,NA,5.332890105,4.243611691
+PGP Exp.,445,NA,11,3,1,1,FPsc,NA,No inoculation,avg_lf_03.24_no_germ,3.534934894,phys,3,wk4,NA,3.621113993,3.444608905
+PGP Exp.,449,NA,11,3,2,2,R500,NA,Disrupted,avg_lf_03.24_no_germ,4.706466835,phys,3,wk4,NA,5.19170603,4.222054278
+PGP Exp.,451,NA,11,3,5,3,FPsc,NA,Disrupted,avg_lf_03.24_no_germ,3.10160156,phys,3,wk4,NA,3.387780659,2.811275572
+PGP Exp.,453,NA,11,3,3,3,FPsc,NA,Disrupted,avg_lf_03.24_no_germ,3.634934894,phys,3,wk2,NA,3.354447326,3.911275572
+PGP Exp.,455,NA,11,3,1,3,FPsc,NA,No inoculation,avg_lf_03.24_no_germ,2.668268227,phys,3,wk2,NA,2.821113993,2.511275572
+PGP Exp.,461,NA,11,3,5,5,R500,NA,Live,avg_lf_03.24_no_germ,3.999530717,phys,3,wk2,NA,3.966223438,4.043611691
+PGP Exp.,462,NA,11,3,4,5,R500,NA,No inoculation,avg_lf_03.24_no_germ,5.084934894,phys,3,wk4,NA,5.154447326,5.011275572
+PGP Exp.,463,NA,11,3,3,5,R500,NA,Disrupted,avg_lf_03.24_no_germ,4.194665443,phys,3,wk2,NA,4.462298068,3.932832985
+PGP Exp.,473,NA,11,3,9,2,FPsc,NA,Live,avg_lf_03.24_no_germ,2.966197384,phys,3,wk2,NA,2.932890105,3.010278358
+PGP Exp.,477,NA,11,3,9,3,R500,NA,Live,avg_lf_03.24_no_germ,3.816197384,phys,3,wk4,NA,4.232890105,3.410278358
+PGP Exp.,482,NA,11,3,6,5,FPsc,NA,Live,avg_lf_03.24_no_germ,3.777998776,phys,3,wk4,NA,4.495631401,3.066166318
+PGP Exp.,485,NA,12,3,5,1,R500,NA,Live,avg_lf_03.24_no_germ,5.232864051,RNAseq,3,wk2,NA,5.499556772,4.976945024
+PGP Exp.,494,NA,12,3,1,2,FPsc,NA,No inoculation,avg_lf_03.24_no_germ,2.968268227,RNAseq,3,wk4,NA,3.221113993,2.711275572
+PGP Exp.,504,NA,12,3,1,4,R500,NA,Disrupted,avg_lf_03.24_no_germ,4.35160156,RNAseq,3,wk2,NA,4.921113993,3.777942239
+PGP Exp.,505,NA,12,3,5,5,R500,NA,Disrupted,avg_lf_03.24_no_germ,4.399530717,RNAseq,3,wk4,NA,4.732890105,4.076945024
+PGP Exp.,508,NA,12,3,2,5,FPsc,NA,No inoculation,avg_lf_03.24_no_germ,2.70160156,RNAseq,3,wk2,NA,3.021113993,2.377942239
+PGP Exp.,509,NA,12,3,1,5,R500,NA,Live,avg_lf_03.24_no_germ,4.80160156,RNAseq,3,wk4,NA,5.121113993,4.477942239
+PGP Exp.,511,NA,12,3,7,1,R500,NA,No inoculation,avg_lf_03.24_no_germ,4.266197384,RNAseq,3,wk4,NA,4.699556772,3.843611691
+PGP Exp.,513,NA,12,3,9,1,R500,NA,No inoculation,avg_lf_03.24_no_germ,3.816197384,RNAseq,3,wk2,NA,4.066223438,3.576945024
+PGP Exp.,514,NA,12,3,6,2,FPsc,NA,Live,avg_lf_03.24_no_germ,3.294665443,RNAseq,3,wk4,NA,2.995631401,3.599499651
+PGP Exp.,517,NA,12,3,9,2,FPsc,NA,Disrupted,avg_lf_03.24_no_germ,3.316197384,RNAseq,3,wk2,NA,3.699556772,2.943611691
+PGP Exp.,523,NA,12,3,7,4,FPsc,NA,Live,avg_lf_03.24_no_germ,3.532864051,RNAseq,3,wk2,NA,3.699556772,3.376945024
+PGP Exp.,525,NA,12,3,9,4,FPsc,NA,Disrupted,avg_lf_03.24_no_germ,2.716197384,RNAseq,3,wk4,NA,3.066223438,2.376945024
+,,,,,,,,,,,,,,,,,
+Validation Exp.,3,A3,1,2,2,1,FPsc,CR,Disrupted,raw_avg_lf_11.07.17,4.633333333,NA,NA,NA,3.033333333,NA,NA
+Validation Exp.,6,A6,1,2,3,2,FPsc,CR,Disrupted,raw_avg_lf_11.07.17,4.133333333,NA,NA,NA,2.7,NA,NA
+Validation Exp.,8,A8,1,2,1,2,FPsc,CR,Live,raw_avg_lf_11.07.17,5.05,NA,NA,NA,3.05,NA,NA
+Validation Exp.,17,A17,1,2,4,5,FPsc,CR,Live,raw_avg_lf_11.07.17,4.933333333,NA,NA,NA,3.1,NA,NA
+Validation Exp.,21,A21,2,2,4,6,FPsc,CR,Disrupted,raw_avg_lf_11.07.17,4.55,NA,NA,NA,2.65,NA,NA
+Validation Exp.,22,A22,2,2,3,6,FPsc,CR,Live,raw_avg_lf_11.07.17,4.75,NA,NA,NA,2.9,NA,NA
+Validation Exp.,26,A26,2,2,3,7,FPsc,CR,Disrupted,raw_avg_lf_11.07.17,4.633333333,NA,NA,NA,2.55,NA,NA
+Validation Exp.,29,A29,2,2,4,8,FPsc,CR,Live,raw_avg_lf_11.07.17,4.8,NA,NA,NA,2.683333333,NA,NA
+Validation Exp.,42,A42,3,2,3,11,FPsc,CR,Live,raw_avg_lf_11.07.17,4.983333333,NA,NA,NA,3.183333333,NA,NA
+Validation Exp.,44,A44,3,2,1,11,FPsc,CR,Disrupted,raw_avg_lf_11.07.17,4.433333333,NA,NA,NA,2.85,NA,NA
+Validation Exp.,54,A54,3,2,3,14,FPsc,CR,Disrupted,raw_avg_lf_11.07.17,4.933333333,NA,NA,NA,2.966666667,NA,NA
+Validation Exp.,56,A56,3,2,1,14,FPsc,CR,Live,raw_avg_lf_11.07.17,5.133333333,NA,NA,NA,3.316666667,NA,NA
+Validation Exp.,62,A62,4,2,6,1,FPsc,CR,Live,raw_avg_lf_11.07.17,4.4,NA,NA,NA,3.066666667,NA,NA
+Validation Exp.,65,A65,4,2,5,2,FPsc,CR,Live,raw_avg_lf_11.07.17,3.9,NA,NA,NA,2.716666667,NA,NA
+Validation Exp.,77,A77,4,2,5,5,FPsc,CR,Disrupted,raw_avg_lf_11.07.17,4.15,NA,NA,NA,2.75,NA,NA
+Validation Exp.,79,A79,4,2,7,5,FPsc,CR,Disrupted,raw_avg_lf_11.07.17,4.4,NA,NA,NA,2.55,NA,NA
+Validation Exp.,83,A83,5,2,7,6,FPsc,CR,Live,raw_avg_lf_11.07.17,4.65,NA,NA,NA,2.616666667,NA,NA
+Validation Exp.,88,A88,5,2,8,7,FPsc,CR,Disrupted,raw_avg_lf_11.07.17,4.416666667,NA,NA,NA,2.516666667,NA,NA
+Validation Exp.,91,A91,5,2,7,8,FPsc,CR,Live,raw_avg_lf_11.07.17,4.7,NA,NA,NA,3.05,NA,NA
+Validation Exp.,95,A95,5,2,7,9,FPsc,CR,Disrupted,raw_avg_lf_11.07.17,4.475,NA,NA,NA,2.7,NA,NA
+Validation Exp.,104,A104,6,2,8,11,FPsc,CR,Disrupted,raw_avg_lf_11.07.17,4.616666667,NA,NA,NA,2.816666667,NA,NA
+Validation Exp.,109,A109,6,2,5,13,FPsc,CR,Live,raw_avg_lf_11.07.17,4.833333333,NA,NA,NA,3.1,NA,NA
+Validation Exp.,119,A119,6,2,7,15,FPsc,CR,Disrupted,raw_avg_lf_11.07.17,4.266666667,NA,NA,NA,2.566666667,NA,NA
+Validation Exp.,120,A120,6,2,8,15,FPsc,CR,Live,raw_avg_lf_11.07.17,5.116666667,NA,NA,NA,3.116666667,NA,NA
+Validation Exp.,128,A128,7,3,1,2,FPsc,CR,Live,raw_avg_lf_11.07.17,4.725,NA,NA,NA,2.533333333,NA,NA
+Validation Exp.,133,A133,7,3,4,4,FPsc,CR,Disrupted,raw_avg_lf_11.07.17,4.025,NA,NA,NA,2.1,NA,NA
+Validation Exp.,136,A136,7,3,1,4,FPsc,CR,Live,raw_avg_lf_11.07.17,4.525,NA,NA,NA,2.316666667,NA,NA
+Validation Exp.,139,A139,7,3,2,5,FPsc,CR,Disrupted,raw_avg_lf_11.07.17,4.016666667,NA,NA,NA,1.833333333,NA,NA
+Validation Exp.,142,A142,8,3,3,6,FPsc,CR,Disrupted,raw_avg_lf_11.07.17,4.066666667,NA,NA,NA,2.25,NA,NA
+Validation Exp.,151,A151,8,3,2,8,FPsc,CR,Live,raw_avg_lf_11.07.17,5.05,NA,NA,NA,2.183333333,NA,NA
+Validation Exp.,153,A153,8,3,4,9,FPsc,CR,Disrupted,raw_avg_lf_11.07.17,4.875,NA,NA,NA,2.416666667,NA,NA
+Validation Exp.,157,A157,8,3,4,10,FPsc,CR,Live,raw_avg_lf_11.07.17,4.616666667,NA,NA,NA,2.5,NA,NA
+Validation Exp.,162,A162,9,3,3,11,FPsc,CR,Disrupted,raw_avg_lf_11.07.17,4.425,NA,NA,NA,2.033333333,NA,NA
+Validation Exp.,170,A170,9,3,3,13,FPsc,CR,Live,raw_avg_lf_11.07.17,4.375,NA,NA,NA,2.116666667,NA,NA
+Validation Exp.,171,A171,9,3,2,13,FPsc,CR,Disrupted,raw_avg_lf_11.07.17,4.675,NA,NA,NA,2.216666667,NA,NA
+Validation Exp.,172,A172,9,3,1,13,FPsc,CR,Live,raw_avg_lf_11.07.17,4.225,NA,NA,NA,1.95,NA,NA
+Validation Exp.,185,A185,10,3,5,2,FPsc,CR,Live,raw_avg_lf_11.07.17,4.7,NA,NA,NA,2.433333333,NA,NA
+Validation Exp.,191,A191,10,3,7,3,FPsc,CR,Disrupted,raw_avg_lf_11.07.17,4.3,NA,NA,NA,2.25,NA,NA
+Validation Exp.,198,A198,10,3,6,5,FPsc,CR,Live,raw_avg_lf_11.07.17,4.325,NA,NA,NA,1.85,NA,NA
+Validation Exp.,199,A199,10,3,7,5,FPsc,CR,Disrupted,raw_avg_lf_11.07.17,4.425,NA,NA,NA,2.05,NA,NA
+Validation Exp.,203,A203,11,3,7,6,FPsc,CR,Live,raw_avg_lf_11.07.17,5.05,NA,NA,NA,2.416666667,NA,NA
+Validation Exp.,205,A205,11,3,5,7,FPsc,CR,Disrupted,raw_avg_lf_11.07.17,4.9,NA,NA,NA,2.1,NA,NA
+Validation Exp.,216,A216,11,3,8,9,FPsc,CR,Live,raw_avg_lf_11.07.17,4.9,NA,NA,NA,2.65,NA,NA
+Validation Exp.,220,A220,11,3,8,10,FPsc,CR,Disrupted,raw_avg_lf_11.07.17,4.975,NA,NA,NA,2.55,NA,NA
+Validation Exp.,228,A228,12,3,8,12,FPsc,CR,Disrupted,raw_avg_lf_11.07.17,4.516666667,NA,NA,NA,2.133333333,NA,NA
+Validation Exp.,235,A235,12,3,7,14,FPsc,CR,Disrupted,raw_avg_lf_11.07.17,4.7,NA,NA,NA,2.216666667,NA,NA
+Validation Exp.,236,A236,12,3,8,14,FPsc,CR,Live,raw_avg_lf_11.07.17,5.225,NA,NA,NA,2.766666667,NA,NA
+Validation Exp.,240,A240,12,3,8,15,FPsc,CR,Live,raw_avg_lf_11.07.17,4.7,NA,NA,NA,2.916666667,NA,NA
