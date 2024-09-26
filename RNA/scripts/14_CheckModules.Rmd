@@ -1,0 +1,97 @@
+---
+title: "14_Check_Modules"
+author: "Julin Maloof"
+date: "2023-06-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+```
+
+
+What is the relationship between MEs and average expression?
+
+```{r}
+root.voom5 <- readr::read_tsv(file.path("..","output","voom_expression.e1and3.resid.exp_gt.root.plusR500.txt.gz"))
+load("../output/voom_expression.e1and3.resid.exp_gt.root.plusR500.signedhybrid.txt.gz.WGCNA.softthresh10.signedhybrid.RData")
+
+rootMEs <- MEs %>% as_tibble() %>%
+  rename_all(str_c, "_root") %>%
+  mutate(sampleID=colnames(root.voom5)[-1],
+         sampleID=str_remove(sampleID, "_root"),
+         sampleID=str_remove(sampleID, "_S[0-9]{1,3}$"),
+         sampleID=str_remove(sampleID, "^[a-h][1-8]_")) %>%
+  select(sampleID, everything())
+rootMEs
+rm(MEs)
+```
+
+```{r}
+root.voom5.module <- cbind(moduleColors, root.voom5)
+head(root.voom5.module)
+```
+
+```{r}
+root.voom5.module.mean <- root.voom5.module %>% 
+  group_by(moduleColors) %>%
+  summarize(across(.cols=matches("(wyo|5e)"), mean)) %>%
+  pivot_longer(-moduleColors, names_to = "sampleID", values_to = "voom") %>%
+  mutate(sampleID = str_remove(sampleID, "root_"),
+         sampleID = str_remove(sampleID, "^[a-z][0-9]_"),
+         sampleID = str_remove(sampleID, "_S[0-9]*$"))
+
+root.voom5.module.mean %>% pull(sampleID) %>% unique()
+
+root.voom5.module.mean
+```
+
+```{r}
+rootMEs.long <- rootMEs %>%
+  rename_with(str_remove, pattern="ME") %>%
+  rename_with(str_remove, pattern="_root") %>%
+  pivot_longer(-sampleID, values_to = "eigen", names_to = "moduleColors") 
+rootMEs.long
+```
+
+```{r}
+
+left_join(rootMEs.long, root.voom5.module.mean) %>%
+  ggplot(aes(x=voom, y=eigen)) +
+  geom_point() +
+  facet_wrap(~moduleColors)
+```
+# okay that lines up.  let's go back and check the log2cpm
+
+```{r}
+root.cpm <- read_csv("../output/cpm_wide_20170617_root_samples.csv.gz") %>%
+  mutate(across(.cols=c(-transcript_ID), .fns= ~ log2(.x + 1))) 
+
+root.cpm
+```
+
+```{r}
+root.cpm.mean <- root.voom5.module %>% select(moduleColors, genes) %>%
+  left_join(root.cpm, by=c("genes" = "transcript_ID")) %>%
+   group_by(moduleColors) %>%
+  summarize(across(.cols=matches("(wyo|5e)"), mean)) %>%
+  pivot_longer(-moduleColors, names_to = "sampleID", values_to = "log2cpm") %>%
+  mutate(sampleID = str_remove(sampleID, "root_"),
+         sampleID = str_remove(sampleID, "^[a-z][0-9]_"),
+         sampleID = str_remove(sampleID, "_S[0-9]*$"))
+
+root.cpm.mean  
+```
+
+```{r}
+left_join(root.cpm.mean, rootMEs.long) %>%
+  ggplot(aes(x=log2cpm, y=eigen)) +
+  geom_point() +
+  facet_wrap(~moduleColors)
+```
+
+All good (for better or worse)

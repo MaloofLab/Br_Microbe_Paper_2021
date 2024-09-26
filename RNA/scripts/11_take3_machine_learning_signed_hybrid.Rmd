@@ -4,7 +4,7 @@ author: "Julin Maloof"
 date: "01/21/2021"
 output: html_notebook
 editor_options: 
-  chunk_output_type: console
+  chunk_output_type: inline
 ---
 
 The goal of this file is to find which WGCNA modules are best able to predict leaf length.
