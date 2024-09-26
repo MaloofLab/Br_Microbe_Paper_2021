@@ -1,0 +1,22 @@
+---
+title: "15_Hub_Genes"
+author: "Julin Maloof"
+date: "9/26/2024"
+output: html_document
+editor_options: 
+  chunk_output_type: inline
+---
+
+Looking for hub genes in interesting modules.
+
+Methods: can you standard network concepts, like degree centrality and betweeness centrality.  Alternatively, can use module membership (MM) from WGCNA and / or correlation with trait. 
+
+```{r}
+library(WGCNA)
+library(tidyverse)
+```
+
+```{r}
+load("../output/voom_expression.e1and3.resid.exp_gt.root.plusR500.signedhybrid.txt.gz.WGCNA.softthresh10.signedhybrid.RData")
+```
+
