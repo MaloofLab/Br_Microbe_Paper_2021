@@ -11,7 +11,7 @@ output: html_document
   #  source_code: embed
     #theme: default
 editor_options: 
-  chunk_output_type: console
+  chunk_output_type: inline
 ---
 
 purpose: WGCNA analysis to look correlation of plant data and expression data
@@ -36,7 +36,6 @@ library(tidyverse);library(readr);library(readxl);library(openxlsx)
  options(stringsAsFactors = FALSE)
 # install.packages(c("dynamicTreeCut", "cluster", "flashClust", "Hmisc", "reshape", "foreach", "doParallel") ) 
 library(WGCNA);library(flashClust) # for WGCNA in Whitney
-allowWGCNAThreads(nThreads = NULL) # for Whitney
 enableWGCNAThreads(4) # for Whitney
 # for my computer
 disableWGCNAThreads()
@@ -261,7 +260,7 @@ colorOrder = c("grey", standardColors(50));
 moduleLabels = match(moduleColors, colorOrder)-1;
 MEs = mergedMEs
 # Save module colors and labels for use in subsequent parts
-save(dynamicColors,MEs, moduleLabels, moduleColors, geneTree, file =paste(datname,".WGCNA.softthresh10.signedhybrid.RData",sep=""))
+save(dynamicColors,MEs, moduleLabels, moduleColors, geneTree, adjacency, TOM, file =paste(datname,".WGCNA.softthresh10.signedhybrid.RData",sep=""))
 }
 #  
 voom.WGCNA.signedhybrid(voom.data=root.voom5,datname="voom_expression.e1and3.resid.exp_gt.root.plusR500.signedhybrid.txt.gz")
