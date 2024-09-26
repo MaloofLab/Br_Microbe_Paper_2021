@@ -38,7 +38,7 @@ library(tidyverse);library(readr);library(readxl);library(openxlsx)
 library(WGCNA);library(flashClust) # for WGCNA in Whitney
 enableWGCNAThreads(4) # for Whitney
 # for my computer
-disableWGCNAThreads()
+# disableWGCNAThreads()
 ```
 
 
@@ -260,7 +260,10 @@ colorOrder = c("grey", standardColors(50));
 moduleLabels = match(moduleColors, colorOrder)-1;
 MEs = mergedMEs
 # Save module colors and labels for use in subsequent parts
-save(dynamicColors,MEs, moduleLabels, moduleColors, geneTree, adjacency, TOM, file =paste(datname,".WGCNA.softthresh10.signedhybrid.RData",sep=""))
+save(dynamicColors,MEs, moduleLabels, moduleColors, geneTree, file =paste("../output/",datname,".WGCNA.softthresh10.signedhybrid.RData",sep=""))
+
+save(adjacency, TOM,
+            file = paste("../output/",datname,".WGCNA.softthresh10.signedhybrid.adjacencyTOM.Rdata",sep=""))
 }
 #  
 voom.WGCNA.signedhybrid(voom.data=root.voom5,datname="voom_expression.e1and3.resid.exp_gt.root.plusR500.signedhybrid.txt.gz")
