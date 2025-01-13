@@ -9,6 +9,7 @@ editor_options:
 
 ```{r setup, include=FALSE}
 library(knitr)
+library(GGally)
 #library(d3heatmap)
 #library(flexdashboard)
 library(edgeR);library(tidyverse)
@@ -38,7 +39,13 @@ names(DEG.count.list.e1.e3.v3.0annotation.all) <- gsub(".csv","",DEG.objs.e1.e3.
 
 Overlap between DEGs (Oct 28, 2021) 
 ```{r error=TRUE}
-DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation
+## JM Added the line below on January 2025.  Not sure if this is correct, but otherwise the object does not exist.
+DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation <- DEG.count.list.e1.e3.v3.0annotation.all 
+
+## JM Added the line below on January 2025.  Needed to get the names in the list to match the code below.
+names(DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation) <- names(DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation) %>% str_remove(fixed(".v3.0anno"))
+
+
 # FDR < 0.1
 DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1 <- DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation %>% map(.,~filter(.x,FDR < 0.1))
 names(DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation)
@@ -51,15 +58,29 @@ DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1[["e3.root.trtlive.D
 ## root
 ```{r}
 # DEGs of interest
-e1.root.trtlive.DEGs <- DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1[["e1.root.trt5E_live.DEGs.add.rD.rFPsc.NB"]] %>% dplyr::select("genes","AGI","logFC","FDR") %>% drop_na(AGI) %>% dplyr::rename(`original root`=logFC,exp1root_FDR=FDR) # 63 genes
-e3.root.cr.trtlive.DEGs <- DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1[["e3.root.trtlive.DEGs.add.rD.rCR"]] %>% dplyr::select("genes","AGI","logFC","FDR") %>% drop_na(AGI) %>% dplyr::rename(`validation root`=logFC,exp3.root_FDR=FDR)   # 4975 genes
-e1.leaf.trtlive.DEGs <- DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1[["e1.leaf.trt5E_live.DEGs.add.rD.rFPsc.NB"]] %>% dplyr::select("genes","AGI","logFC","FDR") %>% drop_na(AGI) %>% dplyr::rename(`original leaf`=logFC,exp1.leaf_FDR=FDR)  # 3729 genes
-e3.leaf.cr.trtlive.DEGs <- DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1[["e3.leaf.trtlive.DEGs.add.rD.rCR"]]  %>% dplyr::select("genes","AGI","logFC","FDR") %>% drop_na(AGI) %>% dplyr::rename(`validation leaf`=logFC,exp3.leaf_FDR=FDR)  # 319 genes
+e1.root.trtlive.DEGs <- DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1[["e1.root.trt5E_live.DEGs.add.rD.rFPsc.NB"]] %>% dplyr::select("genes","AGI","logFC","FDR") %>% drop_na(AGI) %>% dplyr::rename(`original root`=logFC,exp1root_FDR=FDR) # 63 genes # now 61
+e3.root.cr.trtlive.DEGs <- DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1[["e3.root.trtlive.DEGs.add.rD.rCR"]] %>% dplyr::select("genes","AGI","logFC","FDR") %>% drop_na(AGI) %>% dplyr::rename(`validation root`=logFC,exp3.root_FDR=FDR)   # 4975 genes # now 4923
+e1.leaf.trtlive.DEGs <- DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1[["e1.leaf.trt5E_live.DEGs.add.rD.rFPsc.NB"]] %>% dplyr::select("genes","AGI","logFC","FDR") %>% drop_na(AGI) %>% dplyr::rename(`original leaf`=logFC,exp1.leaf_FDR=FDR)  # 3729 genes # now 3694
+e3.leaf.cr.trtlive.DEGs <- DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1[["e3.leaf.trtlive.DEGs.add.rD.rCR"]]  %>% dplyr::select("genes","AGI","logFC","FDR") %>% drop_na(AGI) %>% dplyr::rename(`validation leaf`=logFC,exp3.leaf_FDR=FDR)  # 319 genes # now 317
 
 # combine e1 adn e3 (root): original ggpair()
 root.exp1and3.FDR0.1.plot <- e1.root.trtlive.DEGs %>% inner_join(e3.root.cr.trtlive.DEGs,by="genes") %>% GGally::ggpairs(columns=c(3,6),lower = list(continuous = wrap("points", alpha = 0.2)))
 # combine e1 adn e3 (leaf): original ggpair()
 leaf.exp1and3.FDR0.1.plot <- e1.leaf.trtlive.DEGs %>% inner_join(e3.leaf.cr.trtlive.DEGs,by="genes") %>% GGally::ggpairs(columns=c(3,6),lower = list(continuous = wrap("points", alpha = 0.2)))
+
+
+##### JM Janyary 2025: Dont `drop_na(AGI).`..keep all genes for correlation plots, etc.
+
+# DEGs of interest
+e1.root.trtlive.DEGs <- DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1[["e1.root.trt5E_live.DEGs.add.rD.rFPsc.NB"]] %>% dplyr::select("genes","AGI","logFC","FDR") %>% dplyr::rename(`original root`=logFC,exp1root_FDR=FDR) # 63 genes 
+e3.root.cr.trtlive.DEGs <- DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1[["e3.root.trtlive.DEGs.add.rD.rCR"]] %>% dplyr::select("genes","AGI","logFC","FDR") %>% dplyr::rename(`validation root`=logFC,exp3.root_FDR=FDR)   # 4975 genes 
+e1.leaf.trtlive.DEGs <- DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1[["e1.leaf.trt5E_live.DEGs.add.rD.rFPsc.NB"]] %>% dplyr::select("genes","AGI","logFC","FDR") %>% dplyr::rename(`original leaf`=logFC,exp1.leaf_FDR=FDR)  # 3729 genes 
+e3.leaf.cr.trtlive.DEGs <- DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation.FDR0.1[["e3.leaf.trtlive.DEGs.add.rD.rCR"]]  %>% dplyr::select("genes","AGI","logFC","FDR") %>% dplyr::rename(`validation leaf`=logFC,exp3.leaf_FDR=FDR)  # 319 genes
+
+# combine e1 and e3 (root): original ggpair()
+root.exp1and3.FDR0.1.plot <- e1.root.trtlive.DEGs %>% inner_join(e3.root.cr.trtlive.DEGs,by="genes") %>% ggpairs(columns=c(3,6),lower = list(continuous = wrap("points", alpha = 0.2)))
+# combine e1 and e3 (leaf): original ggpair()
+leaf.exp1and3.FDR0.1.plot <- e1.leaf.trtlive.DEGs %>% inner_join(e3.leaf.cr.trtlive.DEGs,by="genes") %>% ggpairs(columns=c(3,6),lower = list(continuous = wrap("points", alpha = 0.2)))
 
 ```
 
@@ -140,4 +161,47 @@ p.all <- p.all+ theme(plot.background = element_rect(fill="white")) # default ba
 ggsave2(p.all,filename=file.path("RNA","output","cor.plus.Venn3.png"),width=6.5,height=7.5,units="in") # width 6.5 (Feb 3, 2022)
 ggsave2(p.all,filename=file.path("RNA","output","cor.plus.Venn3.pdf"),width=6.5,height=7.5,units="in")
 
+```
+
+# Cor.test for the union (as compared to the intersection) of DEGs
+```{r}
+# get expression levels, regardless of FDR
+e1.root.trtlive.all <- DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation[["e1.root.trt5E_live.DEGs.add.rD.rFPsc.NB"]] %>% dplyr::select("genes","AGI","logFC","FDR") %>% dplyr::rename(`original root`=logFC,exp1.root_FDR=FDR) 
+e3.root.cr.trtlive.all <- DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation[["e3.root.trtlive.DEGs.add.rD.rCR"]] %>% dplyr::select("genes","AGI","logFC","FDR") %>% dplyr::rename(`validation root`=logFC,exp3.root_FDR=FDR)
+
+e1.leaf.trtlive.all <- DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation[["e1.leaf.trt5E_live.DEGs.add.rD.rFPsc.NB"]] %>% dplyr::select("genes","AGI","logFC","FDR") %>% dplyr::rename(`original leaf`=logFC,exp1.leaf_FDR=FDR)  
+e3.leaf.cr.trtlive.all <- DEG.count.list.DEG.objs.e1and3.add.trt.v3.0annotation[["e3.leaf.trtlive.DEGs.add.rD.rCR"]]  %>% dplyr::select("genes","AGI","logFC","FDR") %>% dplyr::rename(`validation leaf`=logFC,exp3.leaf_FDR=FDR)
+
+root.exp1and3.FDR0.1.data.union <- full_join(e1.root.trtlive.all, e3.root.cr.trtlive.all, by = "genes") %>%
+  filter(exp1.root_FDR < 0.1 | exp3.root_FDR < 0.1) %>%
+  dplyr::select(`original root`, `validation root`)
+
+leaf.exp1and3.FDR0.1.data.union <- full_join(e1.leaf.trtlive.all, e3.leaf.cr.trtlive.all, by = "genes") %>%
+  filter(exp1.leaf_FDR < 0.1 | exp3.leaf_FDR < 0.1) %>%
+  dplyr::select(`original leaf`, `validation leaf`)
+
+# root
+root.cor.test.result.union <- cor.test(~`original root`+`validation root`, root.exp1and3.FDR0.1.data.union)
+# leaf
+leaf.cor.test.result.union <- cor.test(~`original leaf`+`validation leaf`, leaf.exp1and3.FDR0.1.data.union)
+# summary
+cor.summary.union <- tibble(
+  x = c(-0.7,-0.7,-0.7,-0.7), y=c(0.95,0.72,1.7,1.3),
+  value=c(paste("cor = ",round(root.cor.test.result.union$estimate,2),sep=""),
+          paste("p.value = ", signif(root.cor.test.result.union$p.value,2),sep=""),
+          paste("cor = ",round(leaf.cor.test.result.union$estimate,2),sep=""),
+          paste("p.value = ",signif(leaf.cor.test.result.union$p.value,2),sep="")))
+
+# root plot
+root.exp1and3.FDR0.1.plot.s.union <- ggplot(root.exp1and3.FDR0.1.data.union) + 
+  geom_point(aes(x=`original root`,y=`validation root`,alpha=0.5),size=1) + 
+  theme(legend.position="none") + 
+  geom_text(data=cor.summary.union[1:2,],aes(label=value,x=x,y=y),size=4) + 
+  theme(axis.text=element_text(size=10))
+# leaf plot
+leaf.exp1and3.FDR0.1.plot.s.union <- ggplot(leaf.exp1and3.FDR0.1.data.union) + 
+  geom_point(aes(x=`original leaf`,y=`validation leaf`,alpha=0.5),size=1) + 
+  theme(legend.position="none") + 
+  geom_text(data=cor.summary.union[3:4,],aes(label=value,x=x,y=y),size=4) + 
+  theme(axis.text=element_text(size=10))
 ```
