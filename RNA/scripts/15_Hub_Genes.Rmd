@@ -14,9 +14,152 @@ Methods: can you standard network concepts, like degree centrality and betweenes
 ```{r}
 library(WGCNA)
 library(tidyverse)
+library(igraph)
 ```
+
+NOTE: the adjacency and TOM matrices are too big for git.  If you need them, email jnmaloof@ucdavis or run the code at `/RNA/scripts/10_WGCNA_including_R500_signedhybrid_moduleColors.Rmd`
+
+## Root
 
 ```{r}
 load("../output/voom_expression.e1and3.resid.exp_gt.root.plusR500.signedhybrid.txt.gz.WGCNA.softthresh10.signedhybrid.RData")
+
+load("../output/voom_expression.e1and3.resid.exp_gt.root.plusR500.signedhybrid.txt.gz.WGCNA.softthresh10.signedhybrid.adjacencyTOM.Rdata")
 ```
 
+
+### Ivory
+```{r}
+root.ivory.adjacency <- adjacency[moduleColors=="ivory", moduleColors=="ivory"]
+root.ivory.TOM <- TOM[moduleColors=="ivory", moduleColors=="ivory"]
+
+root.ivory.adjacency[1:5, 1:5]
+
+diag(root.ivory.adjacency) <- 0
+diag(root.ivory.TOM) <- 0
+
+hist(root.ivory.adjacency)
+hist(log10(root.ivory.adjacency))
+hist(root.ivory.TOM)
+```
+
+export to cytoscape
+```{r}
+# dir.create("../output/cytoscape")
+# adjacency 
+
+sum(root.ivory.adjacency>=.1) #300
+
+exportNetworkToCytoscape(root.ivory.adjacency, 
+                         edgeFile = "../output/cytoscape/root.ivory.a0.1.edge.txt",
+                         nodeFile = "../output/cytoscape/root.ivory.a0.1.node.txt",
+                         threshold = 0.1)
+# TOM
+sum(root.ivory.TOM>=.05) #420
+
+exportNetworkToCytoscape(root.ivory.adjacency, 
+                         edgeFile = "../output/cytoscape/root.ivory.T0.05.edge.txt",
+                         nodeFile = "../output/cytoscape/root.ivory.T0.05.node.txt",
+                         threshold = 0.05)
+
+```
+
+
+calculate connectivity
+```{r}
+root.ivory.connectivity <- root.ivory.adjacency %>% colSums() %>% sort(decreasing = TRUE) 
+root.ivory.connectivity
+
+as_tibble(root.ivory.connectivity)
+
+tibble(geneID=names(root.ivory.connectivity), WGCNA_connectivity=root.ivory.connectivity) %>% write_tsv(
+            file = "../output/cytoscape/root.ivory.connectivity.txt")
+```
+### Bisque 4
+
+```{r}
+root.bisque4.adjacency <- adjacency[moduleColors=="bisque4", moduleColors=="bisque4"]
+root.bisque4.TOM <- TOM[moduleColors=="bisque4", moduleColors=="bisque4"]
+
+diag(root.bisque4.adjacency) <- 0
+diag(root.bisque4.TOM) <- 0
+
+hist(root.bisque4.adjacency)
+hist(root.bisque4.TOM)
+
+dim(root.bisque4.adjacency)
+```
+
+export to cytoscape
+```{r}
+# dir.create("../output/cytoscape")
+# adjacency 
+
+sum(root.bisque4.adjacency>=.1) #368
+
+exportNetworkToCytoscape(root.bisque4.adjacency, 
+                         edgeFile = "../output/cytoscape/root.bisque4.a0.1.edge.txt",
+                         nodeFile = "../output/cytoscape/root.bisque4.a0.1.node.txt",
+                         threshold = 0.1)
+# TOM
+sum(root.bisque4.TOM>=.05) #256
+
+exportNetworkToCytoscape(root.bisque4.adjacency, 
+                         edgeFile = "../output/cytoscape/root.bisque4.T0.05.edge.txt",
+                         nodeFile = "../output/cytoscape/root.bisque4.T0.05.node.txt",
+                         threshold = 0.05)
+
+```
+
+
+## leaf
+   
+### leaf.darkseagreen4
+   
+
+```{r}
+load("../output/voom_expression.e1and3.resid.exp_gt.leaf.plusR500.signedhybrid.txt.gz.WGCNA.softthresh10.signedhybrid.RData")
+
+load("../output/voom_expression.e1and3.resid.exp_gt.leaf.plusR500.signedhybrid.txt.gz.WGCNA.softthresh10.signedhybrid.adjacencyTOM.Rdata")
+```
+
+
+### Darkseagreen4
+
+```{r}
+leaf.darkseagreen4.adjacency <- adjacency[moduleColors=="darkseagreen4", moduleColors=="darkseagreen4"]
+leaf.darkseagreen4.TOM <- TOM[moduleColors=="darkseagreen4", moduleColors=="darkseagreen4"]
+
+leaf.darkseagreen4.adjacency[1:5, 1:5]
+
+diag(leaf.darkseagreen4.adjacency) <- 0
+diag(leaf.darkseagreen4.TOM) <- 0
+
+hist(leaf.darkseagreen4.adjacency)
+hist(log10(leaf.darkseagreen4.adjacency))
+hist(leaf.darkseagreen4.TOM)
+```
+
+export to cytoscape
+```{r}
+# dir.create("../output/cytoscape")
+# adjacency 
+
+dim(leaf.darkseagreen4.adjacency) #99
+
+sum(leaf.darkseagreen4.adjacency>=.075) #284
+
+exportNetworkToCytoscape(leaf.darkseagreen4.adjacency, 
+                         edgeFile = "../output/cytoscape/leaf.darkseagreen4.a0.1.edge.txt",
+                         nodeFile = "../output/cytoscape/leaf.darkseagreen4.a0.1.node.txt",
+                         threshold = 0.075)
+# TOM
+sum(leaf.darkseagreen4.TOM>=.05) #162
+
+exportNetworkToCytoscape(leaf.darkseagreen4.adjacency, 
+                         edgeFile = "../output/cytoscape/leaf.darkseagreen4.T0.05.edge.txt",
+                         nodeFile = "../output/cytoscape/leaf.darkseagreen4.T0.05.node.txt",
+                         threshold = 0.05)
+
+```
+   
