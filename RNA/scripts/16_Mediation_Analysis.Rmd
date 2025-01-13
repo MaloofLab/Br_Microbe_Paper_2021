@@ -1,0 +1,45 @@
+---
+title: "16_Mediation_Analysis"
+author: "Julin Maloof"
+date: "2025-01-13"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(relaimpo)
+library(tidyverse)
+```
+
+
+```{r}
+load("../output/ElasticNet_Relaimp_objects.Rdata")
+```
+
+```{r}
+d_with_trt
+```
+
+
+```{r}
+relimpmultiCV_trt <- d_with_trt %>% dplyr::select(all_of(vars), autoclave) %>%
+  mutate(autoclave=as.numeric(autoclave=="live")) %>%
+  calc.relimp() 
+```
+
+```{r}
+relimpmultiCV_trt
+```
+```{r}
+med.fit <- lm(MEivory_root ~ autoclave, data=d_with_trt)
+out.fit <- lm(leaf_avg_std ~ autoclave + MEivory_root, data = d_with_trt)
+med.out <- mediate(med.fit, out.fit, treat = "autoclave", mediator = "MEivory_root")
+```
+
+```{r}
+summary(med.out)
+```
+
