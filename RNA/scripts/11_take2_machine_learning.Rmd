@@ -4,10 +4,12 @@ author: "Julin Maloof"
 date: "01/21/2021"
 output: html_notebook
 ---
+THIS IS AN OLD SCRIPT THAT ANALYZES THE ORIGINAL WGCNA MODULES.  FOR THE CURRENT VERSION SEE `11_take3_machine_learning_signed_hybrid.Rmd`
 
 The goal of this file is to find which WGCNA modules are best able to predict leaf length.
 
 Here I modify the original script to use a multi-CV approach that I developed from the metabolites.
+
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -281,6 +283,7 @@ relimpmultiCV
 
 coef.tb
 ```
+
 ```{r}
 d %>% ggplot(aes(x=MEred_leaf, y=leaf_avg_std)) +
   geom_point()
