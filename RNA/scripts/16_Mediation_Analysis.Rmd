@@ -42,4 +42,40 @@ med.out <- mediate(med.fit, out.fit, treat = "autoclave", mediator = "MEivory_ro
 ```{r}
 summary(med.out)
 ```
+## Mediation for each ME
+
+```{r}
+summarize.mediation <- function(x) { # writing my own because I can't figure out how to programatically extract the summary table from summary.mediate(), sigh.
+  results <- with(x, tribble(
+    ~name,          ~Estimate, ~CI.upper95, ~CI.lower95, ~p.value,
+    "ACME",         d.avg,     d.avg.ci[1], d.avg.ci[2], d.avg.p,
+    "ADE",          z.avg,     z.avg.ci[1], z.avg.ci[2], z.avg.p,
+    "Total Effect", tau.coef,  tau.ci[1],   tau.ci[2],   tau.p,
+    "Prop. Mediated", n.avg,   n.avg.ci[1], n.avg.ci[2], n.avg.p
+  ))
+  results
+}
+
+# check it (compare to above)
+summarize.mediation(med.out)
+```
+
+
+```{r}
+mediation.results <- tibble(ME = vars[-1])
+
+mediation.results <- mediation.results %>%
+  mutate(med.fit = map(ME, \(x) lm(str_c(x, "~ autoclave"), data = d_with_trt)),
+         out.fit = map(ME, \(x) lm(str_c("leaf_avg_std ~ autoclave + ", x), data = d_with_trt)),
+         result = pmap(list(ME, med.fit, out.fit),
+                       \(med, mfit, ofit) summarize.mediation(mediate(mfit, ofit, treat = "autoclave", mediator = med))
+         )
+  )
+```
+
+
+```{r}
+mediation.results %>% unnest(result)
+```
+
 
