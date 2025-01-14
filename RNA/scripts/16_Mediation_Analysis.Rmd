@@ -75,7 +75,14 @@ mediation.results <- mediation.results %>%
 
 
 ```{r}
-mediation.results %>% unnest(result)
+mediation.results.unnest <- mediation.results %>% select(ME, result) %>% unnest(result)
+mediation.results.unnest
+```
+
+```{r}
+mediation.results.unnest %>%
+  filter(name=="Prop. Mediated") %>%
+  arrange(p.value)
 ```
 
 
