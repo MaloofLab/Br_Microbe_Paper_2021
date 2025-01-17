@@ -1,0 +1,78 @@
+---
+title: "Metabolite Correlations"
+author: "Julin Maloof"
+date: "2025-01-17"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(broom)
+```
+
+## get and wrangle metabolite data
+```{r}
+met_raw <-read_csv("../input/metabolites_set1.csv")
+met <- met_raw %>% 
+  mutate(sampleID=str_c("wyo", genotype, pot, sep="_")) %>%
+  mutate(trt=ifelse(is.na(autoclave), "BLANK", autoclave)) %>%
+  select(sampleID, pot, genotype, tissue, trt, sample_mass = `sample_mass mg`, !submission_number:concatenate)  %>%
+  
+  #make long
+  pivot_longer(!sampleID:sample_mass, names_to = "metabolite", values_to = "met_amount") %>%
+  
+  #filter away unnamed
+   filter(str_detect(metabolite, pattern="^[0-9]+$", negate=TRUE)) %>%
+  
+  #adjust by sample mass
+  mutate(met_per_mg=met_amount/sample_mass) %>%
+  
+  # got normalized and raw measurements in same column
+  
+  pivot_longer(c(met_amount, met_per_mg), names_to = "type", values_to = "amount") %>%
+  mutate(type=ifelse(type=="met_amount", "raw", "normalized")) %>%
+  
+  arrange(metabolite, type, tissue, trt, genotype)
+
+met %>% head 
+```
+
+### calculate means
+
+```{r}
+normalized.means <- met %>%
+  filter(type=="normalized") %>%
+  select(genotype, tissue, trt, metabolite, amount) %>%
+  group_by(genotype, tissue, trt, metabolite) %>%
+  summarize(value=mean(amount))
+
+normalized.means
+  
+```
+
+```{r}
+raw.means <- met %>%
+  filter(type=="raw") %>%
+  select(genotype, tissue, trt, metabolite, amount) %>%
+  group_by(genotype, tissue, trt, metabolite) %>%
+  summarize(value=mean(amount))
+
+raw.means
+```
+## Correlations
+
+### Normalized metabolites
+
+```{r}
+normalized.means %>%
+  ungroup() %>%
+  pivot_wider(names_from = trt, values_from = value) %>% 
+  nest(.by = c(genotype, tissue)) %>%
+  mutate(cor.results = map(data, \(x) cor.test(x$dead,  x$live) ),
+         cor.results = map(cor.results, tidy)) %>%
+  unnest(cor.results)
+```
+
+
+
+
