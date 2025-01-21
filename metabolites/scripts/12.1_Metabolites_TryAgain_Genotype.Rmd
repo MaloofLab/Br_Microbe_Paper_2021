@@ -24,6 +24,7 @@ NOTE: NEXT STEPS:  TRY MAKING TERNARY PLOT WITH SIMPLE MEANS.
 ```{r}
 library(tidyverse)
 library(broom)
+library(ggfortify)
 ```
 
 get leaflength data
@@ -65,11 +66,52 @@ met <- met_raw %>%
 met 
 ```
 
+PC analysis
+```{r}
+met.pc.root <- met %>% select(starts_with("met_per_mg_root")) %>%
+  prcomp(scale. = TRUE)
+autoplot(met.pc.root, data=met, color = "trt", shape = "genotype", scale = 0 )
+```
+
+There is a serious outlier.  ID and remove it:
+```{r}
+which.max(met.pc.root$x[,"PC1"])
+which.max(met.pc.root$x[,"PC2"])
+met.pc.root$x[24,1:2]
+root.outlier <- met$sampleID[which.max(met.pc.root$x[,"PC1"])]
+```
+
+
+```{r}
+met.pc.leaf <- met %>% select(starts_with("met_per_mg_leaf")) %>%
+  prcomp(scale. = TRUE)
+autoplot(met.pc.leaf, data=met, color = "trt", shape = "genotype" )
+```
+leafs look okay
+
+remove root outlier
+```{r}
+met.censor <- met %>%
+  pivot_longer(starts_with("met")) %>%
+  filter(! (sampleID==root.outlier & str_detect(name, "root"))) %>%
+  pivot_wider(names_from = "name", values_from = "value")
+  
+met.censor %>% filter(sampleID==root.outlier) %>% select(1:4, contains("root"))
+```
+recalcualte root PCs
+```{r}
+met.pc.root <- met.censor  %>% select(starts_with("met_per_mg_root")) %>%
+  na.omit() %>%
+  prcomp(scale. = TRUE)
+autoplot(met.pc.root, data=na.omit(met.censor), color = "trt", shape = "genotype", scale = 0 )
+```
+
+
 split this into two data frames, one normalized by tissue amount and one not.
 ```{r}
-met_per_mg <- met %>% select(sampleID, genotype, trt, leaf_avg_std, starts_with("met_per_mg")) %>%
+met_per_mg <- met.censor %>% select(sampleID, genotype, trt, leaf_avg_std, starts_with("met_per_mg")) %>%
   as.data.frame() %>% column_to_rownames("sampleID")
-met_amt <- met %>% select(sampleID,  genotype, trt, leaf_avg_std, starts_with("met_amt")) %>%
+met_amt <- met.censor %>% select(sampleID,  genotype, trt, leaf_avg_std, starts_with("met_amt")) %>%
   as.data.frame() %>% column_to_rownames("sampleID")
 ```
 
@@ -84,6 +126,7 @@ met_per_mg_lm <- met_per_mg %>%
   mutate(trt=ifelse(str_detect(trt, "live"), "live", "blank_dead")) %>%
   pivot_longer(cols=starts_with("met"), names_to = "metabolite") %>%
   mutate(tissue=str_extract(metabolite, "leaf|root")) %>%
+  na.omit() %>%
 
   #scale and center
   group_by(metabolite, genotype, tissue) %>%
@@ -166,7 +209,7 @@ met_per_mg_lm_results %>%
 
 Table S12
 ```{r}
-met_per_mg_lm_results %>% filter(p.value_trt_trtlive < 0.05 & p.value_leaf_value_scale < 0.05) %>% 
+met_per_mg_lm_results %>% filter(p.value_trt_trtlive < 0.1 & p.value_leaf_value_scale < 0.1) %>% 
   select(metabolite, tissue, estimate_trt_trtlive, estimate_leaf_value_scale, p.value_trt_trtlive, p.value_leaf_value_scale, FDR_trt_trtlive, FDR_leaf_value_scale) %>%
   mutate(metabolite=str_remove(metabolite, "met_.*(leaf|root)_")) %>%
   arrange(p.value_leaf_value_scale) %>%
@@ -179,6 +222,7 @@ met_amt_lm <- met_amt %>%
   mutate(trt=ifelse(str_detect(trt, "live"), "live", "blank_dead")) %>%
   pivot_longer(cols=starts_with("met"), names_to = "metabolite") %>%
   mutate(tissue=str_extract(metabolite, "leaf|root")) %>%
+  na.omit() %>%
 
   #scale and center
   group_by(metabolite, genotype, tissue) %>%
