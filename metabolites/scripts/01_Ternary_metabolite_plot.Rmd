@@ -29,6 +29,9 @@ met <- met_raw %>%
   #filter away unnamed
   filter(str_detect(metabolite, pattern="^[0-9]+$", negate=TRUE)) %>%
   
+  # remove the outlier
+  filter(!(sampleID=="wyo_FPsc_016" & tissue=="root")) %>%
+  
   #adjust by sample mass
   mutate(met_per_mg=met_amount/sample_mass) %>%
   
@@ -49,7 +52,7 @@ normalized.means <- met %>%
   filter(type=="normalized") %>%
   select(genotype, tissue, trt, metabolite, amount) %>%
   group_by(genotype, tissue, trt, metabolite) %>%
-  summarize(value=mean(amount))
+  summarize(value=mean(amount, na.rm = TRUE))
 
 normalized.means
   
@@ -60,7 +63,7 @@ raw.means <- met %>%
   filter(type=="raw") %>%
   select(genotype, tissue, trt, metabolite, amount) %>%
   group_by(genotype, tissue, trt, metabolite) %>%
-  summarize(value=mean(amount))
+  summarize(value=mean(amount, na.rm = TRUE))
 
 raw.means
 ```
@@ -70,14 +73,10 @@ raw.means
 
 ```{r}
 pvals.norm <- read_csv("../output/met_per_mg_lm_full.csv") %>%
-  select(metabolite, FDR_microbe=FDR_trt_trtlive, FDR_leaf=FDR_leaf_value_scale) %>%
-  mutate(tissue = str_extract(metabolite, "leaf|root"),
-         metabolite=str_remove(metabolite, ".*_(leaf|root)_"))
+  select(metabolite, tissue, FDR_microbe=FDR_trt_trtlive, FDR_leaf=FDR_leaf_value_scale)
 
 pvals.raw <- read_csv("../output/met_amt_lm_full.csv")  %>%
-  select(metabolite, FDR_microbe=FDR_trt_trtlive, FDR_leaf=FDR_leaf_value_scale) %>%
-  mutate(tissue = str_extract(metabolite, "leaf|root"),
-         metabolite=str_remove(metabolite, ".*_(leaf|root)_"))
+  select(metabolite, tissue, FDR_microbe=FDR_trt_trtlive, FDR_leaf=FDR_leaf_value_scale)
 ```
 
 Join pvals and means
@@ -147,8 +146,8 @@ met_plot_raw %>%
   scale_shape_manual(values=c("TRUE" = 17, "FALSE" = 16)) +
   scale_alpha_manual(values=c("TRUE" = 1, "FALSE" = 0.2), guide = "none") +
   facet_grid(tissue ~ genotype) + ggtitle("Not standardized") + theme_bw() 
-ggsave("../../_Paper_Figures/Figure_6.png", height = 6.5, width = 6.5)
-ggsave("/Volumes/GoogleDrive/Shared drives/BrassicaMicrobeRNAseq/Figs and Tables/Figure_6.png", height = 6.5, width = 6.5)
+ggsave("../../_Paper_Figures/Fig_6.png", height = 6.5, width = 6.5)
+ggsave("~/Library/CloudStorage/GoogleDrive-jnmaloof@ucdavis.edu/Shared drives/BrassicaMicrobeRNAseq/Figs and Tables/Fig_6.png", height = 6.5, width = 6.5)
 
 ```
 
@@ -169,7 +168,7 @@ met_plot_norm %>%
   scale_shape_manual(values=c("TRUE" = 17, "FALSE" = 16)) +
   scale_alpha_manual(values=c("TRUE" = 1, "FALSE" = 0.2), guide = "none") +
   facet_grid(tissue ~ genotype) + ggtitle("Standardized") + theme_bw() 
-ggsave("../../_Paper_Figures/Figure_S5.png", height = 6.5, width = 6.5)
-ggsave("/Volumes/GoogleDrive/Shared drives/BrassicaMicrobeRNAseq/Figs and Tables/Figure_S5.png", height = 6.5, width = 6.5)
+ggsave("../../_Paper_Figures/Figure_S4.png", height = 6.5, width = 6.5)
+ggsave("~/Library/CloudStorage/GoogleDrive-jnmaloof@ucdavis.edu/Shared drives/BrassicaMicrobeRNAseq/Figs and Tables/Fig_S4.png", height = 6.5, width = 6.5)
 
 ```

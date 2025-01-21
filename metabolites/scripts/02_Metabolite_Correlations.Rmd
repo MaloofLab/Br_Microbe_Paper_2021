@@ -24,6 +24,10 @@ met <- met_raw %>%
   #filter away unnamed
    filter(str_detect(metabolite, pattern="^[0-9]+$", negate=TRUE)) %>%
   
+  # remove the outlier
+  filter(!(sampleID=="wyo_FPsc_016" & tissue=="root")) %>%
+  
+  
   #adjust by sample mass
   mutate(met_per_mg=met_amount/sample_mass) %>%
   
