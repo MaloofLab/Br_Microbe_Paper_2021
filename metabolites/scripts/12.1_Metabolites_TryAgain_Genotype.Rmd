@@ -202,6 +202,8 @@ write the results (Table S10)
 met_per_mg_lm_results %>% 
   #filter(FDR.trt < 0.1 | FDR.leaf < 0.1) %>%
   mutate(sig.both = FDR_trt_trtlive < 0.1 & FDR_leaf_value_scale < 0.1) %>%
+  mutate(metabolite=str_remove(metabolite, "met_.*(leaf|root)_")) %>%
+  select(metabolite, tissue, everything()) %>%
   arrange(desc(sig.both), min(.$FDR_trt_trtlive, .$FDR_leaf_value_scale)) %>% 
   write_csv("../output/met_per_mg_lm_full.csv")
 ```
@@ -295,7 +297,9 @@ Write it out (Table S9)
 met_amt_lm_results %>% 
   #filter(FDR.trt < 0.1 | FDR.leaf < 0.1) %>%
   mutate(sig.both = FDR_trt_trtlive < 0.1 & FDR_leaf_value_scale < 0.1) %>%
+  mutate(metabolite=str_remove(metabolite, "met_.*(leaf|root)_")) %>%
   arrange(desc(sig.both), min(.$FDR_trt_trtlive, .$FDR_leaf_value_scale)) %>% 
+  select(metabolite, tissue, everything()) %>%
   write_csv("../output/met_amt_lm_full.csv")
 ```
 
