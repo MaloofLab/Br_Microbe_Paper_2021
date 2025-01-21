@@ -211,10 +211,10 @@ met_per_mg_lm_results %>%
 
 Table S12
 ```{r}
-met_per_mg_lm_results %>% filter(p.value_trt_trtlive < 0.1 & p.value_leaf_value_scale < 0.1) %>% 
+met_per_mg_lm_results %>% filter(FDR_trt_trtlive < 0.1 | FDR_leaf_value_scale < 0.1) %>% 
   select(metabolite, tissue, estimate_trt_trtlive, estimate_leaf_value_scale, p.value_trt_trtlive, p.value_leaf_value_scale, FDR_trt_trtlive, FDR_leaf_value_scale) %>%
   mutate(metabolite=str_remove(metabolite, "met_.*(leaf|root)_")) %>%
-  arrange(p.value_leaf_value_scale) %>%
+  arrange(tissue, p.value_leaf_value_scale) %>%
   write_csv("../output/met_per_mg_lm_full_filter.csv")
 ```
 
@@ -305,10 +305,10 @@ met_amt_lm_results %>%
 
 Table S11
 ```{r}
-met_amt_lm_results %>% filter(p.value_trt_trtlive < 0.1 & p.value_leaf_value_scale < 0.1) %>% 
+met_amt_lm_results %>% filter(FDR_trt_trtlive < 0.1 | FDR_leaf_value_scale < 0.1) %>% 
   select(metabolite, tissue, estimate_trt_trtlive, estimate_leaf_value_scale, p.value_trt_trtlive, p.value_leaf_value_scale, FDR_trt_trtlive, FDR_leaf_value_scale) %>%
     mutate(metabolite=str_remove(metabolite, "met_.*(leaf|root)_")) %>%
-  arrange(p.value_leaf_value_scale) %>%
+  arrange(tissue, p.value_leaf_value_scale) %>%
   write_csv("../output/met_amt_lm_full_filtered.csv")
 ```
 
